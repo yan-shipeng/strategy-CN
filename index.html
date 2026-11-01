@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>中国企业出海整合管理 · 战略执行模拟</title>
+  <meta name="description" content="EMBA 变革管理模拟（中文版）—— 在 60 个资源内转化 12 位关键人物，与同班同学比较你的打法。" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #050d0f;
+      color: #d8eef4;
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    }
+    iframe {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      z-index: 1;
+    }
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: #050d0f;
+      color: #0d8b96;
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+      z-index: 10;
+      transition: opacity 0.45s ease;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .spin {
+      width: 34px; height: 34px;
+      border: 3px solid rgba(13, 139, 150, .25);
+      border-top-color: #0d8b96;
+      border-radius: 50%;
+      animation: sp 0.9s linear infinite;
+    }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    #sub { font-size: .85rem; color: #6f8b94; text-align: center; max-width: 30rem; line-height: 1.6; display: none; }
+    #sub.on { display: block; }
+    #sub a {
+      display: inline-block; margin-top: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      border: 1px solid rgba(13,139,150,.5);
+      color: #6fd8dd; text-decoration: none; font-size: .82rem;
+    }
+    #elapsed { font-size: .78rem; color: #4d6b77; letter-spacing: .06em; }
+    noscript { display: block; padding: 24px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="spin"></div>
+    <div id="msg">正在加载模拟系统…</div>
+    <div id="sub">正在唤醒游戏服务器，首次加载可能要等一分钟。
+      <br><a href="./">重新加载</a></div>
+    <div id="elapsed"></div>
+  </div>
+  <iframe
+    id="app"
+    src="https://fbb2b3058d844978890b4eddc3274785.sg2.agentos-app.run/cn"
+    title="中国企业出海整合管理"
+    allow="fullscreen"
+    referrerpolicy="no-referrer-when-downgrade"
+    onload="window.__appLoaded = true; document.getElementById('loading').classList.add('hidden')"
+  ></iframe>
+  <noscript>这个模拟需要 JavaScript，请开启后刷新页面。</noscript>
+  <script>
+    /* 当前游戏地址从 current.json 读，重新发布后只改那一个文件。 */
+    (function () {
+      var FALLBACK = 'https://fbb2b3058d844978890b4eddc3274785.sg2.agentos-app.run/cn';
+      var frame = document.getElementById('app');
+
+      function apply(url) {
+        if (!url || typeof url !== 'string' || url.indexOf('http') !== 0) return;
+        if (frame.getAttribute('src') !== url) frame.src = url;
+      }
+
+      apply(FALLBACK);
+      fetch('current.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { if (j && j.url) apply(j.url); })
+        .catch(function () {});
+    })();
+  </script>
+  <script>
+    (function () {
+      var t0 = Date.now();
+      var msg = document.getElementById('msg');
+      var sub = document.getElementById('sub');
+      var elapsed = document.getElementById('elapsed');
+
+      var tick = setInterval(function () {
+        if (window.__appLoaded) { clearInterval(tick); return; }
+        var s = Math.round((Date.now() - t0) / 1000);
+        elapsed.textContent = s + 's';
+        if (s >= 10 && s < 30) { msg.textContent = '还在加载…'; sub.classList.add('on'); }
+        if (s >= 30) { msg.textContent = '服务器还在启动中'; sub.classList.add('on'); }
+      }, 1000);
+    })();
+  </script>
+</body>
+</html>

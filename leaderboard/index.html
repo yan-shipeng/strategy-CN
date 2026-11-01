@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>排行榜 · 战略执行模拟</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a0f0d;color:#8aa;font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center}
+  a{color:#34d399}
+</style>
+</head>
+<body>
+  <p>正在打开排行榜… <a id="go" href="#">继续</a></p>
+  <script>
+    (function () {
+      var FALLBACK = 'https://fbb2b3058d844978890b4eddc3274785.sg2.agentos-app.run/cn/leaderboard';
+      function go(url) { location.replace(url); }
+      fetch('../current.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          var u = (j && j.url) ? j.url.replace(/\/+$/, '') + '/leaderboard' : FALLBACK;
+          document.getElementById('go').href = u;
+          go(u);
+        })
+        .catch(function () { document.getElementById('go').href = FALLBACK; go(FALLBACK); });
+    })();
+  </script>
+</body>
+</html>
