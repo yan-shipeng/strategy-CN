@@ -14,7 +14,7 @@
   <p>正在打开排行榜… <a id="go" href="#">继续</a></p>
   <script>
     (function () {
-      var FALLBACK = 'https://f83b02b66d2d4b339f1f8afc79442120.sg2.agentos-app.run/cn/leaderboard';
+      var FALLBACK = 'https://47902697484a429bbe509a18bffcd5b5.sg2.agentos-app.run/cn/leaderboard';
       function go(url) { location.replace(url); }
       fetch('../current.json?t=' + Date.now(), { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
