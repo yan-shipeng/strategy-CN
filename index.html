@@ -307,10 +307,14 @@
     .round-card .meta{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
     .round-card .narrative{font-size:14px;color:var(--text);margin-top:8px}
     .round-card .deltas{font-size:13px;color:var(--muted);margin-top:6px}
-    .trend-wrap{display:grid;grid-template-columns:1fr;gap:14px;margin-top:18px}
-    .trend-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px}
-    .trend-card h4{margin:0 0 6px;font-size:15px}
-    .trend-svg{width:100%;height:200px}
+    .trend-wrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+    .trend-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px}
+    .trend-card h4{margin:0 0 4px;font-size:13.5px;font-weight:600}
+    .trend-svg{width:100%;height:120px;display:block}
+    @media (max-width:820px){
+      .trend-wrap{grid-template-columns:1fr}
+      .trend-svg{height:104px}
+    }
 
     /* 结局横幅 */
     .ending-banner{padding:22px;border-radius:18px;color:#fff;margin-bottom:14px}
@@ -438,6 +442,9 @@
   .mech-text b{color:var(--text);font-weight:600}
   .one-thing{margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(15,118,110,.10);
     border:1px solid rgba(15,118,110,.28);font-size:13px;line-height:1.65}
+  .pred-box{border-left:3px solid var(--warn);background:rgba(224,138,58,.07)}
+  .pred-quote{margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);
+    font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word}
 
   /* ═══════════════════════════════════════════════════════════════════
      v25 · 手机优先：一屏一页 → 线性推进
@@ -446,9 +453,11 @@
   .net-toggle{display:none}
   #netCta{display:none}
   /* 开场页盖住顶栏 / HUD / 标签栏，避免从缝隙里透出来 */
+  /* v29：开场是全屏 overlay，底下三块chrome必须彻底不渲染——
+     只用 visibility:hidden 时，手机端 #tabsBar 的 display:flex!important 会让它透出来 */
   .app:has(#screen-intro.active) .topbar,
   .app:has(#screen-intro.active) #hudBar,
-  .app:has(#screen-intro.active) #tabsBar{visibility:hidden}
+  .app:has(#screen-intro.active) #tabsBar{display:none!important;visibility:hidden}
 
   @media (max-width:820px){
     :root{--tabbar-h:56px}
@@ -1352,10 +1361,12 @@
         <h2>回合日志</h2>
         <div class="small muted">复盘每一轮的决策、对象、关键结果以及 KPI 演化。可作为课后讨论的依据。</div>
 
-        <div class="trend-wrap" id="trendWrap"></div>
-
-        <h3 style="margin-top:24px">逐轮回顾</h3>
+        <h3 style="margin-top:18px">逐轮回顾</h3>
         <div class="log-list" id="logList"></div>
+
+        <h3 style="margin-top:26px">指标演化</h3>
+        <div class="small muted">三条曲线分别对应已转化人数、可信度、激进压力。黄点是里程碑。</div>
+        <div class="trend-wrap" id="trendWrap"></div>
       </div>
     </section>
 
@@ -3639,6 +3650,20 @@ function showModal(){
   lead.innerHTML=`<strong>结果反馈${labelSuffix}</strong><div class="small muted" style="margin-top:6px">${x.story}</div>`;
   body.appendChild(lead);
 
+  /* v29：预判 vs 实际
+     模拟器真正的学习发生在"猜错了"的那一刻。学生写下的预判必须在他看到结果的同一屏里出现，
+     否则预判就只是一个填了没用的输入框。 */
+  if(x.prediction){
+    const pb=document.createElement('div'); pb.className='log-item pred-box';
+    const dConv=(x.convertedAfter||0)-(x.convertedBefore||0);
+    pb.innerHTML='<strong>📝 你的预判</strong>'+
+      '<div class="pred-quote">'+String(x.prediction).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</div>'+
+      '<div class="small muted" style="margin-top:6px">对照上面的实际结果：你猜的是「会发生什么」，还是「为什么会发生」？'+
+      (dConv>0?'这一轮确实有 '+dConv+' 个人跨过了转化线。':(dConv<0?'这一轮没有人转化。':''))+
+      '如果猜错了，先别改策略——先找出你错在哪个机制上（偏好？阈值？扩散？压力？）。</div>';
+    body.appendChild(pb);
+  }
+
   // v15：副作用专框
   if(x.sideEffects && x.sideEffects.length){
     const se=document.createElement('div'); se.className='side-effects';
@@ -4177,7 +4202,10 @@ function runTurn(){
   const newRelations = (state.newInformal||[]).slice();
 
   state.lastImpact = { story: impact.story, details: [...impact.details, ...consequences], sideEffects,
-    actionLabel: a.label, people: peopleImpact, relations: newRelations };
+    actionLabel: a.label, people: peopleImpact, relations: newRelations,
+    prediction: predictionText, // v29：把学生自己写的预判带进结果页，逼他对照
+    convertedBefore: Object.values(before.people).filter(x=>x.status===4).length,
+    convertedAfter: Object.values(state.people).filter(x=>x.status===4).length };
 
   // 重置预判输入
   if(el('predictInput')) el('predictInput').value='';
@@ -4212,10 +4240,25 @@ function exportGamePdf(){
   let endingBlock = '';
   if(state.ended && state.endingType){
     const e = endingNarratives(state.endingType);
+    // v27：把全局诊断也带进 PDF——这份材料是交上来的作业，最该留下的是"他哪里想错了"
+    let diagBlock = '';
+    try{
+      const d = debrief();
+      if(d && d.items && d.items.length){
+        diagBlock = '<h3>🎓 全局诊断：你的操盘模式</h3><ul style="margin:6px 0 0 20px;padding:0;font-size:12.5px;line-height:1.7">'+
+          d.items.map(t=>`<li><b>［${t.tag}］</b>${t.t}</li>`).join('')+'</ul>';
+        if(d.oneThing){
+          diagBlock += `<p style="margin-top:10px;padding:8px 12px;background:#eef7f5;border-left:3px solid #0f766e;font-size:12.5px"><b>如果只改一件事：</b>${d.oneThing.tag}——${d.oneThing.t.split('。')[0]}。</p>`;
+        } else if(d.challenge){
+          diagBlock += `<p style="margin-top:10px;padding:8px 12px;background:#eef7f5;border-left:3px solid #0f766e;font-size:12.5px">${d.challenge.t}</p>`;
+        }
+      }
+    }catch(_){}
     endingBlock = `
       <section class="section ending-${e.cls||''}">
         <h2>🏁 局终结算：${e.title||state.endingType}</h2>
         <p class="story">${(e.story||'')}</p>
+        ${diagBlock}
         <h3>💡 讨论要点</h3>
         <div class="prose">${(e.teach||'').split('\n').map(x=>`<p>${x}</p>`).join('')}</div>
         <h3>🏛️ 真实案例对照</h3>
