@@ -316,6 +316,7 @@
     .ending-banner{padding:22px;border-radius:18px;color:#fff;margin-bottom:14px}
     .ending-banner.win{background:linear-gradient(135deg,#3d8a3a,#2a6f28)}
     .ending-banner.pass{background:linear-gradient(135deg,#d97e3a,#b65f1f)}
+    .ending-banner.mid{background:linear-gradient(135deg,#4a6fa5,#2f4a75)}
     .ending-banner.fail{background:linear-gradient(135deg,#c84d5f,#943140)}
     .ending-banner h3{margin:0 0 8px;font-size:24px;word-break:break-word;line-height:1.4;white-space:normal}
 
@@ -428,6 +429,13 @@
   .detail-fold summary:before{content:'▸ ';color:var(--primary)}
   .detail-fold[open] summary:before{content:'▾ '}
   .detail-list{margin:8px 0 0 18px;padding:0;font-size:12.5px;line-height:1.7;color:var(--muted)}
+  /* v27：机制速览卡片 */
+  .mech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+  .mech-card{padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border)}
+  .mech-icon{font-size:20px;line-height:1;margin-bottom:6px}
+  .mech-title{font-weight:700;font-size:14px;margin-bottom:5px;color:var(--text)}
+  .mech-text{font-size:12.5px;line-height:1.65;color:var(--muted)}
+  .mech-text b{color:var(--text);font-weight:600}
   .one-thing{margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(15,118,110,.10);
     border:1px solid rgba(15,118,110,.28);font-size:13px;line-height:1.65}
 
@@ -446,8 +454,12 @@
     :root{--tabbar-h:56px}
     body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
     .app{padding:0 12px calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px) + 16px)}
-    .topbar{margin-bottom:10px;padding-bottom:10px}
-    .title{font-size:19px}
+    .topbar{margin-bottom:10px;padding-bottom:10px;flex-direction:row!important;align-items:center!important;gap:8px}
+    .topbar>div:first-child{min-width:0;flex:1 1 auto;overflow:hidden}
+    .title{font-size:15px;line-height:1.25;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+    .title .ver{display:none}
+    #topbarActions{gap:6px!important;flex-wrap:nowrap!important;flex:0 0 auto}
+    #topbarActions .btn{font-size:11.5px;padding:6px 9px;border-radius:9px;white-space:nowrap}
     .sub{font-size:12px}
     .hero h2,.section h2{font-size:19px}
     .section{padding:14px;border-radius:14px}
@@ -466,10 +478,11 @@
       scrollbar-width:none;
     }
     #hudBar::-webkit-scrollbar{display:none}
-    #hudBar .kpi{flex:0 0 auto;min-width:62px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,.05);box-shadow:none}
-    #hudBar .kpi .small{font-size:9.5px;line-height:1.15;margin:0;white-space:nowrap}
+    #hudBar .kpi{flex:1 1 0;min-width:52px;padding:5px 4px;border-radius:11px;background:rgba(255,255,255,.05);box-shadow:none;text-align:center}
+    #hudBar .kpi .small{font-size:9px;line-height:1.15;margin:0;white-space:nowrap;letter-spacing:-.2px}
     #hudBar .kpi .small span{display:none}
-    #hudBar .kpi .num{font-size:16px;line-height:1.3;margin:0}
+    #hudBar .kpi .num{font-size:15px;line-height:1.3;margin:0;letter-spacing:-.3px}
+    #hudBar #tipKpiSub{font-size:8px!important;opacity:.75}
     #hudBar #convertedKpiSub{display:none}
     #hudBar .resources-bar-wrap{height:3px;margin-top:4px}
 
@@ -561,7 +574,9 @@
     .impact-table td:nth-child(4){grid-column:2;grid-row:1;text-align:right;font-size:14px}
     .impact-table td:nth-child(2){grid-column:1/-1;grid-row:2;font-size:12px}
     .impact-table td:nth-child(3){grid-column:1;grid-row:3;font-size:12px;color:var(--muted)}
+    .impact-table td:nth-child(3)::before{content:'说服度 ';opacity:.7}
     .impact-table td:nth-child(5){grid-column:1/-1;grid-row:4;font-size:11.5px;line-height:1.5}
+    .impact-table td:nth-child(5)::before{content:'为什么：';opacity:.7}
     /* 排行榜表格：六列挤在一屏里，表头不折行 */
     #endingBody table{font-size:12px}
     #endingBody table th,#endingBody table td{padding:5px 4px!important;white-space:nowrap}
@@ -573,7 +588,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 v20</div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v20</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -591,6 +606,7 @@
     <div class="kpi"><div class="small">已转化率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
     <div class="kpi"><div class="small">激进压力</div><div class="num" id="pressureKpi">0</div></div>
+    <div class="kpi" id="tipKpiCard"><div class="small">临界点 <span title="主动参与及以上的人占到 1/3，观望的心理成本就会变高">ⓘ</span></div><div class="num" id="tipKpi">0/4</div><div class="small" id="tipKpiSub" style="margin-top:2px">主动参与以上</div></div>
   </div>
 
   <div class="tabs" id="tabsBar" style="display:none">
@@ -1221,6 +1237,39 @@
         <div class="small" id="roleGoalText" style="padding:8px 12px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:4px"><strong>你的目标：</strong>在 60 个资源内让 ≥50% 的关键人物真正进入「已转化」状态。</div>
         <div class="badges" style="margin-top:12px"><span class="badge">先理解任务</span><span class="badge">再看社会网络</span><span class="badge">然后做决策</span></div>
         <button class="btn btn-primary" id="startBtn2" style="margin-top:14px">查看社会网络 →</button>
+      </div>
+
+      <!-- v27：机制速览——开局就把"这个模拟器在教什么"讲清楚 -->
+      <div class="panel section" style="margin-top:16px">
+        <h2>这个模拟器在教什么</h2>
+        <div class="small muted" style="margin-bottom:12px">五个机制，互相咬合。不需要记住，玩两轮自然会感觉到。</div>
+        <div class="mech-grid">
+          <div class="mech-card">
+            <div class="mech-icon">📊</div>
+            <div class="mech-title">说服度是分档的</div>
+            <div class="mech-text">每个人有 0-100 的「说服度」，跨过 25 / 45 / 65 / 85 才升一档。加 10 分给一个 78 分的人，他不会动；加 10 分给一个 58 分的人，他升档了。<b>同一个动作，价值取决于你选的是谁。</b></div>
+          </div>
+          <div class="mech-card">
+            <div class="mech-icon">🕸</div>
+            <div class="mech-title">网络会替你干活</div>
+            <div class="mech-text">一个人真的被转化之后，他会主动去说服他的邻居——这是"社会传染"。连接多的人（桥梁人物）带动力最强。<b>所以先打穿一个人，比在十个人身上各加一点更划算。</b></div>
+          </div>
+          <div class="mech-card">
+            <div class="mech-icon">🤝</div>
+            <div class="mech-title">一起做事会长出私交</div>
+            <div class="mech-text">同一回合里被卷进同一件事的人，信任会累积。过线之后工作关系之外多一层私交，他们互相说服的效率从 ×1.4 提到 ×1.85。<b>把两个人放进同一个动作里，比分别推动更省资源。</b></div>
+          </div>
+          <div class="mech-card">
+            <div class="mech-icon">🔥</div>
+            <div class="mech-title">临界点之后会自加速</div>
+            <div class="mech-text">「主动参与」以上的人一旦超过全员的 1/3，观望的心理成本突然变高——继续不动意味着站在少数人那边。<b>临界点之前你推石头，之后石头自己滚。</b></div>
+          </div>
+          <div class="mech-card">
+            <div class="mech-icon">🏛</div>
+            <div class="mech-title">结构本身就是杠杆</div>
+            <div class="mech-text">改变汇报关系，等于改变信息流和谁听谁的。制度型动作（激励、KPI、汇报线）能打穿人际说服打不穿的最后一跳，代价是组织压力。<b>但压力到顶，就会反弹。</b></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1912,7 +1961,10 @@ function initState(){
     trust:{},                 // {'a|b': 0-100}
     informal:new Set(),       // 已经跨过阈值、变成非正式关系的对
     newInformal:[],           // 本回合新建立的非正式关系
-    turnEvents:[]             // 本回合每个人的得分变化事件
+    turnEvents:[],            // 本回合每个人的得分变化事件
+    // v27：临界点
+    tippingPointReached:false,
+    tippingPointRound:null
   };
 }
 
@@ -1990,8 +2042,10 @@ function preferenceMultiplier(personId, actionType){
 function broadResistanceFactor(personId){
   // 仅对「面向全体 / 面向观望者」的广覆盖动作生效
   const p=state.people[personId];
-  if(p.status===0) return 0.40;
-  if(p.status===1) return 0.70;
+  // v27：过了临界点，观望的心理成本变高——广覆盖的渗透力整体上浮
+  const tip = state.tippingPointReached ? 1.45 : 1.0;
+  if(p.status===0) return Math.min(0.58, 0.40*tip);
+  if(p.status===1) return Math.min(0.90, 0.70*tip);
   return 1.00;
 }
 
@@ -2419,6 +2473,19 @@ function renderTop(){
   setText('resourcesKpi',state.resources); setText('roundKpi',state.round);
   setText('convertedKpi',convertedRate()+'%');
   setText('credKpi',state.credibility); setText('pressureKpi',state.pressure);
+  // v27：临界点进度
+  try{
+    const ids=Object.keys(state.people).filter(id=>id!=='pm');
+    const active=ids.filter(id=>state.people[id].status>=3).length;
+    const need=Math.ceil(ids.length/3);
+    const tipEl=el('tipKpi'), tipSub=el('tipKpiSub'), tipCard=el('tipKpiCard');
+    if(tipEl) tipEl.textContent = state.tippingPointReached ? '✓' : (Math.min(active,need)+'/'+need);
+    if(tipSub) tipSub.textContent = state.tippingPointReached ? '已越过' : '主动参与以上';
+    if(tipCard){
+      tipCard.style.borderColor = state.tippingPointReached ? 'rgba(30,160,120,.55)' : '';
+      tipCard.style.background = state.tippingPointReached ? 'rgba(30,160,120,.12)' : '';
+    }
+  }catch(_){}
   // v17: 勉强通道动态提示
   const role = ROLES[state.roleId] || ROLES.integrator;
   const cr = convertedRate();
@@ -3240,6 +3307,17 @@ function endingNarratives(type){
       realWorld:'▶ <strong>联想·IBM PC（2005）</strong>：前三年达成业务整合的阶段性目标，随后通过引入熟悉双方文化的高管团队，耗时多年才实现深度的文化融合。\n▶ <strong>TikTok·海外治理（2020-）</strong>：通过架构隔离和本地化团队迅速达到合规要求，但建立真正的跨文化信任仍是一项长期工程。\n▶ <strong>宁德时代·德国工厂（2019-）</strong>：初期以硬性标准推动建厂，随后逐步转向本地化柔性管理，在效率与认同之间寻找平衡。'
     };
   }
+  // v27：新增「行为到了、认同没到」的结局——这是最真实也最常被忽略的一种结果
+  if(type==='partial-deep'){
+    const ids=Object.keys(state.people).filter(id=>id!=='pm');
+    const active=ids.filter(id=>state.people[id].status>=3).length;
+    return {
+      cls:'mid', title:'阶段达标 · 但未固化',
+      story:`时间走完。${active}/${ids.length} 的人已经进入「主动参与」以上——他们开始用新流程干活，会上的表态也不再是敷衍。但真正"内化"的只有 ${finalRate}%。这是一种非常真实的状态：<b>行为变了，认同还没跟上</b>。三个月后如果总部撤掉你这个角色，这批人里有多少会退回原样？答案取决于你有没有动过制度——汇报关系、激励与奖惩、谁能决定什么。`,
+      teach:'▶ 文化层：行为的改变可以靠推动，认同的改变只能靠时间和一致性。你的转化者里，谁是"因为理解"而不是"因为你在盯着"？\n▶ 制度层：你有没有把新的行为写进考核、汇报线和资源分配？没有制度承载的变革，人一走就散。\n▶ 个人层：你几乎把资源都用在了"让人动起来"，剩下多少留给了"让动起来的人留下来"？',
+      realWorld:'▶ <strong>联想·IBM PC（2005）</strong>：前三年业务整合达标，但文化融合花了近十年——阶段目标与深度认同从来不是同一件事。\n▶ <strong>海尔·GE 家电（2016-）</strong>：先保留人、保留流程，用两三年才逐步引入人单合一，避免"改得太快、认同没跟上"。\n▶ <strong>反面：TCL·阿尔卡特（2004）</strong>：组织表面上接受了新流程，但关键岗位认同缺失，整合红利在两年内被内耗吃掉。'
+    };
+  }
   // 组织反弹失败也需要区分成因：压力爆表 vs 资源数耗尽进展不够
   let failCause;
   if (state.pressure >= 7 || finalCred <= 2) {
@@ -3456,7 +3534,18 @@ function debrief(){
       t:`你建立了 ${state.informal.size} 对非正式关系。这些关系是复利资产：它们不会随回合衰减，后面的每一次扩散都会经过它们放大。`});
   }
 
-  // 6. 可信度管理
+  // 6. 临界点
+  if(state.tippingPointReached){
+    out.push({tag:'越过临界点', k:'good',
+      t:`第 ${state.tippingPointRound} 回合你越过了临界点——「主动参与」以上的人超过 1/3。此后观望的心理成本变高，广覆盖对未动者的渗透从 40% 提到 58%。真实变革里这个点一旦过了，事情就开始自己往前走；过不了，你永远在推石头。`});
+  } else {
+    const ids2=Object.keys(state.people).filter(id=>id!=='pm');
+    const active=ids2.filter(id=>state.people[id].status>=3).length;
+    out.push({tag:'没过临界点', k:'tip',
+      t:`终局「主动参与」以上只有 ${active}/${ids2.length} 人，始终没到 1/3 的临界点。在临界点之前，每一步都要你亲自推；过了之后，观望者会因为"多数人都在做"而自己走过来。所以早期该做的不是广覆盖，而是尽快把 1/3 的人推到"主动参与"。`});
+  }
+
+  // 7. 可信度管理
   if(state.credibility<=4){
     out.push({tag:'信誉透支', k:'warn',
       t:`终局可信度 ${state.credibility}/10。可信度低于 5 时动作力度被打折、失败惩罚翻倍。它不会自己回来——只有"成功"才会回补，而成功需要你先有信誉。这是变革里最典型的死亡螺旋。`});
@@ -3675,12 +3764,12 @@ function checkEnding(){
   }
   // 终末判定：资源数耗尽
   if(state.resources <= 0){
-    state.ended = true; state.endingType = cr >= 50 ? 'win-pass' : 'fail-rebound'; return true;
+    state.ended = true; state.endingType = loseOrWin(cr); return true;
   }
   // v20 修复：死局检测——剩余资源不足以执行任何动作时，视为资源耗尽
   const minCost = Math.min(...ACTIONS.map(a => a.weeks));
   if(state.resources < minCost){
-    state.ended = true; state.endingType = cr >= 50 ? 'win-pass' : 'fail-rebound'; return true;
+    state.ended = true; state.endingType = loseOrWin(cr); return true;
   }
   // v20 修复：所有可负担的动作均在冷却中时，也视为死局
   const affordableAndReady = ACTIONS.filter(a => {
@@ -3688,9 +3777,19 @@ function checkEnding(){
     return state.resources >= a.weeks && wait === 0;
   });
   if(affordableAndReady.length === 0){
-    state.ended = true; state.endingType = cr >= 50 ? 'win-pass' : 'fail-rebound'; return true;
+    state.ended = true; state.endingType = loseOrWin(cr); return true;
   }
   return false;
+}
+
+/* v27：资源走完时，区分「什么都没做出来」和「人都动起来了但没内化」。
+   后者是真实变革里最常见的结局，不该被笼统地写成"组织反弹·失败"。 */
+function loseOrWin(cr){
+  if(cr>=50) return 'win-pass';
+  const ids=Object.keys(state.people).filter(id=>id!=='pm');
+  const active=ids.filter(id=>state.people[id].status>=3).length;
+  if(ids.length && active/ids.length >= 0.65) return 'partial-deep';
+  return 'fail-rebound';
 }
 
 /* =========================================================
@@ -3750,6 +3849,34 @@ function buildPeopleImpact(before, after){
     return Math.abs(y.delta)-Math.abs(x.delta);
   });
   return rows;
+}
+
+/* =========================================================
+   v27：临界点（tipping point）
+   「主动参与及以上」的人一旦占到 1/3，观望者的心理成本就变了：
+   继续不动意味着站在少数人那边。此后广覆盖对未动者的力度从 40% 提到 58%。
+   这是一次性事件，也是整局最有教学价值的一刻。
+   ========================================================= */
+function checkTippingPoint(){
+  if(state.tippingPointReached) return null;
+  const ids=Object.keys(state.people).filter(id=>id!=='pm');
+  const active=ids.filter(id=>state.people[id].status>=3).length;
+  const need=Math.ceil(ids.length/3);
+  if(active<need) return null;
+  state.tippingPointReached=true;
+  state.tippingPointRound=state.round;
+  // 过线那一刻，观望者被"多数人已经在做"这件事推了一把
+  const pushed=[];
+  ids.forEach(id=>{
+    const p=state.people[id];
+    if(p.status>=3) return;
+    const before=p.status;
+    applyGain(id, 5, '叙事', 'broad');
+    if(p.status>before) pushed.push(`${p.name}（${STATUS_LABELS[before]}→${STATUS_LABELS[p.status]}）`);
+  });
+  state.credibility=Math.min(10, state.credibility+1);
+  const extra = pushed.length ? `当场被推起来的有：${pushed.join('、')}。` : '';
+  return `🔥 临界点被触发（第 ${state.round} 回合）：组织里已经有 ${active}/${ids.length} 人进入「主动参与」以上，超过 1/3。规范变了——继续不动开始有社交成本。你的可信度 +1（现 ${state.credibility}），此后广覆盖动作对未动者的力度从 40% 提到 58%。${extra}`;
 }
 
 function snapshotPeople(){
@@ -3926,6 +4053,14 @@ function runTurn(){
   }
 
   const impact = a.run(state.selectedTargets);
+
+  /* v27：临界点（tipping point）
+     组织里"主动参与及以上"的人一旦超过 1/3，规范就变了——观望者的心理成本突然变高。
+     这是真实变革里最关键、也最容易被忽略的一件事：不是线性累积，而是过线之后自加速。 */
+  try{
+    const tp = checkTippingPoint();
+    if(tp) impact.details.push(tp);
+  }catch(_){}
   // v20: noEffect flag — action had zero effect (e.g. team-building at zero pressure); skip all scoring side-effects
   if(impact.noEffect){
     // 无效动作：消耗资源但无实质效果，仅显示教学反馈
