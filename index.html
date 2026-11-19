@@ -401,6 +401,17 @@
     background: #fff5f5;
   }
 
+  /* v26：逐人影响表 / 关系列表 */
+  .impact-table{width:100%;border-collapse:collapse;font-size:13px}
+  .impact-table th{text-align:left;padding:6px 8px;background:var(--surface2);color:var(--muted);font-weight:600;white-space:nowrap}
+  .impact-table td{padding:7px 8px;border-top:1px solid var(--border);vertical-align:top}
+  .impact-table td.why{color:var(--muted);font-size:12px;line-height:1.5}
+  .impact-table .up{color:var(--success);font-weight:700;white-space:nowrap}
+  .impact-table .down{color:var(--danger);font-weight:700;white-space:nowrap}
+  .impact-table .flat{color:var(--muted);white-space:nowrap}
+  .rel-list{margin:8px 0 0 18px;padding:0;font-size:13px;line-height:1.8}
+  .edge.informal{stroke:#e0a03a;stroke-width:2.2;stroke-dasharray:2 4;opacity:.95}
+
   /* ═══════════════════════════════════════════════════════════════════
      v25 · 手机优先：一屏一页 → 线性推进
      看一页 → 进入决策 → 立刻看到结果 → 再点一下看网络结构 → 回到决策
@@ -523,6 +534,15 @@
     /* 人物列表：单列，名字不再被截断 */
     #screen-network .people-quicklist{grid-template-columns:1fr;gap:6px}
     #screen-network .people-quicklist .qp-item{padding:11px 12px;font-size:13.5px}
+    /* 逐人影响表：手机上改成一人一张小卡 */
+    .impact-table thead{display:none}
+    .impact-table tr{display:grid;grid-template-columns:1fr auto;column-gap:8px;row-gap:2px;padding:10px 0;border-top:1px solid var(--border)}
+    .impact-table td{border:none!important;padding:0!important}
+    .impact-table td:nth-child(1){grid-column:1;grid-row:1;font-weight:700;font-size:14px;white-space:nowrap}
+    .impact-table td:nth-child(4){grid-column:2;grid-row:1;text-align:right;font-size:14px}
+    .impact-table td:nth-child(2){grid-column:1/-1;grid-row:2;font-size:12px}
+    .impact-table td:nth-child(3){grid-column:1;grid-row:3;font-size:12px;color:var(--muted)}
+    .impact-table td:nth-child(5){grid-column:1/-1;grid-row:4;font-size:11.5px;line-height:1.5}
     /* 排行榜表格：六列挤在一屏里，表头不折行 */
     #endingBody table{font-size:12px}
     #endingBody table th,#endingBody table td{padding:5px 4px!important;white-space:nowrap}
@@ -1200,7 +1220,7 @@
       <div class="layout">
         <div class="panel section">
           <h2>社会网络</h2>
-          <div class="small muted">点击节点查看信息，拖拽节点重新排列。连线表示人物间的相互影响；绿色虚线表示已转化者正在向邻居扩散影响。</div>
+          <div class="small muted">点击节点查看信息，拖拽节点重新排列。连线表示人物间的相互影响；绿色虚线表示已转化者正在向邻居扩散影响；橙色点线表示一起做事之后建立起来的非正式关系（私交），这类关系里说服更省力。</div>
           <div class="svg-wrapper" style="margin-top:12px">
             <svg id="networkSvg"></svg>
           </div>
@@ -1352,43 +1372,43 @@ const safeStorage = (function(){
 /* 动作类型枚举，用于偏好矩阵键名 */
 // 类型：示范/政治/对话/沟通/赋能/验证/叙事/压力/对抗/制度
 const PEOPLE={
-  ceo:{name:'总部CEO',role:'总部最高决策者',desc:'能提供公开背书，但非常看重速度与结果。',faction:'总部',score:18,status:0,x:40,y:60,ties:['pm','cfo'],hidden_ties:[],
+  ceo:{name:'总部CEO',role:'总部最高决策者',desc:'能提供公开背书，但非常看重速度与结果。',faction:'总部',score:18,status:0,x:40,y:30,ties:['pm','cfo'],hidden_ties:[],
     hidden_goal:'快速实现ROI，维持股价，避免重大失误',
     prefs:{'验证':0.25,'政治':0.20,'对话':-0.15,'叙事':-0.05}},
-  pm:{name:'你',role:'海外整合负责人',desc:'跨总部与当地组织协调推进，是整个变革的发起者。',score:100,status:4,x:200,y:120,ties:['ceo','region'],hidden_ties:[],
+  pm:{name:'你',role:'海外整合负责人',desc:'跨总部与当地组织协调推进，是整个变革的发起者。',score:100,status:4,x:140,y:75,ties:['ceo','region'],hidden_ties:[],
     hidden_goal:'在总部要求与当地合法性之间找到平衡',
     prefs:{}},
-  cfo:{name:'总部CFO',role:'总部资源把关人',desc:'关心预算、KPI和整合效率。私下与当地有非正式的财务摸底渠道。',faction:'总部',score:12,status:0,x:60,y:140,ties:['ceo'],hidden_ties:['region'],
+  cfo:{name:'总部CFO',role:'总部资源把关人',desc:'关心预算、KPI和整合效率。私下与当地有非正式的财务摸底渠道。',faction:'总部',score:12,status:0,x:40,y:120,ties:['ceo'],hidden_ties:['region'],
     hidden_goal:'控制成本，确保财务指标达成',
     prefs:{'制度':0.25,'验证':0.15,'叙事':-0.20,'对话':-0.10}},
-  region:{name:'当地区域总经理',role:'区域桥梁人物',desc:'连接总部与当地组织，直接管辖厂长和运营主管，平衡利益冲突。',faction:'当地',score:16,status:0,x:320,y:80,ties:['pm','plant','ops'],hidden_ties:[],
+  region:{name:'当地区域总经理',role:'区域桥梁人物',desc:'连接总部与当地组织，直接管辖厂长和运营主管，平衡利益冲突。',faction:'当地',score:16,status:0,x:240,y:30,ties:['pm','plant','ops'],hidden_ties:[],
     hidden_goal:'维持当地团队稳定，保护既得利益',
     prefs:{'对话':0.25,'赋能':0.15,'对抗':-0.25,'压力':-0.15}},
-  plant:{name:'当地厂长',role:'生产运营部主管',desc:'握有现场执行节奏和工人信任，是落地成败的关键。',faction:'当地',score:10,status:0,x:280,y:200,ties:['region','engineer','union'],hidden_ties:[],
+  plant:{name:'当地厂长',role:'生产运营部主管',desc:'握有现场执行节奏和工人信任，是落地成败的关键。',faction:'当地',score:10,status:0,x:140,y:165,ties:['region','engineer','union'],hidden_ties:[],
     hidden_goal:'保护现场工艺和工人信任，避免生产中断',
     prefs:{'赋能':0.25,'验证':0.20,'压力':-0.20,'制度':-0.10}},
-  hr:{name:'当地HR总监',role:'人力行政部主管',desc:'管理人才、流程和组织稳定性。向运营主管汇报。',faction:'当地',score:14,status:0,x:360,y:280,ties:['ops'],hidden_ties:['engineer','union'],
+  hr:{name:'当地HR总监',role:'人力行政部主管',desc:'管理人才、流程和组织稳定性。向运营主管汇报。',faction:'当地',score:14,status:0,x:340,y:120,ties:['ops'],hidden_ties:['engineer','union'],
     hidden_goal:'防止关键人才流失，维持组织稳定',
     prefs:{'对话':0.20,'赋能':0.20,'叙事':0.15,'对抗':-0.25}},
-  sales:{name:'当地销售主管',role:'销售客户部主管',desc:'掌握客户关系和市场前线信息，是客户压力的第一接收者。向运营主管汇报。',faction:'当地',score:11,status:0,x:320,y:280,ties:['ops','customer'],hidden_ties:[],
+  sales:{name:'当地销售主管',role:'销售客户部主管',desc:'掌握客户关系和市场前线信息，是客户压力的第一接收者。向运营主管汇报。',faction:'当地',score:11,status:0,x:240,y:210,ties:['ops','customer'],hidden_ties:[],
     hidden_goal:'维持客户关系，保护销售团队独立性',
     prefs:{'叙事':0.20,'对话':0.15,'压力':-0.20,'制度':-0.15}},
-  ops:{name:'当地运营主管',role:'运营管理部主管',desc:'直接向区域总经理汇报，统筹销售与HR，流程优化者，担心新制度拖慢效率。',faction:'当地',score:8,status:0,x:360,y:200,ties:['region','hr','sales'],hidden_ties:[],
+  ops:{name:'当地运营主管',role:'运营管理部主管',desc:'直接向区域总经理汇报，统筹销售与HR，流程优化者，担心新制度拖慢效率。',faction:'当地',score:8,status:0,x:240,y:120,ties:['region','hr','sales'],hidden_ties:[],
     hidden_goal:'保护现有流程权力，维持运营自主权',
     prefs:{'验证':0.25,'赋能':0.15,'制度':-0.15,'叙事':-0.10}},
-  engineer:{name:'当地生产工程师',role:'生产运营部下属',desc:'掌握生产工艺秘密，工人听他的话胜过听厂长的。隐形权力大于名义权力。',faction:'当地',score:6,status:0,x:280,y:280,ties:['plant','union'],hidden_ties:[],
+  engineer:{name:'当地生产工程师',role:'生产运营部下属',desc:'掌握生产工艺秘密，工人听他的话胜过听厂长的。隐形权力大于名义权力。',faction:'当地',score:6,status:0,x:140,y:255,ties:['plant','union'],hidden_ties:[],
     hidden_goal:'保护自己的权力和职位，维持老团队利益',
     prefs:{'对抗':-0.30,'压力':-0.25,'对话':0.20,'赋能':0.20}},
-  union:{name:'当地工会主席',role:'生产运营部下属',desc:'代表基层工人利益，直接向厂长汇报。一旦觉得被强压，反弹会较快传开。',faction:'当地',score:7,status:0,x:320,y:320,ties:['plant','engineer'],hidden_ties:['gov','hr'],
+  union:{name:'当地工会主席',role:'生产运营部下属',desc:'代表基层工人利益，直接向厂长汇报。一旦觉得被强压，反弹会较快传开。',faction:'当地',score:7,status:0,x:240,y:300,ties:['plant','engineer'],hidden_ties:['gov','hr'],
     hidden_goal:'防止裁员，保护薪酬和工作条件',
     prefs:{'压力':-0.25,'对抗':-0.25,'赋能':0.25,'叙事':0.15}},
-  gov:{name:'当地骨干工人',role:'生产运营部下属',desc:'掌握一线工人的真实想法和情绪，是工人与管理层之间的重要桥梁。具有很强的群众基础和号召力。',faction:'当地',score:10,status:0,x:400,y:320,ties:['engineer'],hidden_ties:['union'],
+  gov:{name:'当地骨干工人',role:'生产运营部下属',desc:'掌握一线工人的真实想法和情绪，是工人与管理层之间的重要桥梁。具有很强的群众基础和号召力。',faction:'当地',score:10,status:0,x:40,y:300,ties:['engineer'],hidden_ties:['union'],
     hidden_goal:'维护工人利益，确保工资和福利不下降，防止裁员',
     prefs:{'赋能':0.25,'对话':0.20,'压力':-0.25,'对抗':-0.15}},
-  customer:{name:'大客户销售',role:'销售客户部下属',desc:'代表大客户与本公司的关系，掌握客户需求和满意度。一旦认为整合影响服务质量，会向上级反映压力。',faction:'当地',score:12,status:0,x:380,y:200,ties:['sales','finance'],hidden_ties:['ceo'],
+  customer:{name:'大客户销售',role:'销售客户部下属',desc:'代表大客户与本公司的关系，掌握客户需求和满意度。一旦认为整合影响服务质量，会向上级反映压力。',faction:'当地',score:12,status:0,x:340,y:210,ties:['sales','finance'],hidden_ties:['ceo'],
     hidden_goal:'维持客户满意度，确保订单稳定，保护销售团队的提成',
     prefs:{'验证':0.25,'制度':0.15,'叙事':0.10,'对抗':-0.20}},
-  finance:{name:'当地数据分析师',role:'销售客户部下属',desc:'掌握成本、风险和真实的财务故事，能改变决策方向。隐形影响力强。',faction:'当地',score:13,status:0,x:380,y:240,ties:['sales','customer'],hidden_ties:['cfo'],
+  finance:{name:'当地数据分析师',role:'销售客户部下属',desc:'掌握成本、风险和真实的财务故事，能改变决策方向。隐形影响力强。',faction:'当地',score:13,status:0,x:340,y:300,ties:['sales','customer'],hidden_ties:['cfo'],
     hidden_goal:'确保财务安全，跟随强势方',
     prefs:{'制度':0.20,'政治':0.15,'对抗':-0.15,'叙事':-0.10}}
 };
@@ -1409,6 +1429,11 @@ const AVATARS={
   customer:'data:image/jpeg;base64,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',
   engineer:'data:image/jpeg;base64,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'
 };
+/* v26：每个人的正式汇报对象（组织结构本身也是杠杆） */
+const REPORTS_TO={ceo:null,pm:'ceo',cfo:'ceo',region:'pm',plant:'region',ops:'region',
+  hr:'ops',sales:'ops',engineer:'plant',union:'plant',gov:'engineer',customer:'sales',finance:'sales'};
+Object.keys(REPORTS_TO).forEach(id=>{ if(PEOPLE[id]) PEOPLE[id].reportsTo=REPORTS_TO[id]; });
+
 const GLYPHS=['◯','◔','◑','◕','●'];
 const STATUS_LABELS=['未动','意识觉醒','初步理解','主动参与','已转化'];
 const STATUS_CUTOFFS=[0,25,45,65,85];
@@ -1737,6 +1762,53 @@ const ACTIONS=[
     return r;
   }},
   {id:'incentive',label:'调整激励与奖惩',weeks:4,cooldown:6,need:0,type:'制度',reqCred:8,disrupt:3,desc:'通过制度激励能推动全体。这是后期的终极武器——当其他方法都失效时，制度改变能突破瓶颈。但代价是会大幅提升组织压力。',cooldownReason:'激励制度的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){ return affectAll(12,'激励与奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','制度'); }},
+  {id:'reorg',label:'调整汇报关系',weeks:3,cooldown:6,need:1,type:'制度',reqCred:6,disrupt:2,
+   desc:'把某个人的汇报线改到已经认同变革的上级名下。组织结构本身就是杠杆：换了汇报对象，信息流向、资源分配和压力传导都会跟着改道。',
+   cooldownReason:'动组织结构是大事，一年内反复调整会让人觉得你在乱折腾，反而摧毁可信度。',
+   run(ids){
+     const id=ids[0]; const p=state.people[id];
+     const oldBossId=p.reportsTo; const oldBoss=oldBossId?state.people[oldBossId]:null;
+     const cands=['region','ops','pm'].filter(x=>x!==id&&state.people[x]&&x!==oldBossId);
+     if(!cands.length){
+       return {story:`${p.name}已经直接挂在最合适的上级名下，没有更好的接法。`,
+         details:['这个人的汇报线已经是最优结构，再调一次只会制造噪音。']};
+     }
+     let best=cands[0];
+     cands.forEach(x=>{
+       const q=state.people[x], b=state.people[best];
+       if(q.status>b.status || (q.status===b.status && q.score>b.score)) best=x;
+     });
+     const q=state.people[best];
+     const bossLabel = best==='pm' ? '你（整合负责人）' : q.name;
+     // 断旧线、接新线
+     if(oldBoss) oldBoss.ties=(oldBoss.ties||[]).filter(t=>t!==id);
+     p.ties=(p.ties||[]).filter(t=>t!==oldBossId);
+     p.reportsTo=best;
+     if(!p.ties.includes(best)) p.ties.push(best);
+     if(!q.ties.includes(id)) q.ties.push(id);
+     let gain=3, note='';
+     if(q.status>=3){ gain=14; note='新上级自己已经走通了，信息通道和资源通道同时打通。'; }
+     else if(q.status>=2){ gain=8; note='新上级已经在往这个方向走，汇报线一改，少了一层中间阻力。'; }
+     else { state.credibility=Math.max(0,state.credibility-1); note='但新上级自己都还没转过弯，这次调整在别人眼里更像一次人事操作。'; }
+     state.pressure=Math.min(10,state.pressure+2);
+     const prevStatus=p.status, scoreBefore=p.score;
+     p.score=clamp(p.score+gain,0,100); updateStatus(p);
+     state.touchedThisTurn.add(id); state.touchedThisTurn.add(best);
+     try{
+       state.turnEvents.push({id, mode:'action', actionType:'制度', base:gain, pref:1, soft:1,
+         amount:Math.round(p.score-scoreBefore), from:Math.round(scoreBefore), to:Math.round(p.score),
+         prev:prevStatus, now:p.status, locked:false});
+     }catch(_){}
+     return {
+       story:`你把${p.name}的汇报线从${oldBoss?oldBoss.name:'原上级'}改到了${bossLabel}名下。`,
+       details:[
+         `🏛 汇报关系变更：${p.name} → 汇报给 ${bossLabel}（原：${oldBoss?oldBoss.name:'—'}）。`,
+         `📈 ${p.name} 说服度 +${Math.round(p.score-scoreBefore)}（现 ${Math.round(p.score)}）。${note}`,
+         `⚠️ 动组织结构的代价：激进压力 +2（现 ${state.pressure}），这类动作短期内不宜重复。`,
+         `💡 网络图上这条线已经改道——信息以后沿着新的汇报线流动。再推动${q.name}时，${p.name}受到的影响会更直接。`
+       ]
+     };
+   }},
   PRESSURE_RELIEF_ACTION];
 
 /* =========================================================
@@ -1764,6 +1836,7 @@ const ACTION_GROUPS = [
   
   { key:'spread',   label:'📣 推动扩散', ids:['interview','email','progress','training','pilot','success-story','recognize'] },
   { key:'pressure', label:'📐 制度压力', ids:['kpi','incentive'] },
+  { key:'structure',label:'🏛 结构杠杆', ids:['reorg'] },
   { key:'confront', label:'⚡ 对抗纠偏', ids:['confront'] },
   { key:'relief',   label:'🌿 缓解恢复', ids:['team-building'] }
 ];
@@ -1814,7 +1887,12 @@ function initState(){
     milestones:{},            // {round: ['首次转化',...]}
     touchedThisTurn:new Set(),// 本轮被触及的人物，用于跳过衰减
     _rebelTriggered:false,    // v17：本局组织反弹是否已触发
-    trend:{cred:[6],pressure:[0],converted:[0]}
+    trend:{cred:[6],pressure:[0],converted:[0]},
+    // v26：合作累积的信任 + 非正式关系 + 本回合逐人事件
+    trust:{},                 // {'a|b': 0-100}
+    informal:new Set(),       // 已经跨过阈值、变成非正式关系的对
+    newInformal:[],           // 本回合新建立的非正式关系
+    turnEvents:[]             // 本回合每个人的得分变化事件
   };
 }
 
@@ -1897,10 +1975,44 @@ function broadResistanceFactor(personId){
   return 1.00;
 }
 
+/* v26：一对人之间的信任与非正式关系
+   合作（同一回合里一起被推动）会让信任累积，过线后工作关系之外多一层私交 */
+const TRUST_INFORMAL = 40;
+function pairKey(a,b){ return [a,b].sort().join('|'); }
+function isInformalPair(a,b){ return !!(state.informal && state.informal.has(pairKey(a,b))); }
+function trustOf(a,b){ return (state.trust && state.trust[pairKey(a,b)]) || 0; }
+
+function updateTrust(){
+  if(!state.trust) state.trust={};
+  if(!state.informal) state.informal=new Set();
+  if(!state.newInformal) state.newInformal=[];
+  const touched=[...state.touchedThisTurn].filter(id=>id!=='pm'&&state.people[id]);
+  const direct=new Set(state.selectedTargets||[]);
+  for(let i=0;i<touched.length;i++){
+    for(let j=i+1;j<touched.length;j++){
+      const a=touched[i], b=touched[j];
+      const pa=state.people[a], pb=state.people[b];
+      const linked=(pa.ties||[]).includes(b)||(pb.ties||[]).includes(a);
+      if(!linked) continue;   // 只在既有的工作关系上累积信任
+      let step=4;
+      if(direct.has(a)&&direct.has(b)) step=18;        // 一起被卷进同一件事：合作最深
+      else if(direct.has(a)||direct.has(b)) step=10;   // 一方直接、一方被带动
+      const k=pairKey(a,b);
+      const v=clamp((state.trust[k]||0)+step,0,100);
+      state.trust[k]=v;
+      if(v>=TRUST_INFORMAL && !state.informal.has(k)){
+        state.informal.add(k);
+        state.newInformal.push({k,a,b,v});
+      }
+    }
+  }
+}
+
 function softeningBonus(targetId){
   if(!(state.softened[targetId]>0)) return 1.0;
-  // 扩散加成：若来源是桥梁节点，+60%，否则 +40%
+  // 扩散加成：私交最灵，其次桥梁节点，最后普通关系
   const origin = state.softenedOrigin[targetId];
+  if(origin && isInformalPair(origin,targetId)) return 1.85;
   if(origin && isBridge(origin)) return 1.60;
   return 1.40;
 }
@@ -1919,20 +2031,32 @@ function applyGain(personId, rawAmount, actionType, mode){
   // mode: 'direct' | 'broad' | 'spread'
   const p=state.people[personId];
   let amount = rawAmount;
+  const baseAmount = rawAmount;
   // 偏好
-  amount = amount * preferenceMultiplier(personId, actionType);
+  const prefMul = preferenceMultiplier(personId, actionType);
+  amount = amount * prefMul;
   // 广覆盖阻力
   if(mode==='broad') amount = amount * broadResistanceFactor(personId);
   // 扩散软化加成（对直接/扩散均生效）
-  if(mode!=='broad') amount = amount * softeningBonus(personId);
+  let softMul = 1;
+  if(mode!=='broad'){ softMul = softeningBonus(personId); amount = amount * softMul; }
   else if(state.softened[personId]>0) amount = amount * (1.0 + 0.15);  // 广覆盖也享受一点软化
   // 阈值锁（针对广覆盖）
   const viaDirectOrSpread = (mode==='direct' || mode==='spread');
-  amount = thresholdLock(personId, Math.round(amount), viaDirectOrSpread);
+  const preLock = Math.round(amount);
+  amount = thresholdLock(personId, preLock, viaDirectOrSpread);
   const prev = p.status;
+  const scoreBefore = p.score;
   p.score = clamp(p.score + amount, 0, 100);
   updateStatus(p);
   state.touchedThisTurn.add(personId);
+  // v26：把这一笔变化记下来，供结果页逐人展示
+  try{
+    state.turnEvents.push({id:personId, mode, actionType:actionType||'', base:baseAmount,
+      pref:prefMul, soft:softMul, amount:Math.round(p.score-scoreBefore),
+      from:Math.round(scoreBefore), to:Math.round(p.score),
+      prev, now:p.status, locked: Math.round(amount) < preLock});
+  }catch(_){}
   return { prev, now:p.status, amount, newlyConverted: prev<4 && p.status===4 };
 }
 
@@ -1976,7 +2100,13 @@ function decayUntouched(){
     // status=2 的人最多回落到 status=1 下界（25）
     if(prev>=3) newScore = Math.max(newScore, 60);
     else if(prev>=2) newScore = Math.max(newScore, 30);
+    const scoreBeforeDecay = p.score;
     p.score=clamp(newScore,0,100); updateStatus(p);
+    try{
+      state.turnEvents.push({id, mode:'decay', actionType:'', base:decay, pref:1, soft:1,
+        amount:Math.round(p.score-scoreBeforeDecay), from:Math.round(scoreBeforeDecay), to:Math.round(p.score),
+        prev, now:p.status, locked:false});
+    }catch(_){}
     if(prev!==p.status){
       state.lastDecayChanges = state.lastDecayChanges || [];
       state.lastDecayChanges.push(`${p.name}：${STATUS_LABELS[prev]} → ${STATUS_LABELS[p.status]}（自然衰减，未被本轮触及）`);
@@ -2044,6 +2174,17 @@ function handleConversions(newlyConverted, details, originActionType){
     if(softened.length){
       const strengthNote = isBridge(id) ? '（桥梁节点，+60% 软化）' : '（+40% 软化）';
       details.push(`${state.people[id].name}已转化${strengthNote}，向邻居 ${softened.map(s=>state.people[s].name).join('、')} 扩散影响（未来3回合内推动效果放大）。`);
+    }
+    // v26：非正式关系——私下的信任让说服成本更低
+    const partners = Object.keys(state.people).filter(x=>x!==id&&x!=='pm'&&state.people[x].status<3&&isInformalPair(id,x));
+    if(partners.length){
+      const hit=[];
+      partners.forEach(x=>{
+        const r2=applyGain(x,5,originActionType||'示范','spread');
+        if(r2.newlyConverted && !alreadySpread.has(x)) secondWave.push(x);
+        hit.push(state.people[x].name);
+      });
+      details.push(`🤝 ${state.people[id].name} 与 ${hit.join('、')} 之间已经形成非正式关系，私交把这次转变直接传了过去（各 +5）。`);
     }
   });
   // 二度：对在 newlyConverted 中且其邻居也刚被软化为新转化的，做 30% 二跳扩散
@@ -2320,6 +2461,24 @@ function renderDetail(id, boxId){
       🔒 隐藏目标与动作偏好：未知。请通过「私人访谈」解锁。
     </div>`;
   }
+  // v26：合作信任进度（没到 40 的先显示进度条数值）
+  const trustPartners=Object.keys(state.people)
+    .filter(x=>x!==id && trustOf(id,x)>0 && !isInformalPair(id,x))
+    .map(x=>({name:state.people[x].name, v:trustOf(id,x)}))
+    .sort((a,b)=>b.v-a.v);
+  const trustLine = trustPartners.length
+    ? `• 合作信任：${trustPartners.map(o=>o.name+' '+o.v+'/40').join('、')}<br/>`
+    : '';
+  // v26：合作累积出来的非正式关系
+  const informalPartners=Object.keys(state.people)
+    .filter(x=>x!==id && isInformalPair(id,x))
+    .map(x=>({name:state.people[x].name, v:trustOf(id,x)}))
+    .sort((a,b)=>b.v-a.v);
+  const informalSection = informalPartners.length ? `<div class="small" style="margin-top:10px;padding:8px;background:rgba(224,160,58,.1);border-radius:8px;border-left:3px solid #e0a03a">
+      <strong style="color:#e0a03a">🤝 非正式关系（合作建立）：</strong>
+      ${informalPartners.map(o=>`${o.name}（信任 ${o.v}）`).join('、')}
+      <div style="margin-top:4px;color:var(--muted)">他们互相说服时扩散加成 ×1.85，比普通关系更灵。</div>
+    </div>` : '';
   const factionColor = p.faction==='总部'?'#0d8b96':p.faction==='当地'?'#2d8659':p.faction==='外部'?'#d97706':'#666';
   const factionBg = p.faction==='总部'?'rgba(13,139,150,.1)':p.faction==='当地'?'rgba(45,134,89,.1)':p.faction==='外部'?'rgba(217,119,6,.1)':'#f5f5f5';
   const stubbornChars = ['union', 'ops', 'engineer'];
@@ -2347,9 +2506,12 @@ function renderDetail(id, boxId){
   <div class="small" style="margin-top:10px;padding:10px;background:rgba(255,255,255,.04);border-radius:6px;border-left:3px solid ${factionColor};border:1px solid rgba(255,255,255,.08);border-left:3px solid ${factionColor}">
     <strong style="color:${factionColor}">📊 关键信息</strong><br/>
     • 当前分数：${p.score}<br/>
+    • 汇报对象：${p.reportsTo&&state.people[p.reportsTo]?state.people[p.reportsTo].name:'—'}<br/>
     • 紧密关系：${p.ties.map(t=>state.people[t]?.name).filter(Boolean).join('、') || '—'}<br/>
+    ${trustLine}
     ${p.hidden_goal && !state.revealed[id]?`• 隐藏目标：<em style="color:var(--muted)">[未解锁]</em>`:p.hidden_goal && state.revealed[id]?`• 隐藏目标：${p.hidden_goal}`:''}
   </div>
+  ${informalSection}
   ${hiddenTiesSection}
   ${hiddenSection}
   ${softenInfo}`;
@@ -2391,7 +2553,7 @@ function drawNetwork(svgId){
       line.setAttribute('x2',q.x);
       line.setAttribute('y2',q.y);
       line.setAttribute('data-edge',key);
-      line.setAttribute('class','edge'+(hot?' hot':'')+(spread?' spread':''));
+      line.setAttribute('class','edge'+(hot?' hot':'')+(spread?' spread':'')+(isInformalPair(id,t)?' informal':''));
       g.appendChild(line);
     });
     // 绘制隐藏连接（只有访谈后才显示）
@@ -2410,7 +2572,7 @@ function drawNetwork(svgId){
         line.setAttribute('x2',q.x);
         line.setAttribute('y2',q.y);
         line.setAttribute('data-edge',key);
-        line.setAttribute('class','edge hidden-edge'+(hot?' hot':'')+(spread?' spread':''));
+        line.setAttribute('class','edge hidden-edge'+(hot?' hot':'')+(spread?' spread':'')+(isInformalPair(id,t)?' informal':''));
         line.setAttribute('stroke-dasharray','5,5');
         line.setAttribute('opacity','0.5');
         g.appendChild(line);
@@ -2661,6 +2823,7 @@ function renderLegend(){
     </div>
   `).join('') + `
     <div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="var(--success)" stroke-width="2.4" stroke-dasharray="4 3"/></svg><span>已转化者向邻居扩散</span></div>
+    <div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#e0a03a" stroke-width="2.2" stroke-dasharray="2 4"/></svg><span>非正式关系（合作中建立）</span></div>
     <div class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(61,138,58,.4)"></span>扩散影响圈（本轮推动效果放大）</div>
   `;
 }
@@ -2988,6 +3151,7 @@ function actionGroupPieSvg(){
     info:     '#3b7dd8',
     spread:   '#4ade80',
     pressure: '#e6a84b',
+    structure:'#7b4fd4',
     confront: '#e85454'
   };
   const cx=80, cy=80, r=64;
@@ -3175,7 +3339,46 @@ function showModal(){
     body.appendChild(se);
   }
 
-  x.details.forEach(t=>{ const d=document.createElement('div'); d.className='log-item'; d.innerHTML=`<div class="small muted">${t}</div>`; body.appendChild(d); });
+  // v26：逐人影响表——这一步到底动了谁、动了多少、为什么
+  if(x.people && x.people.length){
+    const box=document.createElement('div'); box.className='log-item';
+    const glyph=i=>`<span style="color:var(--s${i});font-weight:700">${GLYPHS[i]}</span>`;
+    const active=x.people.filter(r=>!r.onlyDecay);
+    const decayed=x.people.filter(r=>r.onlyDecay);
+    const rows=active.map(r=>{
+      const cls = r.delta>0?'up':(r.delta<0?'down':'flat');
+      const sign = r.delta>0?'+':'';
+      const statusCell = (r.from===r.to)
+        ? `${glyph(r.to)} ${STATUS_LABELS[r.to]}`
+        : `${glyph(r.from)} ${STATUS_LABELS[r.from]} → ${glyph(r.to)} <b>${STATUS_LABELS[r.to]}</b>`;
+      return `<tr>
+        <td>${r.name}</td>
+        <td>${statusCell}</td>
+        <td>${r.scoreFrom} → ${r.scoreTo}</td>
+        <td class="${cls}">${sign}${r.delta}</td>
+        <td class="why">${r.reasons.join(' · ')}</td>
+      </tr>`;
+    }).join('');
+    box.innerHTML='<strong>👤 这一步动了谁</strong>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，每跨过 25 / 45 / 65 / 85 就升一档。</div>'+
+      '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
+      (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
+      (decayed.length?('<div class="small muted" style="margin-top:8px">另有 '+decayed.length+' 人本轮没被触及，自然衰减 '+
+        decayed[0].delta+'：'+decayed.map(r=>r.name).join('、')+'。</div>'):'');
+    body.appendChild(box);
+  }
+
+  // v26：本轮新建立的非正式关系
+  if(x.relations && x.relations.length){
+    const box=document.createElement('div'); box.className='log-item';
+    box.innerHTML='<strong>🤝 新建立的非正式关系</strong>'+
+      '<div class="small muted" style="margin-top:6px">这些人一起被卷进了同一件事，信任累积过了线——工作关系之外多了一层私交。之后他们互相说服会更容易，扩散加成从 ×1.4 提到 ×1.85。</div>'+
+      '<ul class="rel-list">'+x.relations.map(o=>`<li>${state.people[o.a].name} ↔ ${state.people[o.b].name}（信任 ${o.v}）</li>`).join('')+'</ul>';
+    body.appendChild(box);
+  }
+
+  // v26：逐人增益那一句已经进了上面的表，这里不再重复
+  x.details.filter(t=>!/获得直接推动/.test(t)).forEach(t=>{ const d=document.createElement('div'); d.className='log-item'; d.innerHTML=`<div class="small muted">${t}</div>`; body.appendChild(d); });
 
   const nextBtn = el('nextRoundBtn');
   const normalActions = el('modalActions');
@@ -3273,6 +3476,42 @@ function toggleTarget(id){
   render();
 }
 
+/* v26：把本回合每个人的得分/状态变化整理成表格数据 */
+function buildPeopleImpact(before, after){
+  const rows=[];
+  Object.keys(after.people).forEach(id=>{
+    if(id==='pm') return;
+    const b=before.people[id], a=after.people[id];
+    if(!b||!a) return;
+    const dScore=Math.round(a.score-b.score);
+    if(dScore===0 && b.status===a.status) return;
+    const evs=(state.turnEvents||[]).filter(e=>e.id===id);
+    const modes={};
+    evs.forEach(e=>{ modes[e.mode]=(modes[e.mode]||0)+1; });
+    const reasons=[];
+    if(modes.direct) reasons.push('直接推动');
+    if(modes.spread) reasons.push('网络扩散');
+    if(modes.broad) reasons.push('广覆盖');
+    if(modes.action) reasons.push('动作直接作用');
+    if(modes.decay) reasons.push('自然衰减');
+    if(!reasons.length) reasons.push('动作直接作用');
+    const prefEv=evs.find(e=>e.pref && Math.abs(e.pref-1)>0.01);
+    if(prefEv) reasons.push((prefEv.pref>1?'正中偏好':'逆其偏好')+'×'+prefEv.pref.toFixed(2));
+    const softEv=evs.find(e=>e.soft && e.soft>1.01);
+    if(softEv) reasons.push('扩散加成×'+softEv.soft.toFixed(2));
+    if(evs.some(e=>e.locked)) reasons.push('阈值锁（广覆盖打不穿最后一跳）');
+    const onlyDecay = evs.length>0 && evs.every(e=>e.mode==='decay');
+    rows.push({id, name:state.people[id].name, from:b.status, to:a.status,
+      scoreFrom:Math.round(b.score), scoreTo:Math.round(a.score), delta:dScore, reasons, onlyDecay});
+  });
+  // 被动作影响到的人排前面，纯自然衰减的沉到最后
+  rows.sort((x,y)=>{
+    if(x.onlyDecay!==y.onlyDecay) return x.onlyDecay?1:-1;
+    return Math.abs(y.delta)-Math.abs(x.delta);
+  });
+  return rows;
+}
+
 function snapshotPeople(){
   const m={};
   Object.entries(state.people).forEach(([id,p])=>{ m[id]={status:p.status,score:p.score}; });
@@ -3321,6 +3560,7 @@ function runTurn(){
   // v17.7：累计动作使用次数 + 记录上一轮动作
   state.actionUseCount[a.id] = (state.actionUseCount[a.id]||0) + 1;
   state.touchedThisTurn = new Set(); state.lastDecayChanges = [];
+  state.turnEvents = []; state.newInformal = [];
   // 被选中的目标视为触及，广覆盖则所有人
   if(a.need===0) { Object.keys(state.people).forEach(id=>state.touchedThisTurn.add(id)); }
   else { state.selectedTargets.forEach(id=>state.touchedThisTurn.add(id)); }
@@ -3351,7 +3591,7 @@ function runTurn(){
       { kind:'neg', text:`消耗 ${a.weeks} 资源（无效果），剩余 ${state.resources} / ${TOTAL_RESOURCES}` },
       { kind:'neutral', text:`冷却 ${a.cooldown} 回合` }
     ];
-    state.lastImpact = { story: impact.story, details: impact.details||[], sideEffects, actionLabel: a.label };
+    state.lastImpact = { story: impact.story, details: impact.details||[], sideEffects, actionLabel: a.label, people: [], relations: [] };
     // 检查结局
     if(checkEnding()){ renderEndingScreen(); showScreen('ending'); render(); return; }
     // 显示反馈弹窗
@@ -3445,7 +3685,13 @@ function runTurn(){
   sideEffects.push({ kind:'neutral', text:`消耗 ${a.weeks} 资源，剩余 ${state.resources} / ${TOTAL_RESOURCES} 资源` });
   sideEffects.push({ kind:'neutral', text:`本动作覆盖 ${touched} 人，冷却 ${a.cooldown} 回合` });
 
-  state.lastImpact = { story: impact.story, details: [...impact.details, ...consequences], sideEffects, actionLabel: a.label };
+  // v26：把合作累积成信任，再结算本回合逐人影响
+  updateTrust();
+  const peopleImpact = buildPeopleImpact(before, after);
+  const newRelations = (state.newInformal||[]).slice();
+
+  state.lastImpact = { story: impact.story, details: [...impact.details, ...consequences], sideEffects,
+    actionLabel: a.label, people: peopleImpact, relations: newRelations };
 
   // 重置预判输入
   if(el('predictInput')) el('predictInput').value='';
