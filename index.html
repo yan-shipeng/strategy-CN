@@ -523,6 +523,9 @@
     /* 人物列表：单列，名字不再被截断 */
     #screen-network .people-quicklist{grid-template-columns:1fr;gap:6px}
     #screen-network .people-quicklist .qp-item{padding:11px 12px;font-size:13.5px}
+    /* 排行榜表格：六列挤在一屏里，表头不折行 */
+    #endingBody table{font-size:12px}
+    #endingBody table th,#endingBody table td{padding:5px 4px!important;white-space:nowrap}
   }
 
   </style>
@@ -4224,11 +4227,24 @@ document.addEventListener('keydown',(e)=>{
   render();
   closeModal();
 
-  /* ===== 排行榜：本机记录 + 成绩码互通（无后端） ===== */
+  /* =========================================================
+     在线排行榜（全班共享）
+     存储：kvdb.io 免注册 KV，一人一条 key，天然无写冲突
+     读：GET  /<bucket>/?format=json&values=1  一次拿回全班
+     写：PUT  /<bucket>/<key>                  只写自己那条
+     兜底：本机也存一份，云端读不到时用本机榜，提交者自己先 merge
+     ========================================================= */
   (function initLeaderboard(){
-    const KEY='ci_leaderboard_v1';
-    const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return []}};
-    const write=a=>{try{localStorage.setItem(KEY,JSON.stringify(a.slice(0,300)))}catch(e){}};
+    const BASE='https://kvdb.io';
+    const BUCKET='64EQyEqxpaujcVcSR8LFHN';
+    const PREFIX='ci_s_';
+    const LOCAL='ci_leaderboard_v1';
+    const DEVICE='ci_device_v1';
+    const TIMEOUT=8000;
+
+    const S={list:[],status:'idle',err:'',writeErr:'',mine:null,timer:null};
+
+    const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const passed=x=>x.r>=50;
     const rankSort=a=>a.slice().sort((x,y)=>{
       const px=passed(x)?1:0, py=passed(y)?1:0;
@@ -4236,25 +4252,154 @@ document.addEventListener('keydown',(e)=>{
       if(px) return (y.l-x.l)||(y.r-x.r)||(x.d-y.d);
       return (y.r-x.r)||(y.l-x.l)||(x.d-y.d);
     });
-    const enc=x=>{try{return btoa(unescape(encodeURIComponent([x.n,x.r,x.c,x.l,x.d].join('|')))).replace(/=+$/,'')}catch(e){return ''}};
-    const dec=s=>{try{const p=decodeURIComponent(escape(atob(s.trim()))).split('|');if(p.length<5)return null;const r={n:p[0],r:+p[1],c:+p[2],l:+p[3],d:+p[4],t:0};return isNaN(r.r)?null:r}catch(e){return null}};
-    const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    // 同一个人再次提交时，只保留更好的那次
+    const better=(x,old)=> passed(x)!==passed(old) ? passed(x) : (passed(x) ? x.l>old.l : x.r>old.r);
+
+    function deviceId(){
+      let d=null;
+      try{ d=localStorage.getItem(DEVICE); }catch(e){}
+      if(!d){
+        d='d'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+        try{ localStorage.setItem(DEVICE,d); }catch(e){}
+      }
+      return d;
+    }
+    // 身份 = 设备 + 显示名：换名字算新的一行，同名重玩覆盖自己那条
+    const keyOf=n=>PREFIX+deviceId()+'_'+n;
+
+    // 旧版本（本机榜 / 成绩码）的记录没有 k 字段，直接丢掉，避免和新榜重复
+    function localRead(){
+      try{
+        const a=JSON.parse(localStorage.getItem(LOCAL)||'[]');
+        if(!Array.isArray(a)) return [];
+        return a.filter(x=>x&&typeof x.k==='string'&&x.k.indexOf(PREFIX)===0);
+      }catch(e){ return []; }
+    }
+    function localWrite(a){ try{ localStorage.setItem(LOCAL,JSON.stringify(a.slice(-200))); }catch(e){} }
+    function localPut(rec){
+      const a=localRead();
+      const i=a.findIndex(x=>x.k===rec.k);
+      if(i<0) a.push(rec); else if(better(rec,a[i])) a[i]=rec;
+      localWrite(a);
+    }
+
+    function fetchT(url,opt){
+      const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+      const timer=ctl?setTimeout(()=>{try{ctl.abort()}catch(e){}},TIMEOUT):null;
+      const o=Object.assign({},opt||{});
+      if(ctl) o.signal=ctl.signal;
+      const p=fetch(url,o);
+      const done=()=>{ if(timer) clearTimeout(timer); };
+      p.then(done,done);
+      return p;
+    }
+
+    function parseList(raw){
+      const out=[];
+      if(!Array.isArray(raw)) return out;
+      raw.forEach(row=>{
+        if(!Array.isArray(row)||row.length<2) return;
+        let v; try{ v=JSON.parse(row[1]); }catch(e){ return; }
+        if(!v||typeof v!=='object') return;
+        const n=String(v.n||'').trim().slice(0,12);
+        const r=Math.round(+v.r), c=Math.round(+v.c), l=Math.round(+v.l), d=Math.round(+v.d);
+        if(!n) return;
+        if(!isFinite(r)||r<0||r>100) return;
+        if(!isFinite(l)||l<0||l>60) return;
+        if(!isFinite(c)||c<0||c>10) return;
+        if(!isFinite(d)||d<1||d>60) return;
+        out.push({k:row[0],n:n,r:r,c:c,l:l,d:d,t:+v.t||0});
+      });
+      return out;
+    }
 
     function current(){
-      return {n:(state.learnerName||'匿名').slice(0,12), r:Math.round(convertedRate()),
-              c:state.credibility, l:state.resources, d:Math.max(1,state.round-1), t:Date.now()};
+      return {k:keyOf((state.learnerName||'匿名').slice(0,12)),
+              n:(state.learnerName||'匿名').slice(0,12),
+              r:Math.round(convertedRate()), c:state.credibility,
+              l:state.resources, d:Math.max(1,state.round-1), t:Date.now()};
     }
-    function saveOnce(){
-      if(state._lbSaved) return;
+
+    function refresh(){
+      S.status='loading'; paint();
+      return fetchT(BASE+'/'+BUCKET+'/?format=json&values=1',{cache:'no-store'})
+        .then(res=>{
+          if(!res.ok) throw new Error('HTTP '+res.status);
+          return res.json();
+        })
+        .then(raw=>{
+          let list=parseList(raw);
+          // 云端读有 3~6 秒缓存：本机有、云端还没回来的，先补上
+          localRead().forEach(x=>{ if(!list.some(y=>y.k===x.k)) list.push(x); });
+          S.list=rankSort(list); S.status='ok'; S.err='';
+        })
+        .catch(e=>{
+          S.status='fail';
+          S.err=(e&&e.name==='AbortError')?'超时':String(e&&e.message||e);
+          S.list=rankSort(localRead());
+        })
+        .then(()=>{ paint(); });
+    }
+
+    function put(rec){
+      S.writeErr='';
+      const body=JSON.stringify({n:rec.n,r:rec.r,c:rec.c,l:rec.l,d:rec.d,t:Date.now()});
+      return fetchT(BASE+'/'+BUCKET+'/'+encodeURIComponent(rec.k),{
+        method:'PUT', headers:{'Content-Type':'text/plain'}, body:body, cache:'no-store'
+      }).then(res=>{
+        if(res.ok) return true;
+        return res.text().catch(()=>'').then(t=>{
+          if(res.status===403) throw new Error(/not verified/i.test(t)?'榜单服务未激活':'写入被拒绝');
+          throw new Error('HTTP '+res.status);
+        });
+      });
+    }
+
+    function submit(){
+      if(state._lbSaved) return Promise.resolve();
       state._lbSaved=true;
-      const rec=current(); const a=read(); a.push(rec); write(a); state._lbMine=rec;
+      const rec=current();
+      S.mine=rec; S.writeErr='';
+      localPut(rec);
+      // 先读自己那条，只有更好才覆盖（避免重玩低分把高分刷掉）
+      const shouldWrite=fetchT(BASE+'/'+BUCKET+'/'+encodeURIComponent(rec.k),{cache:'no-store'})
+        .then(res=>{
+          if(!res.ok) return true;
+          return res.text().then(txt=>{
+            let old=null; try{ old=JSON.parse(txt||'null'); }catch(e){}
+            if(old&&old.n===rec.n){
+              const o={n:old.n,r:+old.r||0,c:+old.c||0,l:+old.l||0,d:+old.d||0};
+              return better(rec,o);
+            }
+            return true;
+          });
+        })
+        .catch(()=>true);
+      return shouldWrite
+        .then(go=> go ? put(rec) : true)
+        .then(()=>{})
+        .catch(e=>{ S.writeErr=String(e&&e.message||e); })
+        .then(()=>refresh());
     }
-    function table(a,mine){
-      const rows=a.map((x,i)=>{
-        const me = mine && x.t===mine.t && x.n===mine.n;
-        return '<tr style="'+(me?'background:rgba(90,184,74,.12);font-weight:700':'')+'">'+
+
+    function statusLine(){
+      const dot=(c)=>'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c+';margin-right:5px;vertical-align:middle"></span>';
+      let s;
+      if(S.status==='ok') s=dot('#5ab84a')+'在线榜单 · 全班 '+S.list.length+' 条记录';
+      else if(S.status==='loading') s=dot('#e0c03a')+'正在同步…';
+      else if(S.status==='fail') s=dot('#e05068')+'云端暂时连不上（'+esc(S.err||'网络')+'）· 先显示本机记录';
+      else s=dot('#5a8090')+'未同步';
+      if(S.writeErr) s+='<div style="margin-top:4px;color:#e05068">⚠ 你的成绩没能写进云端（'+esc(S.writeErr)+'），榜单上暂时只有本机记录</div>';
+      return s;
+    }
+
+    function table(){
+      const all=S.list, mine=S.mine;
+      const rows=all.slice(0,20).map((x,i)=>{
+        const me = mine && x.k===mine.k;
+        return '<tr style="'+(me?'background:rgba(90,184,74,.14);font-weight:700':'')+'">'+
           '<td style="padding:6px 8px">'+(i+1)+'</td>'+
-          '<td style="padding:6px 8px">'+esc(x.n)+'</td>'+
+          '<td style="padding:6px 8px">'+esc(x.n)+(me?' <span style="color:#5ab84a;font-size:11px">你</span>':'')+'</td>'+
           '<td style="padding:6px 8px">'+x.r+'%</td>'+
           '<td style="padding:6px 8px">'+x.l+'</td>'+
           '<td style="padding:6px 8px">'+x.c+'</td>'+
@@ -4265,61 +4410,74 @@ document.addEventListener('keydown',(e)=>{
         '<th style="text-align:left;padding:6px 8px">名次</th><th style="text-align:left;padding:6px 8px">姓名</th>'+
         '<th style="text-align:left;padding:6px 8px">转化率</th><th style="text-align:left;padding:6px 8px">剩余资源</th>'+
         '<th style="text-align:left;padding:6px 8px">可信度</th><th style="text-align:left;padding:6px 8px">回合</th></tr></thead>'+
-        '<tbody>'+(rows||'<tr><td colspan="6" style="padding:10px;color:var(--muted)">还没有记录</td></tr>')+'</tbody></table>';
+        '<tbody>'+(rows||'<tr><td colspan="6" style="padding:10px;color:var(--muted)">还没有人提交</td></tr>')+'</tbody></table>';
     }
-    function panel(){
-      const all=rankSort(read());
-      const mine=state._lbMine;
-      const myRank=mine? all.findIndex(x=>x.t===mine.t&&x.n===mine.n)+1 : 0;
-      const d=document.createElement('div'); d.className='log-item';
-      d.innerHTML='<strong>🏆 排行榜</strong>'+
-        '<div class="small" style="margin-top:6px;color:var(--muted)">先看是否达标（≥50%）：达标的按剩余资源排名，未达标的按转化率排。'+
-        (myRank?('　你的名次：第 <b>'+myRank+'</b> / '+all.length+' 名'):'')+'</div>'+
-        table(all.slice(0,10),mine)+
-        '<div style="margin-top:12px;padding:10px;border:1px dashed var(--border);border-radius:8px">'+
-          '<div class="small" style="margin-bottom:6px"><b>你的成绩码</b>　发给老师汇总，或粘到同学的页面上</div>'+
-          '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-            '<input id="lbCode" readonly value="'+(mine?enc(mine):'')+'" style="flex:1;min-width:220px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:12px">'+
-            '<button class="btn" id="lbCopy" style="padding:6px 12px;font-size:13px">复制</button>'+
-          '</div>'+
-          '<div class="small" style="margin:10px 0 6px"><b>汇总同学成绩</b>　把大家发来的成绩码粘进来，换行或逗号隔开</div>'+
-          '<textarea id="lbPaste" rows="3" placeholder="粘到这里，一行一个" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:12px;font-family:inherit"></textarea>'+
-          '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'+
-            '<button class="btn btn-primary" id="lbMerge" style="padding:6px 14px;font-size:13px">合并进排行榜</button>'+
-            '<button class="btn" id="lbClear" style="padding:6px 12px;font-size:13px">清空本机记录</button>'+
-          '</div>'+
-        '</div>';
-      return d;
+
+    let box=null;
+    function panelHTML(){
+      const all=S.list, mine=S.mine;
+      const myIdx = mine ? all.findIndex(x=>x.k===mine.k) : -1;
+      return '<strong>🏆 全班排行榜</strong>'+
+        '<div class="small" style="margin-top:6px;color:var(--muted)">'+statusLine()+
+          '　先看是否达标（≥50%）：达标的按剩余资源排名，未达标的按转化率排。'+
+          (myIdx>=0?('　你的名次：第 <b>'+(myIdx+1)+'</b> / '+all.length+' 名'):'')+'</div>'+
+        table()+
+        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
+          '<button class="btn" id="lbRefresh" style="padding:7px 14px;font-size:13px">↻ 刷新榜单</button>'+
+          '<button class="btn" id="lbShare" style="padding:7px 14px;font-size:13px">复制分享链接</button>'+
+        '</div>'+
+        '<div class="small" style="margin-top:8px;color:var(--muted)">榜单存在云端，换手机、换浏览器看到的是同一份；同一个人重玩只保留更好的成绩。</div>';
     }
-    function attach(d){
+
+    function paint(){
+      if(!box || !box.isConnected) return;
+      box.innerHTML=panelHTML();
+      bind();
+    }
+
+    function bind(){
+      const r=el('lbRefresh');
+      if(r) r.onclick=function(){ r.textContent='同步中…'; refresh().then(()=>{ const b=el('lbRefresh'); if(b) b.textContent='↻ 刷新榜单'; }); };
+      const s=el('lbShare');
+      if(s) s.onclick=function(){
+        const url=location.origin+location.pathname;
+        if(navigator.clipboard&&navigator.clipboard.writeText){
+          navigator.clipboard.writeText(url).then(()=>{s.textContent='已复制'},()=>{s.textContent='请手动复制'});
+        } else s.textContent='请手动复制';
+      };
+    }
+
+    function attach(){
       const body=el('endingBody'); if(!body) return;
+      box=document.createElement('div'); box.className='log-item';
+      box.innerHTML=panelHTML();
       const wrap=body.firstElementChild;
-      if(wrap && wrap.children.length>1) wrap.insertBefore(d, wrap.children[1]);
-      else if(wrap) wrap.appendChild(d);
-      else body.appendChild(d);
-      const copy=el('lbCopy');
-      if(copy) copy.onclick=function(){
-        const v=(el('lbCode')||{}).value||'';
-        if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(v).then(function(){copy.textContent='已复制'},function(){copy.textContent='请手动复制'});}
-        else{copy.textContent='请手动复制';}
-      };
-      const merge=el('lbMerge');
-      if(merge) merge.onclick=function(){
-        const raw=(el('lbPaste').value||'').split(/[\s,，]+/).filter(Boolean);
-        const a=read(); let added=0;
-        raw.forEach(function(s){const r=dec(s); if(r&&!a.some(function(x){return x.n===r.n&&x.r===r.r&&x.l===r.l;})){a.push(r);added++;}});
-        write(a); merge.textContent=added?('已合并 '+added+' 条'):'没有新记录';
-        renderEndingScreen();
-      };
-      const clr=el('lbClear');
-      if(clr) clr.onclick=function(){
-        if(confirm('清空本机所有成绩记录？')){write([]); state._lbSaved=false; state._lbMine=null; renderEndingScreen();}
-      };
+      if(wrap && wrap.children.length>1) wrap.insertBefore(box, wrap.children[1]);
+      else if(wrap) wrap.appendChild(box);
+      else body.appendChild(box);
+      bind();
     }
+
+    function stopAuto(){ if(S.timer){ clearInterval(S.timer); S.timer=null; } }
+    function startAuto(){
+      stopAuto();
+      let n=0;
+      S.timer=setInterval(()=>{
+        if(state.currentScreen!=='ending' || n++>8){ stopAuto(); return; }
+        if(S.status==='loading') return;
+        refresh();
+      },15000);
+    }
+
     const orig=renderEndingScreen;
     renderEndingScreen=function(){
       orig.apply(this,arguments);
-      try{ if(state.ended){ saveOnce(); attach(panel()); } }catch(e){ console.warn('leaderboard',e); }
+      if(!state.ended) return;
+      try{
+        attach();
+        if(!state._lbSaved) submit(); else refresh();
+        startAuto();
+      }catch(e){ console.warn('leaderboard',e); }
     };
   })();
 
