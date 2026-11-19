@@ -607,7 +607,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v20</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v31</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1040,7 +1040,7 @@
           </div>
           <ul class="intro-warn-list">
             <li><span class="wi">⚠️</span><div><strong>别只靠一种动作</strong>单一策略会遇到瓶颈，需要组合使用。</div></li>
-            <li><span class="wi">⚠️</span><div><strong>阻力角色需要更多资源</strong>工会主席、运营主管、生产工程师的转化阈值更高。</div></li>
+            <li><span class="wi">⚠️</span><div><strong>有些人的门槛比看上去高</strong>——他们的顾虑不会写在脸上。想少走弯路，先花一周做「私人约谈」。</div></li>
           </ul>
         </div>
 
@@ -1462,43 +1462,43 @@ const safeStorage = (function(){
 /* 动作类型枚举，用于偏好矩阵键名 */
 // 类型：示范/政治/对话/沟通/赋能/验证/叙事/压力/对抗/制度
 const PEOPLE={
-  ceo:{name:'总部CEO',role:'总部最高决策者',desc:'能提供公开背书，但非常看重速度与结果。',faction:'总部',score:18,status:0,x:40,y:30,ties:['pm','cfo'],hidden_ties:[],
+  ceo:{name:'总部CEO',role:'总部最高决策者',desc:'总部最高决策者，能提供公开背书，也决定这个项目的预算与时间表。',faction:'总部',score:18,status:0,x:40,y:30,ties:['pm','cfo'],hidden_ties:[],
     hidden_goal:'快速实现ROI，维持股价，避免重大失误',
     prefs:{'验证':0.25,'政治':0.20,'对话':-0.15,'叙事':-0.05}},
   pm:{name:'你',role:'海外整合负责人',desc:'跨总部与当地组织协调推进，是整个变革的发起者。',score:100,status:4,x:140,y:75,ties:['ceo','region'],hidden_ties:[],
     hidden_goal:'在总部要求与当地合法性之间找到平衡',
     prefs:{}},
-  cfo:{name:'总部CFO',role:'总部资源把关人',desc:'关心预算、KPI和整合效率。私下与当地有非正式的财务摸底渠道。',faction:'总部',score:12,status:0,x:40,y:120,ties:['ceo'],hidden_ties:['region'],
+  cfo:{name:'总部CFO',role:'总部资源把关人',desc:'总部资源把关人，掌管预算与财务口径。',faction:'总部',score:12,status:0,x:40,y:120,ties:['ceo'],hidden_ties:['region'],
     hidden_goal:'控制成本，确保财务指标达成',
     prefs:{'制度':0.25,'验证':0.15,'叙事':-0.20,'对话':-0.10}},
-  region:{name:'当地区域总经理',role:'区域桥梁人物',desc:'连接总部与当地组织，直接管辖厂长和运营主管，平衡利益冲突。',faction:'当地',score:16,status:0,x:240,y:30,ties:['pm','plant','ops'],hidden_ties:[],
+  region:{name:'当地区域总经理',role:'区域桥梁人物',desc:'连接总部与当地组织，直接管辖厂长和运营主管。',faction:'当地',score:16,status:0,x:240,y:30,ties:['pm','plant','ops'],hidden_ties:[],
     hidden_goal:'维持当地团队稳定，保护既得利益',
     prefs:{'对话':0.25,'赋能':0.15,'对抗':-0.25,'压力':-0.15}},
-  plant:{name:'当地厂长',role:'生产运营部主管',desc:'握有现场执行节奏和工人信任，是落地成败的关键。',faction:'当地',score:10,status:0,x:140,y:165,ties:['region','engineer','union'],hidden_ties:[],
+  plant:{name:'当地厂长',role:'生产运营部主管',desc:'生产运营部主管，管现场排产与执行节奏。',faction:'当地',score:10,status:0,x:140,y:165,ties:['region','engineer','union'],hidden_ties:[],
     hidden_goal:'保护现场工艺和工人信任，避免生产中断',
     prefs:{'赋能':0.25,'验证':0.20,'压力':-0.20,'制度':-0.10}},
-  hr:{name:'当地HR总监',role:'人力行政部主管',desc:'管理人才、流程和组织稳定性。向运营主管汇报。',faction:'当地',score:14,status:0,x:340,y:120,ties:['ops'],hidden_ties:['engineer','union'],
+  hr:{name:'当地HR总监',role:'人力行政部主管',desc:'人力行政部主管，管人才与流程，向运营主管汇报。',faction:'当地',score:14,status:0,x:340,y:120,ties:['ops'],hidden_ties:['engineer','union'],
     hidden_goal:'防止关键人才流失，维持组织稳定',
     prefs:{'对话':0.20,'赋能':0.20,'叙事':0.15,'对抗':-0.25}},
-  sales:{name:'当地销售主管',role:'销售客户部主管',desc:'掌握客户关系和市场前线信息，是客户压力的第一接收者。向运营主管汇报。',faction:'当地',score:11,status:0,x:240,y:210,ties:['ops','customer'],hidden_ties:[],
+  sales:{name:'当地销售主管',role:'销售客户部主管',desc:'销售客户部主管，管客户关系，向运营主管汇报。',faction:'当地',score:11,status:0,x:240,y:210,ties:['ops','customer'],hidden_ties:[],
     hidden_goal:'维持客户关系，保护销售团队独立性',
     prefs:{'叙事':0.20,'对话':0.15,'压力':-0.20,'制度':-0.15}},
-  ops:{name:'当地运营主管',role:'运营管理部主管',desc:'直接向区域总经理汇报，统筹销售与HR，流程优化者，担心新制度拖慢效率。',faction:'当地',score:8,status:0,x:240,y:120,ties:['region','hr','sales'],hidden_ties:[],
+  ops:{name:'当地运营主管',role:'运营管理部主管',desc:'运营管理部主管，直接向区域总经理汇报，统筹销售与HR。',faction:'当地',score:8,status:0,x:240,y:120,ties:['region','hr','sales'],hidden_ties:[],
     hidden_goal:'保护现有流程权力，维持运营自主权',
     prefs:{'验证':0.25,'赋能':0.15,'制度':-0.15,'叙事':-0.10}},
-  engineer:{name:'当地生产工程师',role:'生产运营部下属',desc:'掌握生产工艺秘密，工人听他的话胜过听厂长的。隐形权力大于名义权力。',faction:'当地',score:6,status:0,x:140,y:255,ties:['plant','union'],hidden_ties:[],
+  engineer:{name:'当地生产工程师',role:'生产运营部下属',desc:'生产运营部下属，负责生产工艺与现场技术。',faction:'当地',score:6,status:0,x:140,y:255,ties:['plant','union'],hidden_ties:[],
     hidden_goal:'保护自己的权力和职位，维持老团队利益',
     prefs:{'对抗':-0.30,'压力':-0.25,'对话':0.20,'赋能':0.20}},
-  union:{name:'当地工会主席',role:'生产运营部下属',desc:'代表基层工人利益，直接向厂长汇报。一旦觉得被强压，反弹会较快传开。',faction:'当地',score:7,status:0,x:240,y:300,ties:['plant','engineer'],hidden_ties:['gov','hr'],
+  union:{name:'当地工会主席',role:'生产运营部下属',desc:'生产运营部下属，代表基层工人，直接向厂长汇报。',faction:'当地',score:7,status:0,x:240,y:300,ties:['plant','engineer'],hidden_ties:['gov','hr'],
     hidden_goal:'防止裁员，保护薪酬和工作条件',
     prefs:{'压力':-0.25,'对抗':-0.25,'赋能':0.25,'叙事':0.15}},
-  gov:{name:'当地骨干工人',role:'生产运营部下属',desc:'掌握一线工人的真实想法和情绪，是工人与管理层之间的重要桥梁。具有很强的群众基础和号召力。',faction:'当地',score:10,status:0,x:40,y:300,ties:['engineer'],hidden_ties:['union'],
+  gov:{name:'当地骨干工人',role:'生产运营部下属',desc:'生产运营部下属，一线骨干工人。',faction:'当地',score:10,status:0,x:40,y:300,ties:['engineer'],hidden_ties:['union'],
     hidden_goal:'维护工人利益，确保工资和福利不下降，防止裁员',
     prefs:{'赋能':0.25,'对话':0.20,'压力':-0.25,'对抗':-0.15}},
-  customer:{name:'大客户销售',role:'销售客户部下属',desc:'代表大客户与本公司的关系，掌握客户需求和满意度。一旦认为整合影响服务质量，会向上级反映压力。',faction:'当地',score:12,status:0,x:340,y:210,ties:['sales','finance'],hidden_ties:['ceo'],
+  customer:{name:'大客户销售',role:'销售客户部下属',desc:'销售客户部下属，对接大客户。',faction:'当地',score:12,status:0,x:340,y:210,ties:['sales','finance'],hidden_ties:['ceo'],
     hidden_goal:'维持客户满意度，确保订单稳定，保护销售团队的提成',
     prefs:{'验证':0.25,'制度':0.15,'叙事':0.10,'对抗':-0.20}},
-  finance:{name:'当地数据分析师',role:'销售客户部下属',desc:'掌握成本、风险和真实的财务故事，能改变决策方向。隐形影响力强。',faction:'当地',score:13,status:0,x:340,y:300,ties:['sales','customer'],hidden_ties:['cfo'],
+  finance:{name:'当地数据分析师',role:'销售客户部下属',desc:'销售客户部下属，负责数据、成本与风险分析。',faction:'当地',score:13,status:0,x:340,y:300,ties:['sales','customer'],hidden_ties:['cfo'],
     hidden_goal:'确保财务安全，跟随强势方',
     prefs:{'制度':0.20,'政治':0.15,'对抗':-0.15,'叙事':-0.10}}
 };
@@ -1528,6 +1528,32 @@ const GLYPHS=['◯','◔','◑','◕','●'];
 const STATUS_LABELS=['未动','意识觉醒','初步理解','主动参与','已转化'];
 const STATUS_CUTOFFS=[0,25,45,65,85];
 
+/* =========================================================
+   v31：隐藏信息
+   一个还没被私人约谈过的人，你只知道他的公开身份（职位、部门、汇报线、
+   以及他现在的态度），不知道他是不是关键阻力、也不知道他的偏好和隐藏目标。
+   所以「谁更难推」这件事，不能出现在任何默认可见的文本或徽章里。
+   ========================================================= */
+const RESISTANT_IDS=['union','ops','engineer'];
+function isResistant(id){ return RESISTANT_IDS.includes(id); }
+function knowsSecret(id){ return !!(state.revealed && state.revealed[id]); }
+/* 只有访谈过，才允许把"这个人硬"这件事显示出来 */
+function isKnownResistant(id){ return isResistant(id) && knowsSecret(id); }
+
+/* 人数越少，穿透力越强：一对一能聊到心里，四个人一桌只能寒暄 */
+function focusMul(n){
+  const table={1:1.55,2:1.15,3:1.0,4:0.9,5:0.82,6:0.76};
+  if(table[n]) return table[n];
+  return Math.max(0.6, 0.76-(n-6)*0.05);
+}
+/* 目标人数区间：need 是上限，min 是下限（不写 min 就表示必须正好 need 人） */
+function tMin(a){ return (a.min!=null?a.min:a.need); }
+function tMax(a){ return a.need; }
+function tCountOk(a,n){ return n>=tMin(a) && n<=tMax(a); }
+function tRangeText(a){
+  return tMin(a)===tMax(a) ? `${a.need}人` : `${tMin(a)}–${tMax(a)}人`;
+}
+
 /* 动作定义（v13 新增 baseAmount 用于文档化，效果仍在 run 内计算） */
 /* v16：新增「缓压」动作 */
 /* v17：缓压动作
@@ -1535,43 +1561,59 @@ const STATUS_CUTOFFS=[0,25,45,65,85];
    type='沟通' 经同义词可命中 '对话' 偏好（区域GM+25%、HR+20%、销售+15%） */
 const PRESSURE_RELIEF_ACTION = {
   id:'team-building',
-  label:'非正式交流',
+  label:'休闲聚会',
   weeks:1,
   cooldown:3,
-  need:0,
+  need:6,
+  min:2,
   type:'沟通',
   reqCred:5,
   reqPressure:1,
   disrupt:-1,
-  desc:'主动降压——通过非正式渠道缓解组织焦虑，需要一定的组织压力积累才有意义。当压力消解后，能帮助早期观望者放下心防。',
-  cooldownReason:'非正式交流是低成本的压力释放方式，但需要先建立足够的可信度才能让人愿意真实对话。每次交流都需要时间来建立心理安全感。',
+  desc:'把几个人约到非正式场合——吃饭、看球、喝一杯。人越多越热闹，但每个人分到的时间越少、话越浅；它能让关系变软、压力下降，也会让一起在场的人彼此熟起来，但聊不出私人约谈那种深度。',
+  cooldownReason:'非正式聚会是低成本的压力释放方式，但需要先建立足够的可信度才能让人愿意真实对话。频繁聚会会让人觉得你在搞小圈子。',
   run(ids){
     const details = [];
     // reqPressure 检查：压力为 0 时动作无意义，给出教学反馈
     if(state.pressure <= 0){
       return {
-        story:'你尝试组织非正式交流，但当前组织压力为零——大家并没有感受到需要被"缓解"的焦虑。',
-        details: ['⚠️ 本次交流效果为零：非正式交流是一种"降压工具"，只有在压力积累后才有实质意义。在压力为零时使用，只是浪费了一周资源。', '💡 建议：等待压力自然积累（通常在使用高扰动动作后），或先推进其他变革动作再使用此工具。'],
+        story:'你张罗了一场聚会，但当前组织压力为零——大家并没有需要被"缓解"的焦虑，来的人只当是吃顿饭。',
+        details: ['⚠️ 本次聚会效果为零：它是一种"降压工具"，只有在压力积累后才有实质意义。在压力为零时使用，只是浪费了一周资源。', '💡 建议：等待压力自然积累（通常在使用高扰动动作后），或先推进其他变革动作再使用此工具。'],
         noCredChange: true,
         noEffect: true
       };
     }
+    const n = ids.length;
     const pressureReduction = Math.min(2, state.pressure);
     state.pressure -= pressureReduction;
     details.push(`🌿 组织压力 -${pressureReduction}（现 ${state.pressure}）。非正式渠道让中层员工感受到了关心、而非任务指令。`);
-    // 压力降至 0 后，额外帮助早期观望者放下心防
-    if(state.pressure === 0){
-      const earlyWatchers = Object.entries(state.people).filter(([id,p])=>p.status<2 && id!=='pm').slice(0,2);
-      earlyWatchers.forEach(([id,p])=>{
-        const before = p.status;
-        const r = applyGain(id, 4, '沟通', 'broad');
-        const prefHint = describePrefHit(id, '沟通');
-        const delta = p.status > before ? `（${STATUS_LABELS[before]}→${statusText(p.status)}）` : '';
-        details.push(`${p.name}在压力消解后的交流中感到被重视${prefHint}，+${r.amount} 分${delta}。`);
-      });
+
+    const per = Math.max(2, Math.round(5*focusMul(n)));
+    ids.forEach(id=>{
+      const p=state.people[id];
+      const before=p.status;
+      const r=applyGain(id, per, '沟通', 'direct');
+      const prefHint=describePrefHit(id,'沟通');
+      const delta = p.status>before ? `（${STATUS_LABELS[before]}→${statusText(p.status)}）` : '';
+      details.push(`${p.name}在放松的场合里放下了戒备${prefHint}，+${r.amount} 分${delta}。`);
+    });
+    if(n>=4) details.push('👥 一桌坐了 '+n+' 个人，话题只能停在表面——人多热闹，但每个人都只分到几分钟。');
+    else details.push('☕ 人不多，反而聊得开一些；但这不是访谈，你听到的仍是场面话。');
+
+    // 一起在场的人会彼此熟起来——哪怕他们平时根本不搭界
+    const newTies=[];
+    for(let i=0;i<ids.length;i++){
+      for(let j=i+1;j<ids.length;j++){
+        const d=seedTrust(ids[i],ids[j],10);
+        if(d>0) newTies.push(`${state.people[ids[i]].name}—${state.people[ids[j]].name}（信任 +${d}）`);
+      }
     }
+    if(newTies.length) details.push('🤝 一起在场的人彼此熟了一些：'+newTies.join('、')+'。这类关系不来自汇报线，只来自"一起待过"。');
+
+    details.push('🔒 聚会不产出任何隐藏信息：想知道谁在真正挡路、他在意什么，只能靠「私人约谈」。');
+
     return {
-      story:'你组织了一场跨部门的非正式交流会，大家放松了警惕，开始真实对话。',
+      story:'你组织了一场非正式聚会，'+n+' 个人到场。酒过三巡，气氛松了下来。',
       details
     };
   }
@@ -1611,7 +1653,7 @@ const ACTIONS=[
     // 首次使用——信号清晰
     return affectAll(7,'总部公开支持了这次变革，信号清晰。','政治');
   }},
-  {id:'interview',label:'私人访谈',weeks:1,cooldown:2,need:2,type:'对话',reqCred:3,disrupt:0,desc:'摸清顾虑，识别非正式关系。完成后你会看到对方的真实想法与隐藏目标。注意：对同一人重复访谈超过 2 次会显得烦人。',cooldownReason:'私人访谈是低成本的信息收集方式，可以频繁进行。但每次访谈都需要时间来消化信息和建立信任。',run(ids){
+  {id:'interview',label:'私人约谈',weeks:1,cooldown:2,need:2,min:1,type:'对话',reqCred:3,disrupt:0,desc:'一对一坐下来，摸清顾虑、识别非正式关系。这是唯一能解锁对方真实想法与隐藏目标的动作——只谈一个人时对方最愿意说实话，同时谈两个就会明显变浅。注意：对同一人重复约谈超过 2 次会显得烦人。',cooldownReason:'私人约谈是低成本的信息收集方式，可以频繁进行。但每次约谈都需要时间来消化信息和建立信任。',run(ids){
     ids.forEach(id=>{ state.revealed[id]=true; });
     // 统计本轮被重复访谈（第3次及以上）的对象
     const overused = [];
@@ -1634,7 +1676,7 @@ const ACTIONS=[
       // 对首次或二次的对象仍给正常效果，仅降重复者分数
       const normalIds = ids.filter(id => !overused.includes(id));
       const res = normalIds.length
-        ? affectTargets(normalIds, 12, '部分对象的对话仍然有收获。', true, '对话')
+        ? affectTargets(normalIds, Math.round(12*focusMul(normalIds.length)), '部分对象的对话仍然有收获。', true, '对话')
         : {story:'这一轮的访谈几乎没有新信息。', details:[]};
       res.details.unshift(
         `⚠️ 重复访谈反感：${overused.map(i=>state.people[i].name).join('、')} 已被你访谈 ≥ 3 次。他们开始觉得你「只会聊，不落地」。`,
@@ -1642,8 +1684,13 @@ const ACTIONS=[
       );
       return res;
     }
-    const res=affectTargets(ids,8,'通过深度对话，你获得了信任，并看清了他们的真实动机。',true,'对话');
+    const res=affectTargets(ids, Math.round(8*focusMul(ids.length)), '通过深度对话，你获得了信任，并看清了他们的真实动机。', true, '对话');
     res.details.unshift(`🔓 已解锁：${ids.map(i=>state.people[i].name).join('、')} 的隐藏偏好与目标（查看节点详情）。`);
+    if(ids.length===1){
+      res.details.unshift('🕯 一对一：对方没有旁人要顾，话说得比平时深。');
+    } else {
+      res.details.unshift('👥 同时约了两个人：彼此都在留面子，深度打了折扣——想挖到真东西，一次只谈一个。');
+    }
     return res;
   }},
   {id:'email',label:'发布组织邮件',weeks:1,cooldown:2,need:0,type:'沟通',reqCred:5,disrupt:0,desc:'广覆盖但说服深度有限；对还没动起来的人效果会大打折扣。若没有实际成果就群发邮件，会被认为是"纸上谈兵"。',cooldownReason:'邮件是低成本的广播工具，可以频繁使用。但过于频繁的邮件会导致"邮件疲劳"，人们开始忽视你的信息。',run(ids){
@@ -1657,7 +1704,7 @@ const ACTIONS=[
     }
     return affectNonAdopters(6,'邮件传达了清晰的方向。','沟通');
   }},
-  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:3,type:'赋能',reqCred:5,disrupt:1,desc:'帮助想做但不会做的人掌握实际技能。最适合那些已经有意愿、只是缺乏方法的人。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids,12,'培训让他们获得了实际能力。',false,'赋能'); }},
+  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:4,min:1,type:'赋能',reqCred:5,disrupt:1,desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
   {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
   {id:'success-story',label:'讲述成功案例',weeks:1,cooldown:1,need:2,type:'叙事',reqCred:5,disrupt:0,desc:'用真实成功故事激励他人。必须有本土转化案例支撑，否则会被认为是"空谈"，并引发反感。',cooldownReason:'成功案例是低成本的激励工具，可以频繁使用。每个新的成功都能强化变革的合法性。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
@@ -1808,7 +1855,7 @@ const ACTIONS=[
     }
     return affectAll(8,'KPI和时限制造了紧迫感，但也增加了压力。','压力');
   }},
-  {id:'confront',label:'强硬约谈阻力者',weeks:1,cooldown:3,need:1,type:'对抗',reqCred:5,disrupt:3,desc:'对明确阻力者施加压力。只对工会主席或运营主管等核心阻力角色有效；用错对象会严重损害你的可信度，并引发组织恐慌。',cooldownReason:'强硬约谈是高风险的动作，需要充分时间观察效果，避免过度使用导致组织对抗升级。',run(ids){
+  {id:'confront',label:'强硬施压',weeks:1,cooldown:3,need:1,type:'对抗',reqCred:5,disrupt:3,desc:'对明确在挡路的人施加压力。这是所有动作里代价最高的一种：用错对象会严重损害你的可信度，还会让整个组织噤声——所以下手之前，你得先弄清楚谁才是真正在挡路的那个人。',cooldownReason:'强硬约谈是高风险的动作，需要充分时间观察效果，避免过度使用导致组织对抗升级。',run(ids){
     const p=state.people[ids[0]];
     const resistanceTargets = ['union','ops']; // 只有核心阻力角色才是合法的强硬约谈对象
     const isLegitTarget = resistanceTargets.includes(ids[0]);
@@ -1827,7 +1874,7 @@ const ACTIONS=[
         details:[
           `❌ 对象选择严重失当：${p.name}当前已处于「${statusText(p.status)}」状态，强硬约谈直接损伤了这位潜在盟友（分数 -15，激进压力 +1）。`,
           `📚 管理学原理：${roleCtx}`,
-          `💡 建议：强硬约谈应仅用于「未动」或「觉醒」状态的核心阻力者。对已在变化中的人，请改用「公开认可」或「小范围试点」来巩固其进展。`
+          `💡 建议：强硬手段只该用在真正挡路、而且还没开始转向的人身上。对已在变化中的人，请改用「公开认可」或「小范围试点」来巩固其进展。`
         ],fail:true};
     }
 
@@ -1839,9 +1886,9 @@ const ACTIONS=[
       state.pressure = Math.min(10, state.pressure + 2);
       return {story:`你对${p.name}进行了强硬约谈，但对方只是个普通的观望者——这场约谈在组织内引发了恐慌。`,
         details:[
-          `❌ 对象选择失当：${p.name}并非核心阻力者，强硬约谈让他/她感到被恐吓（分数 -10），并在组织内传开，激进压力 +2。`,
-          `📚 管理学原理：强硬约谈是针对「有意识地阻碍变革」的关键人物的工具。对普通观望者使用只会制造寒蝉效应，让更多人躲起来。`,
-          `💡 建议：对普通观望者请使用「私人访谈」、「上手培训」或「小范围试点」，而非强硬施压。`
+          `❌ 对象选择失当：${p.name}并不在真正挡路，强硬约谈让他/她感到被恐吓（分数 -10），并在组织内传开，激进压力 +2。`,
+          `📚 管理学原理：强硬手段是针对「有意识地阻碍变革」的关键人物的工具。对普通观望者使用只会制造寒蝉效应，让更多人躲起来。`,
+          `💡 建议：先通过「私人约谈」确认谁才是阻力的源头。对普通观望者，请用「上手培训」「小范围试点」或「休闲聚会」。`
         ],fail:true};
     }
 
@@ -1921,14 +1968,18 @@ const ROLES = {
 };
 let currentRoleId = 'integrator';
 
+/* v31：动作按变革管理的标准类别重排
+   联盟 → 沟通 → 赋能 → 成效 → 制度 → 纠偏 → 恢复
+   这也是一条推荐的推进顺序：先立信、再对话、再给人能力、再让成果可见，
+   最后才动制度。倒着走，每一步都会更贵。 */
 const ACTION_GROUPS = [
-  { key:'trust',    label:'🤝 信任建立', ids:['exemplify','ceo-endorse'] },
-  
-  { key:'spread',   label:'📣 推动扩散', ids:['interview','email','progress','training','pilot','success-story','recognize'] },
-  { key:'pressure', label:'📐 制度压力', ids:['kpi','incentive'] },
-  { key:'structure',label:'🏛 结构杠杆', ids:['reorg'] },
-  { key:'confront', label:'⚡ 对抗纠偏', ids:['confront'] },
-  { key:'relief',   label:'🌿 缓解恢复', ids:['team-building'] }
+  { key:'coalition',  label:'🤝 建立联盟', hint:'先有可信度和正当性，别人才会听你说话', ids:['exemplify','ceo-endorse'] },
+  { key:'communicate',label:'🗣 沟通共识', hint:'信息怎么流动，决定别人怎么理解这件事', ids:['interview','email','progress'] },
+  { key:'enable',     label:'🎓 赋能与试点', hint:'让人从「不想」到「不会」，再到「会」', ids:['training','pilot'] },
+  { key:'wins',       label:'🏆 让成效可见', hint:'短期成果是最便宜的说服工具', ids:['success-story','recognize'] },
+  { key:'institution',label:'🏛 制度与结构', hint:'改规则比改人快，但代价也最大', ids:['kpi','incentive','reorg'] },
+  { key:'correct',    label:'⚡ 纠偏', hint:'只在确认有人挡路之后才用', ids:['confront'] },
+  { key:'recover',    label:'🌿 组织恢复', hint:'组织会累，压力要放气', ids:['team-building'] }
 ];
 
 /* =========================================================
@@ -2108,8 +2159,27 @@ function updateTrust(){
   }
 }
 
-function softeningBonus(targetId){
-  if(!(state.softened[targetId]>0)) return 1.0;
+/* v31：在两个人之间种一点信任（休闲聚会专用）。
+   updateTrust 只在"已有工作关系"的人之间累积，这符合"一起做事长出私交"的逻辑；
+   但聚会是另一回事——本来不搭界的人坐在一桌，也会认识起来，这就是弱连接。 */
+function seedTrust(a,b,step){
+  if(a===b||a==='pm'||b==='pm') return 0;
+  if(!state.people[a]||!state.people[b]) return 0;
+  if(!state.trust) state.trust={};
+  if(!state.informal) state.informal=new Set();
+  if(!state.newInformal) state.newInformal=[];
+  const k=pairKey(a,b);
+  const before=state.trust[k]||0;
+  const v=clamp(before+step,0,100);
+  state.trust[k]=v;
+  if(v>=TRUST_INFORMAL && !state.informal.has(k)){
+    state.informal.add(k);
+    state.newInformal.push({k,a,b,v});
+  }
+  return v-before;
+}
+
+function softeningBonus(targetId){  if(!(state.softened[targetId]>0)) return 1.0;
   // 扩散加成：私交最灵，其次桥梁节点，最后普通关系
   const origin = state.softenedOrigin[targetId];
   if(origin && isInformalPair(origin,targetId)) return 1.85;
@@ -2448,7 +2518,7 @@ function applyConsequences(action, impact){
   if(stubbornChars.includes(targetId) && action.id === 'confront' && !impact.fail){
     // 强硬约谈对阻力角色特别有效，但风险更高
     state.pressure = Math.min(10, state.pressure + 2);
-    notes.push('⚡ 反制机制：强硬约谈对阻力角色产生了更强的冲击，但组织压力上升。');
+    notes.push('⚡ 反制机制：强硬施压打在了真正挡路的人身上，冲击比预想的更强，但组织压力上升。');
   }
 
   /* Proposal G: 盟友干扰 - 阻力角色可以通过其盟友影响他人 */
@@ -2603,7 +2673,7 @@ function renderDetail(id, boxId){
     }
   } else if(id!=='pm') {
     hiddenSection = `<div class="small" style="margin-top:10px;padding:8px;background:rgba(255,255,255,.04);border-radius:8px;border-left:3px solid var(--muted);color:var(--muted)">
-      🔒 隐藏目标与动作偏好：未知。请通过「私人访谈」解锁。
+      🔒 隐藏目标与动作偏好：未知。请通过「私人约谈」解锁。
     </div>`;
   }
   // v26：合作信任进度（没到 40 的先显示进度条数值）
@@ -2626,9 +2696,8 @@ function renderDetail(id, boxId){
     </div>` : '';
   const factionColor = p.faction==='总部'?'#0d8b96':p.faction==='当地'?'#2d8659':p.faction==='外部'?'#d97706':'#666';
   const factionBg = p.faction==='总部'?'rgba(13,139,150,.1)':p.faction==='当地'?'rgba(45,134,89,.1)':p.faction==='外部'?'rgba(217,119,6,.1)':'#f5f5f5';
-  const stubbornChars = ['union', 'ops', 'engineer'];
-  const isStubborn = stubbornChars.includes(id);
-  const stubbornBadge = isStubborn ? '<span class="stubborn-marker" style="display:inline-block;padding:4px 10px;background:rgba(192,0,0,.1);color:#c00;border-radius:4px;font-size:11px;font-weight:600;border:1px solid rgba(192,0,0,.3)">🔒 阻力角色</span>' : '';
+  const isStubborn = isKnownResistant(id);
+  const stubbornBadge = isStubborn ? '<span class="stubborn-marker" style="display:inline-block;padding:4px 10px;background:rgba(192,0,0,.1);color:#c00;border-radius:4px;font-size:11px;font-weight:600;border:1px solid rgba(192,0,0,.3)">🔒 关键阻力（已确认）</span>' : '';
   const avatarHtml = (id==='pm')
     ? `<div style="width:68px;height:68px;border-radius:50%;background:#0d9488;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:3px solid #0d9488;"><span style="font-size:28px;color:#fff;font-weight:bold;">你</span></div>`
     : AVATARS[id]
@@ -2817,7 +2886,7 @@ function drawNetwork(svgId){
 
     // Stubborn character indicator (top-left corner)
     const stubbornChars = ['union','ops','engineer'];
-    if(stubbornChars.includes(id)){
+    if(stubbornChars.includes(id) && knowsSecret(id)){
       const stubbornBadge=document.createElementNS('http://www.w3.org/2000/svg','circle');
       stubbornBadge.setAttribute('cx',p.x-17); stubbornBadge.setAttribute('cy',p.y-17);
       stubbornBadge.setAttribute('r','7');
@@ -3004,7 +3073,7 @@ function renderActions(){
     }).length;
     const groupWrap = document.createElement('div');
     groupWrap.className = 'action-group' + (isOpen?' open':'');
-    groupWrap.innerHTML = `<div class="action-group-header" role="button" tabindex="0" aria-expanded="${isOpen}" data-gkey="${group.key}">
+    groupWrap.innerHTML = `<div class="action-group-header" role="button" tabindex="0" aria-expanded="${isOpen}" data-gkey="${group.key}" title="${group.hint||''}">
         <span class="group-toggle" aria-hidden="true">${isOpen?'▼':'▶'}</span>
         <span class="group-label">${group.label}</span>
         <span class="group-meta">${availCount}/${groupActions.length} 可用</span>
@@ -3048,7 +3117,7 @@ function buildActionCard(a, idx){
     const targetsHtml = a.need ? `<div class="target-selector ${state.selectedAction===idx?'show':''}">
       <div class="target-selector-header">
         <div class="target-selector-title">选择目标人物</div>
-        <div class="target-selector-count">已选${state.selectedTargets.length}/${a.need}</div>
+        <div class="target-selector-count">已选 ${state.selectedTargets.length} 人 · 需 ${tRangeText(a)}</div>
       </div>
       <div class="targets">${(()=>{ 
         // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
@@ -3057,7 +3126,7 @@ function buildActionCard(a, idx){
           estMap={};
           Object.keys(state.people).forEach(pid=>{ if(pid==='pm') return; const e=estimateOne(a,pid); if(e) estMap[pid]=e; });
         }
-        return Object.entries(state.people).map(([id,p])=>{
+        return Object.entries(state.people).filter(([id])=>id!=='pm').map(([id,p])=>{
         const soft = state.softened[id] ? '<span title="扩散圈" style="color:var(--success);font-weight:700">⚡</span>' : '';
         const bridge = isBridge(id) ? '<span title="桥梁节点" style="color:var(--primary)">🌉</span>' : '';
         // 如果已解锁偏好，显示对该动作的偏好标记
@@ -3136,7 +3205,7 @@ function buildActionCard(a, idx){
         <!-- v20: 核心信息行（始终可见） -->
         <div class="chips" style="margin-top:6px">
           <span class="chip" title="执行此动作消耗的资源周数">⏱ ${a.weeks}周</span>
-          <span class="chip ${a.need===0?'good':''}" title="${a.need?'需要指定'+a.need+'位目标人物':'此动作影响所有人物，无需选择目标'}">${a.need?'👤 选'+a.need+'人':'🌐 全体'}</span>
+          <span class="chip ${a.need===0?'good':''}" title="${a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标'}">${a.need?'👤 '+tRangeText(a):'🌐 全体'}</span>
           ${credBad ? `<span class="chip warn" title="当前可信度${state.credibility}，需要${a.reqCred}">🔒 需信誉${a.reqCred}</span>` : ''}
           ${wait>0 ? `<span class="chip bad" title="冷却中">⏳ 冷却${wait}轮</span>` : ''}
         </div>
@@ -3199,7 +3268,13 @@ function simulateAction(a, targets){
 }
 // 单个候选人的预估（用于目标按钮上的"预计 +X"）
 function estimateOne(a, id){
-  const sim=simulateAction(a,[id]);
+  // v31：人数会影响穿透力（人越少越锋利），所以预估必须按"实际会到场的人数"来算
+  let targets=[id];
+  if(a && a.min && a.min>1){
+    const cur=(state.selectedTargets||[]).filter(x=>x!==id);
+    targets=[id].concat(cur).slice(0, Math.max(a.min, cur.length+1));
+  }
+  const sim=simulateAction(a,targets);
   if(!sim) return null;
   const row=sim.rows.find(r=>r.id===id);
   return row || {id, name:state.people[id].name, delta:0, from:state.people[id].status, to:state.people[id].status};
@@ -3232,7 +3307,7 @@ function renderDecisionPreview(a, targetIds){
   if(!p){ box.style.display='none'; return; }
   const credTxt = p.credDir>0 ? '<span class="dp-pos">可信度 ↑</span>' : '<span class="dp-neg">可信度 ↓</span>';
   const pressTxt = p.pressDir>0 ? `<span class="dp-neg">激进压力 +${p.pressDir}</span>` : '<span class="dp-neutral">压力~</span>';
-  const rateTxt = (a.need===0 || targetIds.length===a.need)
+  const rateTxt = (a.need===0 || tCountOk(a,targetIds.length))
     ? `<span class="dp-pos">有望推进转化</span>`
     : `<span class="dp-neutral">待选目标</span>`;
   // v26：选了目标就把每个人预计加多少直接写出来
@@ -3268,12 +3343,12 @@ function updateRunButton(){
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
   const credOk=state.credibility>=a.reqCred;
   // v20: 可信度不足时仍允许执行（强行模式），但显示警告
-  const ready=(state.selectedTargets.length===a.need && wait===0 && state.resources>=a.weeks);
+  const ready=(tCountOk(a,state.selectedTargets.length) && wait===0 && state.resources>=a.weeks);
   btn.disabled=!ready;
   let h=`已选动作：${a.label}`;
   const problems=[];
   const warnings=[];
-  if(a.need>0 && state.selectedTargets.length<a.need) problems.push(`还需选${a.need-state.selectedTargets.length}人`);
+  if(a.need>0 && state.selectedTargets.length<tMin(a)) problems.push(`还需选${tMin(a)-state.selectedTargets.length}人（最少 ${tMin(a)} 人）`);
   if(wait>0) problems.push(`该动作还需等待${wait}轮`);
   if(state.resources<a.weeks) problems.push(`资源数不足（需${a.weeks}周，剩${state.resources}周）`);
   if(a.reqPressure && state.pressure < a.reqPressure) warnings.push(`⚠️ 当前压力为 ${state.pressure}，此动作需要压力 ≥ ${a.reqPressure} 才有实质效果（执行后会浪费资源）`);
@@ -3839,6 +3914,7 @@ function loseOrWin(cr){
 function chooseAction(idx){ if(state.ended) return; state.selectedAction = state.selectedAction===idx ? null : idx; state.selectedTargets=[]; render(); }
 function toggleTarget(id){
   if(state.ended) return;
+  if(id==='pm') return;   // v31：自己不是推动对象
   const a=ACTIONS[state.selectedAction];
   if(!a||a.need===0) return;
   const arr=state.selectedTargets;
@@ -3852,7 +3928,7 @@ function toggleTarget(id){
   if(a.id==='recognize' && p.status===0){
     if(!confirm(`⚠️ ${p.name} 尚未形成任何实际进展，公开表彰不仅会失当，还可能激起反感。确定仍然选择？`)) return;
   }
-  if(arr.length<a.need) arr.push(id);
+  if(arr.length<tMax(a)) arr.push(id);
   render();
 }
 
@@ -4093,7 +4169,7 @@ function runTurn(){
   const credOk=state.credibility>=a.reqCred;
   // v20: 允许在可信度不足时强行执行，但承担额外激进压力代价
   const credOverride = !credOk && state.credibility >= 1; // 可信度至少为 1 才能强行
-  if(state.selectedTargets.length!==a.need || wait>0 || state.resources<a.weeks) return;
+  if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<a.weeks) return;
   if(!credOk && !credOverride) return; // 完全无可信度时不允许
 
   // 记录预判
@@ -4624,11 +4700,10 @@ function renderPeopleQuickList(){
     return pb.score-pa.score;
   });
   const focused = state.focusedNode;
-  const stubborn = ['union','ops','engineer'];
   box.innerHTML = order.map(id=>{
     const p = state.people[id];
     const activeCls = (id===focused) ? ' active' : '';
-    const isStubborn = stubborn.includes(id);
+    const isStubborn = isKnownResistant(id);
     const stubbornMarker = isStubborn ? '<span class="stubborn-marker">🔒 阻力</span>' : '';
     return `<div class="qp-item${activeCls}${isStubborn ? ' stubborn' : ''}" data-pid="${id}" title="${p.role||''}">
       <span class="qp-name">${p.name}${stubbornMarker}</span>
@@ -4665,7 +4740,6 @@ function setMobileNetworkView(mode){
 function renderMobileListPanel(){
   const box = document.getElementById('mobileListPeople');
   if(!box) return;
-  const stubborn = ['union','ops','engineer'];
   const order = Object.keys(state.people);
   order.sort((a,b)=>{
     const pa=state.people[a], pb=state.people[b];
@@ -4678,7 +4752,7 @@ function renderMobileListPanel(){
     const p = state.people[id];
     const activeCls = (id===focused) ? ' active' : '';
     const fc = factionColors[p.faction] || '#999';
-    const isStubborn = stubborn.includes(id);
+    const isStubborn = isKnownResistant(id);
     const stubbornMarker = isStubborn ? '<span class="stubborn-marker" style="font-size:12px;margin-left:4px">🔒 阻力</span>' : '';
     return `<div class="qp-item${activeCls}${isStubborn ? ' stubborn' : ''}" data-pid="${id}" title="${p.role||''}">
       <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
