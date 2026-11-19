@@ -412,6 +412,25 @@
   .rel-list{margin:8px 0 0 18px;padding:0;font-size:13px;line-height:1.8}
   .edge.informal{stroke:#e0a03a;stroke-width:2.2;stroke-dasharray:2 4;opacity:.95}
 
+  /* v27：教练点评 */
+  .coach-box{border-left:3px solid var(--primary);background:rgba(15,118,110,.06)}
+  .coach-list{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+  .coach-list li{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.65}
+  .coach-tag{flex:0 0 auto;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;margin-top:1px}
+  .coach-warn .coach-tag{background:rgba(220,80,80,.16);color:#e87a8a}
+  .coach-tip .coach-tag{background:rgba(224,160,58,.16);color:#e0a03a}
+  .coach-good .coach-tag{background:rgba(30,160,120,.16);color:#3ecf9a}
+  .sit-line{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:8px 12px;border-radius:8px;margin:0 0 12px;line-height:1.5}
+  .sit-line.warn{background:rgba(220,80,80,.10);color:#e87a8a;border:1px solid rgba(220,80,80,.25)}
+  .sit-line.tip{background:rgba(224,160,58,.10);color:#e0a03a;border:1px solid rgba(224,160,58,.25)}
+  .detail-fold summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600;list-style:none}
+  .detail-fold summary::-webkit-details-marker{display:none}
+  .detail-fold summary:before{content:'▸ ';color:var(--primary)}
+  .detail-fold[open] summary:before{content:'▾ '}
+  .detail-list{margin:8px 0 0 18px;padding:0;font-size:12.5px;line-height:1.7;color:var(--muted)}
+  .one-thing{margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(15,118,110,.10);
+    border:1px solid rgba(15,118,110,.28);font-size:13px;line-height:1.65}
+
   /* ═══════════════════════════════════════════════════════════════════
      v25 · 手机优先：一屏一页 → 线性推进
      看一页 → 进入决策 → 立刻看到结果 → 再点一下看网络结构 → 回到决策
@@ -1249,6 +1268,7 @@
         <div class="panel section">
           <h2>本轮可选动作</h2>
           <div class="small muted">先选动作，再点选目标人物（也可展开网络图直接点节点）。</div>
+          <div id="situationLine" style="margin-top:12px"></div>
           <div id="actionList" class="cards" style="margin-top:14px"></div>
         </div>
         <div class="panel section">
@@ -2089,17 +2109,14 @@ function decayUntouched(){
   Object.entries(state.people).forEach(([id,p])=>{
     if(state.touchedThisTurn.has(id)) return;
     if(id==='pm') return; // 玩家自己不衰减
-    // v22：60 个资源后略加重衰减（-2/-4 → -3/-5），仍保留势能保底
-    const decay = p.status>=2 ? 3 : 5;
+    // v26 平衡：只有「还没动起来」的人会自然回冷。
+    // 未动 -2（继续沉默），刚觉醒 -1（注意力会散），走到初步理解（status>=2）就不再自己退回去——
+    // 这样前段最难、越往后越省力，符合变革扩散的 S 曲线；也让 60 个资源真的够用。
+    if(p.status>=4) return;
+    if(p.status>=2) return;
+    const decay = p.status===1 ? 1 : 2;
     const prev=p.status;
-    // v14：势能保底——已经走到某一档的人，单回合不会一跌跨过两档
-    // status=4 不衰减（已转化就稳定了）
-    if(prev>=4) return;
     let newScore = p.score - decay;
-    // 保底下界：status>=3 的人最多回落到 status=2 下界（45）
-    // status=2 的人最多回落到 status=1 下界（25）
-    if(prev>=3) newScore = Math.max(newScore, 60);
-    else if(prev>=2) newScore = Math.max(newScore, 30);
     const scoreBeforeDecay = p.score;
     p.score=clamp(newScore,0,100); updateStatus(p);
     try{
@@ -2162,8 +2179,28 @@ function affectNonAdopters(amount, story, actionType){
   return {story, details:det};
 }
 
+/* v27：社会传染（social contagion）
+   一个人真的被转化之后，他不只是"变软"，而是会主动替你去说话。
+   这是网络模拟最该教的一课：你不可能亲自说服 12 个人，但你可以让 1 个人替你说服 3 个人。
+   - 传染强度 = 基础 × 桥梁系数 × 对方偏好 × 私交系数
+   - 只在 converter 已转化（status=4）时触发；每跳衰减（一度 100%，二度 45%）
+   - 对 stubborn 角色（工会主席/运营主管/工程师）传染力减半——他们不信"别人说的" */
+function contagionStrength(converterId, neighborId, hop){
+  const c=state.people[converterId], q=state.people[neighborId];
+  if(!c||!q) return 0;
+  if(c.status<4) return 0;
+  if(q.status>=4) return 0;
+  let base = 7;
+  if(isBridge(converterId)) base *= 1.55;            // 桥梁人物：一个人带动一片
+  if(isInformalPair(converterId,neighborId)) base *= 1.30;  // 有私交，话更可信
+  if(['union','ops','engineer'].includes(neighborId)) base *= 0.55; // 硬骨头：只认自己的判断
+  if(hop===2) base *= 0.45;
+  return Math.max(1, Math.round(base));
+}
+
 /* 处理一轮内的转化：一度扩散 + 二度扩散（限两跳）
-   v17 修复：二度扩散传入 originActionType，避免 '扩散' 键名导致偏好失效 */
+   v17 修复：二度扩散传入 originActionType，避免 '扩散' 键名导致偏好失效
+   v27：从"只是软化"升级为"真的传过去"——转化会实际推动邻居的分数 */
 function handleConversions(newlyConverted, details, originActionType){
   const alreadySpread = new Set();
   // 一度
@@ -2174,6 +2211,21 @@ function handleConversions(newlyConverted, details, originActionType){
     if(softened.length){
       const strengthNote = isBridge(id) ? '（桥梁节点，+60% 软化）' : '（+40% 软化）';
       details.push(`${state.people[id].name}已转化${strengthNote}，向邻居 ${softened.map(s=>state.people[s].name).join('、')} 扩散影响（未来3回合内推动效果放大）。`);
+    }
+    // v27：社会传染——他替你说话了
+    const pushed=[];
+    (state.people[id].ties||[]).forEach(t=>{
+      const q=state.people[t]; if(!q||q.status>=4||alreadySpread.has(t)) return;
+      const amt=contagionStrength(id,t,1);
+      if(amt<=0) return;
+      const before=q.status;
+      applyGain(t, amt, originActionType||'示范', 'spread');
+      if(q.status>before){
+        pushed.push(`${q.name}（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）`);
+      }
+    });
+    if(pushed.length){
+      details.push(`🗣 ${state.people[id].name} 转化后开始替你说话：${pushed.join('、')} 被带动着往前走了一步。`);
     }
     // v26：非正式关系——私下的信任让说服成本更低
     const partners = Object.keys(state.people).filter(x=>x!==id&&x!=='pm'&&state.people[x].status<3&&isInformalPair(id,x));
@@ -2833,6 +2885,12 @@ function renderLegend(){
    ========================================================= */
 function renderActions(){
   const box=el('actionList'); box.innerHTML='';
+  // v27：当前局面一行提示（只在有风险时出现）
+  const sitBox=el('situationLine');
+  if(sitBox){
+    const s=situationLine();
+    sitBox.innerHTML = s ? `<div class="sit-line ${s.k}">⚠ ${s.t}</div>` : '';
+  }
   // v15：按动作类型分 5 组折叠
   // v17：默认全部折叠，先看组标题（动作类型）再决定打开哪一组
   if(!state.groupOpen){
@@ -2899,7 +2957,14 @@ function buildActionCard(a, idx){
         <div class="target-selector-title">选择目标人物</div>
         <div class="target-selector-count">已选${state.selectedTargets.length}/${a.need}</div>
       </div>
-      <div class="targets">${Object.entries(state.people).map(([id,p])=>{
+      <div class="targets">${(()=>{ 
+        // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
+        let estMap=null;
+        if(state.selectedAction===idx && a.need){
+          estMap={};
+          Object.keys(state.people).forEach(pid=>{ if(pid==='pm') return; const e=estimateOne(a,pid); if(e) estMap[pid]=e; });
+        }
+        return Object.entries(state.people).map(([id,p])=>{
         const soft = state.softened[id] ? '<span title="扩散圈" style="color:var(--success);font-weight:700">⚡</span>' : '';
         const bridge = isBridge(id) ? '<span title="桥梁节点" style="color:var(--primary)">🌉</span>' : '';
         // 如果已解锁偏好，显示对该动作的偏好标记
@@ -2931,9 +2996,14 @@ function buildActionCard(a, idx){
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
+            ${(estMap&&estMap[id])?(()=>{const e=estMap[id];
+              const col=e.delta>0?'var(--success)':(e.delta<0?'var(--danger)':'var(--muted)');
+              return `<span style="color:${col};font-weight:700">预计${e.delta>0?'+':''}${e.delta}</span>`;
+            })():''}
           </span>
         </button>`;
-      }).join('')}</div></div>` : '';
+        }).join('');
+      })()}</div></div>` : '';
 
     const reasonChips = [];
     if(credBad) reasonChips.push('<span class="chip bad reason-chip">可信度不足（需'+a.reqCred+'）</span>');
@@ -3003,6 +3073,45 @@ function buildActionCard(a, idx){
 
 /* v15：决策预览——给出估算值，不改 state。
    预估覆盖人数/可信度变化方向/压力变化方向 */
+/* v26：决策前先"干跑"一遍——在状态副本上真执行，拿到的就是准确数字 */
+function cloneGameState(){
+  const c={};
+  Object.keys(state).forEach(k=>{
+    const v=state[k];
+    if(v instanceof Set) c[k]=new Set(v);
+    else if(v && typeof v==='object') c[k]=JSON.parse(JSON.stringify(v));
+    else c[k]=v;
+  });
+  return c;
+}
+function simulateAction(a, targets){
+  if(!a) return null;
+  const snap=cloneGameState();
+  const before={};
+  Object.keys(state.people).forEach(id=>{ const p=state.people[id]; before[id]={s:p.score,st:p.status}; });
+  let out=null;
+  try{
+    const r=a.run((targets||[]).slice());
+    const rows=[];
+    Object.keys(state.people).forEach(id=>{
+      const p=state.people[id], b=before[id];
+      if(!b) return;
+      const d=Math.round(p.score-b.s);
+      if(d!==0 || p.status!==b.st) rows.push({id, name:p.name, delta:d, from:b.st, to:p.status});
+    });
+    out={ rows, story:(r&&r.story)||'', cred:state.credibility-snap.credibility, press:state.pressure-snap.pressure };
+  }catch(e){ out=null; }
+  finally{ state=snap; }
+  return out;
+}
+// 单个候选人的预估（用于目标按钮上的"预计 +X"）
+function estimateOne(a, id){
+  const sim=simulateAction(a,[id]);
+  if(!sim) return null;
+  const row=sim.rows.find(r=>r.id===id);
+  return row || {id, name:state.people[id].name, delta:0, from:state.people[id].status, to:state.people[id].status};
+}
+
 function predictImpact(a, targetIds){
   if(!a) return null;
   const touched = (a.need===0) ? Object.keys(state.people).length : targetIds.length;
@@ -3033,14 +3142,26 @@ function renderDecisionPreview(a, targetIds){
   const rateTxt = (a.need===0 || targetIds.length===a.need)
     ? `<span class="dp-pos">有望推进转化</span>`
     : `<span class="dp-neutral">待选目标</span>`;
+  // v26：选了目标就把每个人预计加多少直接写出来
+  let perTarget='';
+  if(a.need>0 && targetIds.length){
+    const sim=simulateAction(a,targetIds);
+    if(sim && sim.rows.length){
+      perTarget = sim.rows.filter(r=>targetIds.includes(r.id)).map(r=>{
+        const cls=r.delta>0?'dp-pos':(r.delta<0?'dp-neg':'dp-neutral');
+        const up=(r.to!==r.from)?`（${STATUS_LABELS[r.from]}→${STATUS_LABELS[r.to]}）`:'';
+        return `<span class="dp-item ${cls}">${r.name} ${r.delta>0?'+':''}${r.delta}${up}</span>`;
+      }).join('');
+    }
+  }
   box.style.display='flex';
   box.innerHTML = `<span class="dp-label">预计影响：</span>
+    ${perTarget}
     <span class="dp-item">覆盖 ${p.touched} 人</span>
     <span class="dp-item">${credTxt}</span>
     <span class="dp-item">${pressTxt}</span>
     <span class="dp-item">${rateTxt}</span>
-    <span class="dp-item">消耗 ${a.weeks} 资源</span>
-    <span class="dp-item dp-neutral" style="opacity:.7">仅估计，实际受关系网络与偏好影响</span>`;
+    <span class="dp-item">消耗 ${a.weeks} 资源</span>`;
 }
 
 function updateRunButton(){
@@ -3272,6 +3393,84 @@ function unusedActionsList(){
   return `<ul style="margin:8px 0 0 20px;padding:0">${unused.map(a=>`<li><strong>${a.label}</strong>（${a.type}）：${a.desc}</li>`).join('')}</ul>`;
 }
 
+/* =========================================================
+   v27：局终全局诊断（debrief）
+   用玩家自己这一局的日志当证据，回答"你的操盘模式是什么、代价在哪"。
+   不复述规则，只把他自己做过的事翻译成机制语言。
+   ========================================================= */
+function debrief(){
+  const out=[];
+  const ids=Object.keys(state.people).filter(id=>id!=='pm');
+  const total=ids.length;
+  const conv=ids.filter(id=>state.people[id].status===4).length;
+  const H=state.history||[];
+  const rounds=Math.max(1,H.length);
+
+  // 1. 火力集中度：平均每回合碰几个人 + 覆盖了多少不同的人
+  const allTargets=[];
+  H.forEach(h=>(h.targetIds||[]).forEach(t=>allTargets.push(t)));
+  const uniq=new Set(allTargets);
+  const perRound=allTargets.length/Math.max(1,H.filter(h=>(h.targetIds||[]).length).length);
+  if(allTargets.length>=6){
+    if(perRound>=4.5){
+      out.push({tag:'火力分散', k:'warn',
+        t:`你平均每回合同时推动 ${perRound.toFixed(1)} 个人，整局碰过 ${uniq.size}/${total} 个人。广覆盖动作对「未动」的人只有 40% 力度，对 65 分以上的人被阈值锁压到 30%——铺得越宽，每个人收到的力度越不足以跨档。`});
+    } else if(perRound<=2.4 && conv>=Math.ceil(total*0.5)){
+      out.push({tag:'火力集中', k:'good',
+        t:`你平均每回合只碰 ${perRound.toFixed(1)} 个人，把资源压在少数人身上打穿。这是对的：一个人真的被转化之后，他会替你推动他的关系网。`});
+    }
+  }
+
+  // 2. 是否用过制度杠杆
+  const usedInst = ['incentive','reorg','kpi'].filter(id=>state.usedActions.has(id));
+  if(!usedInst.length && conv<Math.ceil(total*0.5)){
+    out.push({tag:'缺制度杠杆', k:'warn',
+      t:`你整局没有用过任何制度型动作（调整激励与奖惩 / 宣布KPI与时限 / 调整汇报关系）。人际说服能推到 65 分，但 65→85 这一段靠说是不动的——它需要改变"做与不做的后果"。`});
+  }
+
+  // 3. 压力是否爆掉
+  if(state.endingType==='fail-rebound' && state.pressure>=7){
+    out.push({tag:'压力失控', k:'warn',
+      t:`终局激进压力 ${state.pressure}/10。施压动作（KPI、强硬约谈、制度调整）确实能快速抬分，但它们同时抬高组织反弹的概率；反弹一旦触发，再施压就是崩盘。缓解压力不产出转化，它买的是后面几回合的行动空间。`});
+  }
+
+  // 4. 网络扩散有没有真的被用上
+  const spreadHits = H.reduce((s,h)=>{
+    const d=(h.details||[]).filter(x=>/扩散|替你说话|带动着走/.test(x)).length;
+    return s+d;
+  },0);
+  if(spreadHits===0 && rounds>=6){
+    out.push({tag:'网络没用上', k:'warn',
+      t:`整局没有一次转化引发连锁扩散。扩散只有在"某个人真的跨到已转化"之后才会发生——如果你一直在给所有人均匀加一点分，谁都不会跨过去，网络就永远是静态的背景图。`});
+  } else if(spreadHits>=4){
+    out.push({tag:'网络被点燃', k:'good',
+      t:`这一局发生了 ${spreadHits} 次由转化引发的连锁（邻居被带动、私交替你说服）。这正是变革扩散的真实机制：你不是在说服 12 个人，你是在点燃 12 个人之间的关系。`});
+  }
+
+  // 5. 私交有没有建立
+  if((state.informal||new Set()).size===0){
+    out.push({tag:'无私交积累', k:'tip',
+      t:`整局没有建立任何非正式关系。同一回合里一起被卷进同一件事的人，信任会累积；过线之后他们互相说服的加成从 ×1.4 提到 ×1.85。把两个人放进同一个动作里，比分别推动他们更划算。`});
+  } else {
+    out.push({tag:'私交资产', k:'good',
+      t:`你建立了 ${state.informal.size} 对非正式关系。这些关系是复利资产：它们不会随回合衰减，后面的每一次扩散都会经过它们放大。`});
+  }
+
+  // 6. 可信度管理
+  if(state.credibility<=4){
+    out.push({tag:'信誉透支', k:'warn',
+      t:`终局可信度 ${state.credibility}/10。可信度低于 5 时动作力度被打折、失败惩罚翻倍。它不会自己回来——只有"成功"才会回补，而成功需要你先有信誉。这是变革里最典型的死亡螺旋。`});
+  }
+
+  // 7. 最后一击：只给一条最该改的；如果确实没有明显失误，就给下一局的目标
+  const top = out.filter(x=>x.k==='warn')[0];
+  const challenge = !top ? {
+    tag:'下一局的目标', k:'good',
+    t:`这一局没有明显失误。下一局的挑战是效率：你用了 ${state.round} 回合、剩下 ${state.resources} 周资源完成 ${conv}/${total} 人的转化——试试用更少的资源做到同样的结果，剩余资源越多，排行榜上的位置越靠前。`
+  } : null;
+  return {items: out.slice(0,5), oneThing: top || null, challenge};
+}
+
 // 渲染结局页（普通页面，非弹窗）
 function renderEndingScreen(){
   const body = el('endingBody');
@@ -3288,6 +3487,26 @@ function renderEndingScreen(){
   banner.className='ending-banner '+e.cls;
   banner.innerHTML=`<h3>${e.title}</h3><div>${e.story}</div>`;
   wrap.appendChild(banner);
+
+  // v27：全局诊断——先用他自己的日志告诉他"你的操盘模式是什么"
+  try{
+    const d=debrief();
+    if(d.items.length){
+      const box=document.createElement('div'); box.className='log-item coach-box';
+      let html='<strong>🎓 全局诊断：你的操盘模式</strong>'+
+        '<div class="small muted" style="margin:4px 0 8px">下面的判断全部来自你这一局的日志，不是通用建议。</div>'+
+        '<ul class="coach-list">'+d.items.map(t=>
+          `<li class="coach-${t.k}"><span class="coach-tag">${t.tag}</span><span>${t.t}</span></li>`).join('')+'</ul>';
+      if(d.oneThing){
+        html+='<div class="one-thing">如果只改一件事：<b>'+d.oneThing.tag+'</b>——'+
+          d.oneThing.t.split('。')[0]+'。</div>';
+      } else if(d.challenge){
+        html+='<div class="one-thing">'+d.challenge.t+'</div>';
+      }
+      box.innerHTML=html;
+      wrap.appendChild(box);
+    }
+  }catch(_){}
 
   const teach=document.createElement('div'); teach.className='log-item';
   teach.innerHTML=`<strong>💡 讨论要点（分层分析）</strong><div class="small" style="margin-top:8px;line-height:1.75;color:var(--text)">${(e.teach||'').split('\n').join('<br>')}</div>`;
@@ -3364,7 +3583,7 @@ function showModal(){
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       (decayed.length?('<div class="small muted" style="margin-top:8px">另有 '+decayed.length+' 人本轮没被触及，自然衰减 '+
-        decayed[0].delta+'：'+decayed.map(r=>r.name).join('、')+'。</div>'):'');
+        decayed.reduce((s,r)=>s+r.delta,0)+'：'+decayed.map(r=>r.name).join('、')+'。走到「初步理解」以上的人不再自然回冷。</div>'):'');
     body.appendChild(box);
   }
 
@@ -3377,8 +3596,29 @@ function showModal(){
     body.appendChild(box);
   }
 
+  // v27：教练诊断——把"你刚才那一步在机制上发生了什么"翻译成人话
+  try{
+    const tips=diagnose();
+    if(tips.length){
+      const box=document.createElement('div'); box.className='log-item coach-box';
+      box.innerHTML='<strong>🎓 教练点评</strong>'+
+        '<div class="small muted" style="margin:4px 0 8px">不替你选动作，只说明为什么卡住。</div>'+
+        '<ul class="coach-list">'+tips.map(t=>
+          `<li class="coach-${t.k}"><span class="coach-tag">${t.tag}</span><span>${t.t}</span></li>`
+        ).join('')+'</ul>';
+      body.appendChild(box);
+    }
+  }catch(e){}
+
   // v26：逐人增益那一句已经进了上面的表，这里不再重复
-  x.details.filter(t=>!/获得直接推动/.test(t)).forEach(t=>{ const d=document.createElement('div'); d.className='log-item'; d.innerHTML=`<div class="small muted">${t}</div>`; body.appendChild(d); });
+  // v27：剩下的文字细节收进一个折叠块，避免弹窗变成一堵等重的灰盒子墙
+  const leftovers = x.details.filter(t=>!/获得直接推动/.test(t));
+  if(leftovers.length){
+    const box=document.createElement('details'); box.className='log-item detail-fold';
+    box.innerHTML = `<summary>📋 过程细节（${leftovers.length} 条）</summary>`+
+      '<ul class="detail-list">'+leftovers.map(t=>`<li>${t}</li>`).join('')+'</ul>';
+    body.appendChild(box);
+  }
 
   const nextBtn = el('nextRoundBtn');
   const normalActions = el('modalActions');
@@ -3518,6 +3758,116 @@ function snapshotPeople(){
   return m;
 }
 
+/* =========================================================
+   v27：教练诊断（coach）
+   这个模拟器教的是"变革怎么扩散"，不是"哪个按钮加得多"。
+   所以每回合结束要回答一个问题：你刚才那一步，在机制上到底发生了什么？
+   诊断不替学生做选择，只把"为什么卡住"翻译成他能自己判断的语言。
+   ========================================================= */
+function diagnose(){
+  const out=[];
+  const ids=Object.keys(state.people).filter(id=>id!=='pm');
+  const total=ids.length;
+  const conv=ids.filter(id=>state.people[id].status===4).length;
+  const need=Math.ceil(total*0.5);
+  const last=state.lastImpact;
+
+  const stuck=ids.filter(id=>state.people[id].status===3);
+  const awake=ids.filter(id=>state.people[id].status===1);
+  const silent=ids.filter(id=>state.people[id].status===0);
+
+  // —— 1. 阈值锁：卡在「主动参与」的人
+  if(stuck.length>=2){
+    out.push({k:'tip', tag:'阈值锁', w:60,
+      t:`有 ${stuck.length} 个人卡在「主动参与」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 强硬约谈）打穿，广覆盖只剩 30% 力度。`});
+  }
+
+  // —— 2. 火力分散：近三回合碰了太多人
+  const recent=state.history.slice(-3);
+  const tset=new Set();
+  recent.forEach(h=>(h.targetIds||[]).forEach(t=>tset.add(t)));
+  if(tset.size>=7 && conv<need){
+    out.push({k:'warn', tag:'火力分散', w:85,
+      t:`近 3 回合你碰了 ${tset.size} 个不同的人。变革不是投票——一个人的说服度不过线，他的关系网就不会替你把话传下去。把火力集中到 2-3 个人身上先打穿一个，扩散会替你干剩下的活。`});
+  }
+
+  // —— 3. 连续无转化
+  const noConv=state.history.slice(-3).every(h=>((h.deltas&&h.deltas.converted)||0)===0);
+  if(noConv && state.history.length>=3){
+    out.push({k:'warn', tag:'停滞', w:80,
+      t:`已经 ${Math.min(3,state.history.length)} 回合没有新增转化了。看看结果页的「这一步动了谁」：如果每个人都在涨分但没人升档，说明你在给已经快满的人加溢出的分，而该被推的人没被推到。`});
+  }
+
+  // —— 4. 私交没被利用
+  const pairs=[...(state.informal||[])].map(k=>k.split('|'));
+  const unused=pairs.filter(([a,b])=>{
+    const pa=state.people[a], pb=state.people[b];
+    if(!pa||!pb) return false;
+    const hi=pa.score>=pb.score?a:b, lo=pa.score>=pb.score?b:a;
+    return state.people[hi].status>=3 && state.people[lo].status<=1;
+  });
+  if(unused.length){
+    const [a,b]=unused[0];
+    const hi=state.people[a].score>=state.people[b].score?a:b, lo=hi===a?b:a;
+    out.push({k:'tip', tag:'私交杠杆', w:70,
+      t:`${state.people[hi].name} 和 ${state.people[lo].name} 之间已经有私交（信任过线）。先推 ${state.people[hi].name}，他转化时会直接把 ${state.people[lo].name} 拉起来；你直接去找 ${state.people[lo].name} 反而更贵。`});
+  }
+
+  // —— 5. 从没被碰过的人
+  const never=ids.filter(id=>!state.revealed[id] && state.people[id].score<=3 && state.people[id].status===0);
+  if(never.length>=3 && conv>=2){
+    out.push({k:'tip', tag:'未开战场', w:45,
+      t:`${never.length} 个人你一次都没碰过（${never.slice(0,3).map(i=>state.people[i].name).join('、')}）。他们未必都要转化——但如果其中有连接很多人的人，那就是你漏掉的杠杆点。`});
+  }
+
+  // —— 6. 压力水位
+  if(state.pressure>=7){
+    out.push({k:'warn', tag:'压力', w:90,
+      t:`激进压力 ${state.pressure}/10。再叠加一两个施压动作就会触发组织反弹；反弹之后还继续施压，会直接崩盘。「缓解压力」不产出转化，但它买的是后面几回合的行动空间。`});
+  }
+
+  // —— 7. 可信度
+  if(state.credibility<=4){
+    out.push({k:'warn', tag:'可信度', w:88,
+      t:`可信度只有 ${state.credibility}。低于 5 时动作力度打折、失败惩罚翻倍。先用「以身作则」「小范围试点」把信誉做回来——没有信誉的推动只是在消耗你自己。`});
+  }
+
+  // —— 8. 资源告急
+  if(state.resources<=15 && conv<need){
+    out.push({k:'warn', tag:'资源', w:92,
+      t:`只剩 ${state.resources} 周，还差 ${need-conv} 人才到 50%。现在不要再开新战场了：挑最接近过线的 2-3 个人，把剩下的资源全砸进去。`});
+  }
+
+  // —— 9. 正向反馈：机制被用对了
+  if(last){
+    const rel=(last.relations||[]).length;
+    const spread=(last.people||[]).filter(r=>r.reasons.includes('网络扩散') && r.delta>0).length;
+    if(rel>0){
+      out.push({k:'good', tag:'机制用对了', w:30,
+        t:`这一步让 ${rel} 对搭档的信任过了线，变成非正式关系。之后他们互相说服的扩散加成从 ×1.4 提到 ×1.85——这是复利，越早建立越值钱。`});
+    } else if(spread>=2){
+      out.push({k:'good', tag:'机制用对了', w:28,
+        t:`这一步有 ${spread} 个人是被网络扩散推起来的，不是你直接说服的。这就是杠杆：你花一份资源，网络替你干了 ${spread} 份活。`});
+    }
+  }
+
+  out.sort((x,y)=>y.w-x.w);
+  return out.slice(0,3);
+}
+
+/* 决策页顶部的一行「当前局面」——只在真的有风险时出现，不剧透策略 */
+function situationLine(){
+  const ids=Object.keys(state.people).filter(id=>id!=='pm');
+  const conv=ids.filter(id=>state.people[id].status===4).length;
+  const need=Math.ceil(ids.length*0.5);
+  if(state.pressure>=8) return {k:'warn', t:`激进压力 ${state.pressure}/10，再施压可能触发反弹。`};
+  if(state.credibility<=3) return {k:'warn', t:`可信度 ${state.credibility}/10，动作力度被打折。`};
+  if(state.resources<=10) return {k:'warn', t:`只剩 ${state.resources} 周，还差 ${need-conv} 人。`};
+  const stuck=ids.filter(id=>state.people[id].status===3).length;
+  if(stuck>=3) return {k:'tip', t:`${stuck} 人卡在「主动参与」，需要定向动作打穿最后一跳。`};
+  return null;
+}
+
 function detectMilestones(before, after){
   const ms=[];
   // 首次转化
@@ -3653,6 +4003,7 @@ function runTurn(){
     actionId: a.id,
     actionType: a.type,
     targets: state.selectedTargets.map(id=>state.people[id].name),
+    targetIds: state.selectedTargets.slice(),   // v27：教练诊断要按 id 复盘"火力是否分散"
     story: impact.story,
     details: [...impact.details, ...consequences],
     deltas: {
