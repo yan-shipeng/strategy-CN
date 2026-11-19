@@ -4969,12 +4969,17 @@ document.addEventListener('keydown',(e)=>{
   (function initLeaderboard(){
     const BASE='https://kvdb.io';
     const BUCKET='64EQyEqxpaujcVcSR8LFHN';
+    // v29：备用通道。kvdb 需要桶主邮箱验证；万一没激活，整班就看不到彼此的分数。
+    // ntfy.sh 是免注册的公开消息日志，POST 一条 = 提交一次，poll 读回全部。
+    // 代价：免费版消息只缓存 12 小时——所以它只是备用，主通道仍是 kvdb。
+    const NTFY='https://ntfy.sh';
+    const TOPIC='ci_hku_strategy_class_v1';
     const PREFIX='ci_s_';
     const LOCAL='ci_leaderboard_v1';
     const DEVICE='ci_device_v1';
     const TIMEOUT=8000;
 
-    const S={list:[],status:'idle',err:'',writeErr:'',mine:null,timer:null};
+    const S={list:[],status:'idle',err:'',writeErr:'',mine:null,timer:null,source:''};
 
     const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const passed=x=>x.r>=50;
@@ -5026,23 +5031,52 @@ document.addEventListener('keydown',(e)=>{
       return p;
     }
 
+    function normRec(v,k){
+      if(!v||typeof v!=='object') return null;
+      const n=String(v.n||'').trim().slice(0,12);
+      const r=Math.round(+v.r), c=Math.round(+v.c), l=Math.round(+v.l), d=Math.round(+v.d);
+      if(!n) return null;
+      if(!isFinite(r)||r<0||r>100) return null;
+      if(!isFinite(l)||l<0||l>60) return null;
+      if(!isFinite(c)||c<0||c>10) return null;
+      if(!isFinite(d)||d<1||d>60) return null;
+      return {k:k,n:n,r:r,c:c,l:l,d:d,t:+v.t||0};
+    }
+
     function parseList(raw){
       const out=[];
       if(!Array.isArray(raw)) return out;
       raw.forEach(row=>{
         if(!Array.isArray(row)||row.length<2) return;
         let v; try{ v=JSON.parse(row[1]); }catch(e){ return; }
-        if(!v||typeof v!=='object') return;
-        const n=String(v.n||'').trim().slice(0,12);
-        const r=Math.round(+v.r), c=Math.round(+v.c), l=Math.round(+v.l), d=Math.round(+v.d);
-        if(!n) return;
-        if(!isFinite(r)||r<0||r>100) return;
-        if(!isFinite(l)||l<0||l>60) return;
-        if(!isFinite(c)||c<0||c>10) return;
-        if(!isFinite(d)||d<1||d>60) return;
-        out.push({k:row[0],n:n,r:r,c:c,l:l,d:d,t:+v.t||0});
+        const rec=normRec(v,row[0]);
+        if(rec) out.push(rec);
       });
       return out;
+    }
+
+    // ── 备用通道：ntfy.sh ──
+    function ntfyRead(){
+      return fetchT(NTFY+'/'+TOPIC+'/json?poll=1&since=all',{cache:'no-store'})
+        .then(res=>{ if(!res.ok) throw new Error('HTTP '+res.status); return res.text(); })
+        .then(txt=>{
+          const out=[];
+          String(txt||'').split('\n').forEach(line=>{
+            if(!line.trim()) return;
+            let ev; try{ ev=JSON.parse(line); }catch(e){ return; }
+            if(!ev||ev.event!=='message'||!ev.message) return;
+            let v; try{ v=JSON.parse(ev.message); }catch(e){ return; }
+            const rec=normRec(v, v&&v.k);
+            if(rec) out.push(rec);
+          });
+          return out;
+        });
+    }
+    function ntfyWrite(rec){
+      const body=JSON.stringify({k:rec.k,n:rec.n,r:rec.r,c:rec.c,l:rec.l,d:rec.d,t:Date.now()});
+      return fetchT(NTFY+'/'+TOPIC,{
+        method:'POST', headers:{'Content-Type':'text/plain'}, body:body, cache:'no-store'
+      }).then(res=>{ if(!res.ok) throw new Error('HTTP '+res.status); return true; });
     }
 
     function current(){
@@ -5052,25 +5086,38 @@ document.addEventListener('keydown',(e)=>{
               l:state.resources, d:Math.max(1,state.round-1), t:Date.now()};
     }
 
+    function mergeLocal(list){
+      // 云端读有 3~6 秒缓存：本机有、云端还没回来的，先补上
+      localRead().forEach(x=>{ if(!list.some(y=>y.k===x.k)) list.push(x); });
+      return list;
+    }
+
     function refresh(){
       S.status='loading'; paint();
+      const fail=(e)=>{
+        S.status='fail'; S.source='local';
+        S.err=(e&&e.name==='AbortError')?'超时':String(e&&e.message||e);
+        S.list=rankSort(localRead());
+        paint();
+      };
       return fetchT(BASE+'/'+BUCKET+'/?format=json&values=1',{cache:'no-store'})
         .then(res=>{
           if(!res.ok) throw new Error('HTTP '+res.status);
           return res.json();
         })
         .then(raw=>{
-          let list=parseList(raw);
-          // 云端读有 3~6 秒缓存：本机有、云端还没回来的，先补上
-          localRead().forEach(x=>{ if(!list.some(y=>y.k===x.k)) list.push(x); });
-          S.list=rankSort(list); S.status='ok'; S.err='';
+          S.list=rankSort(mergeLocal(parseList(raw))); S.status='ok'; S.err=''; S.source='kvdb';
+          paint();
         })
-        .catch(e=>{
-          S.status='fail';
-          S.err=(e&&e.name==='AbortError')?'超时':String(e&&e.message||e);
-          S.list=rankSort(localRead());
+        .catch(()=>{
+          // 主通道不通 → 试备用通道
+          return ntfyRead().then(list=>{
+            if(!list.length) throw new Error('备用通道也没有记录');
+            S.list=rankSort(mergeLocal(list)); S.status='ok'; S.err=''; S.source='ntfy';
+            paint();
+          });
         })
-        .then(()=>{ paint(); });
+        .catch(fail);
     }
 
     function put(rec){
@@ -5107,17 +5154,26 @@ document.addEventListener('keydown',(e)=>{
           });
         })
         .catch(()=>true);
+      // 主通道不通就走备用通道；两条都不通才如实报错
+      const viaBackup=(e1)=>{
+        return ntfyWrite(rec).then(()=>{ S.writeErr=''; S.source='ntfy'; })
+          .catch(e2=>{
+            const m1=String(e1&&e1.message||e1), m2=String(e2&&e2.message||e2);
+            S.writeErr = m1===m2 ? m1 : (m1+' / 备用通道 '+m2);
+          });
+      };
       return shouldWrite
-        .then(go=> go ? put(rec) : true)
-        .then(()=>{})
-        .catch(e=>{ S.writeErr=String(e&&e.message||e); })
+        .then(go=> go ? put(rec).catch(e=>viaBackup(e)) : true)
+        .catch(e=>viaBackup(e))
         .then(()=>refresh());
     }
 
     function statusLine(){
       const dot=(c)=>'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c+';margin-right:5px;vertical-align:middle"></span>';
       let s;
-      if(S.status==='ok') s=dot('#5ab84a')+'在线榜单 · 全班 '+S.list.length+' 条记录';
+      if(S.status==='ok' && S.source==='ntfy')
+        s=dot('#5ab84a')+'在线榜单（备用通道）· 全班 '+S.list.length+' 条记录 · 只保留最近 12 小时';
+      else if(S.status==='ok') s=dot('#5ab84a')+'在线榜单 · 全班 '+S.list.length+' 条记录';
       else if(S.status==='loading') s=dot('#e0c03a')+'正在同步…';
       else if(S.status==='fail') s=dot('#e05068')+'云端暂时连不上（'+esc(S.err||'网络')+'）· 先显示本机记录';
       else s=dot('#5a8090')+'未同步';
