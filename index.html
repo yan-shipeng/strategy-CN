@@ -5062,7 +5062,7 @@ document.addEventListener('keydown',(e)=>{
     // ntfy.sh 是免注册的公开消息日志，POST 一条 = 提交一次，poll 读回全部。
     // 代价：免费版消息只缓存 12 小时——所以它只是备用，主通道仍是 kvdb。
     const NTFY='https://ntfy.sh';
-    const TOPIC='ci_hku_strategy_class_v1';
+    const TOPIC='ci_hku_strategy_v2';
     const PREFIX='ci_s_';
     const LOCAL='ci_leaderboard_v1';
     const DEVICE='ci_device_v1';
@@ -5124,7 +5124,7 @@ document.addEventListener('keydown',(e)=>{
       if(!v||typeof v!=='object') return null;
       const n=String(v.n||'').trim().slice(0,12);
       const r=Math.round(+v.r), c=Math.round(+v.c), l=Math.round(+v.l), d=Math.round(+v.d);
-      if(!n) return null;
+      if(!n||n==='匿名') return null;   // 匿名记录不上榜（多半是调试残留）
       if(!isFinite(r)||r<0||r>100) return null;
       if(!isFinite(l)||l<0||l>60) return null;
       if(!isFinite(c)||c<0||c>10) return null;
@@ -5181,32 +5181,37 @@ document.addEventListener('keydown',(e)=>{
       return list;
     }
 
+    /* v30 修复：主通道"读得到但写不进"时（kvdb 桶未验证就是这样），
+       如果只在写失败时才落备用通道，备用通道的数据就永远读不回来。
+       所以读的时候两条通道一起读，按 k 去重、各取更好的一条。 */
     function refresh(){
       S.status='loading'; paint();
-      const fail=(e)=>{
-        S.status='fail'; S.source='local';
-        S.err=(e&&e.name==='AbortError')?'超时':String(e&&e.message||e);
-        S.list=rankSort(localRead());
+      const fromKvdb=fetchT(BASE+'/'+BUCKET+'/?format=json&values=1',{cache:'no-store'})
+        .then(res=>{ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+        .then(raw=>parseList(raw))
+        .catch(e=>({__err:e}));
+      const fromNtfy=ntfyRead().catch(e=>({__err:e}));
+
+      return Promise.all([fromKvdb,fromNtfy]).then(([a,b])=>{
+        const kvOk=Array.isArray(a), ntOk=Array.isArray(b);
+        if(!kvOk && !ntOk){
+          const e=(a&&a.__err)||(b&&b.__err)||new Error('网络');
+          S.status='fail'; S.source='local';
+          S.err=(e&&e.name==='AbortError')?'超时':String(e&&e.message||e);
+          S.list=rankSort(localRead());
+          paint(); return;
+        }
+        const byKey={};
+        [].concat(kvOk?a:[], ntOk?b:[]).forEach(rec=>{
+          const old=byKey[rec.k];
+          if(!old || better(rec,old)) byKey[rec.k]=rec;
+        });
+        const merged=Object.keys(byKey).map(k=>byKey[k]);
+        S.list=rankSort(mergeLocal(merged));
+        S.status='ok'; S.err='';
+        S.source=(kvOk && merged.length && a.length) ? 'kvdb' : (ntOk && b.length ? 'ntfy' : 'kvdb');
         paint();
-      };
-      return fetchT(BASE+'/'+BUCKET+'/?format=json&values=1',{cache:'no-store'})
-        .then(res=>{
-          if(!res.ok) throw new Error('HTTP '+res.status);
-          return res.json();
-        })
-        .then(raw=>{
-          S.list=rankSort(mergeLocal(parseList(raw))); S.status='ok'; S.err=''; S.source='kvdb';
-          paint();
-        })
-        .catch(()=>{
-          // 主通道不通 → 试备用通道
-          return ntfyRead().then(list=>{
-            if(!list.length) throw new Error('备用通道也没有记录');
-            S.list=rankSort(mergeLocal(list)); S.status='ok'; S.err=''; S.source='ntfy';
-            paint();
-          });
-        })
-        .catch(fail);
+      });
     }
 
     function put(rec){
