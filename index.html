@@ -3561,14 +3561,15 @@ function debrief(){
   }
 
   // 6. 临界点
-  if(state.tippingPointReached){
+  const _ids2=ids;
+  const _active=_ids2.filter(id=>state.people[id].status>=3).length;
+  const _tipped = state.tippingPointReached || (_ids2.length>0 && _active/_ids2.length >= 1/3);
+  if(_tipped){
     out.push({tag:'越过临界点', k:'good',
       t:`第 ${state.tippingPointRound} 回合你越过了临界点——「主动参与」以上的人超过 1/3。此后观望的心理成本变高，广覆盖对未动者的渗透从 40% 提到 58%。真实变革里这个点一旦过了，事情就开始自己往前走；过不了，你永远在推石头。`});
   } else {
-    const ids2=Object.keys(state.people).filter(id=>id!=='pm');
-    const active=ids2.filter(id=>state.people[id].status>=3).length;
     out.push({tag:'没过临界点', k:'tip',
-      t:`终局「主动参与」以上只有 ${active}/${ids2.length} 人，始终没到 1/3 的临界点。在临界点之前，每一步都要你亲自推；过了之后，观望者会因为"多数人都在做"而自己走过来。所以早期该做的不是广覆盖，而是尽快把 1/3 的人推到"主动参与"。`});
+      t:`终局「主动参与」以上只有 ${_active}/${_ids2.length} 人，始终没到 1/3 的临界点。在临界点之前，每一步都要你亲自推；过了之后，观望者会因为"多数人都在做"而自己走过来。所以早期该做的不是广覆盖，而是尽快把 1/3 的人推到"主动参与"。`});
   }
 
   // 7. 可信度管理
