@@ -607,7 +607,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v32</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v33</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1035,7 +1035,7 @@
             </div>
             <div class="intro-step">
               <div class="intro-step-num">3</div>
-              <div class="intro-step-text"><strong>控制激进压力</strong>——强硬动作见效快但代价高；压力接近上限时及时缓解。</div>
+              <div class="intro-step-text"><strong>控制激进压力</strong>——动制度、下 KPI 见效快但代价高；压力接近上限时，用「休闲聚会」放气。</div>
             </div>
           </div>
           <ul class="intro-warn-list">
@@ -1460,7 +1460,7 @@ const safeStorage = (function(){
    v13 数据：关键人物与利益偏好矩阵
    ========================================================= */
 /* 动作类型枚举，用于偏好矩阵键名 */
-// 类型：示范/政治/对话/沟通/赋能/验证/叙事/压力/对抗/制度
+// 类型：示范/政治/对话/沟通/赋能/验证/叙事/压力/制度
 const PEOPLE={
   ceo:{name:'总部CEO',role:'总部最高决策者',desc:'总部最高决策者，能提供公开背书，也决定这个项目的预算与时间表。',faction:'总部',score:18,status:0,x:40,y:30,ties:['pm','cfo'],hidden_ties:[],
     hidden_goal:'快速实现ROI，维持股价，避免重大失误',
@@ -1473,13 +1473,13 @@ const PEOPLE={
     prefs:{'制度':0.25,'验证':0.15,'叙事':-0.20,'对话':-0.10}},
   region:{name:'当地区域总经理',role:'区域桥梁人物',desc:'连接总部与当地组织，直接管辖厂长和运营主管。',faction:'当地',score:16,status:0,x:240,y:30,ties:['pm','plant','ops'],hidden_ties:[],
     hidden_goal:'维持当地团队稳定，保护既得利益',
-    prefs:{'对话':0.25,'赋能':0.15,'对抗':-0.25,'压力':-0.15}},
+    prefs:{'对话':0.25,'赋能':0.15,'压力':-0.15}},
   plant:{name:'当地厂长',role:'生产运营部主管',desc:'生产运营部主管，管现场排产与执行节奏。',faction:'当地',score:10,status:0,x:140,y:165,ties:['region','engineer','union'],hidden_ties:[],
     hidden_goal:'保护现场工艺和工人信任，避免生产中断',
     prefs:{'赋能':0.25,'验证':0.20,'压力':-0.20,'制度':-0.10}},
   hr:{name:'当地HR总监',role:'人力行政部主管',desc:'人力行政部主管，管人才与流程，向运营主管汇报。',faction:'当地',score:14,status:0,x:340,y:120,ties:['ops'],hidden_ties:['engineer','union'],
     hidden_goal:'防止关键人才流失，维持组织稳定',
-    prefs:{'对话':0.20,'赋能':0.20,'叙事':0.15,'对抗':-0.25}},
+    prefs:{'对话':0.20,'赋能':0.20,'叙事':0.15}},
   sales:{name:'当地销售主管',role:'销售客户部主管',desc:'销售客户部主管，管客户关系，向运营主管汇报。',faction:'当地',score:11,status:0,x:240,y:210,ties:['ops','customer'],hidden_ties:[],
     hidden_goal:'维持客户关系，保护销售团队独立性',
     prefs:{'叙事':0.20,'对话':0.15,'压力':-0.20,'制度':-0.15}},
@@ -1488,19 +1488,19 @@ const PEOPLE={
     prefs:{'验证':0.25,'赋能':0.15,'制度':-0.15,'叙事':-0.10}},
   engineer:{name:'当地生产工程师',role:'生产运营部下属',desc:'生产运营部下属，负责生产工艺与现场技术。',faction:'当地',score:6,status:0,x:140,y:255,ties:['plant','union'],hidden_ties:[],
     hidden_goal:'保护自己的权力和职位，维持老团队利益',
-    prefs:{'对抗':-0.30,'压力':-0.25,'对话':0.20,'赋能':0.20}},
+    prefs:{'压力':-0.25,'对话':0.20,'赋能':0.20}},
   union:{name:'当地工会主席',role:'生产运营部下属',desc:'生产运营部下属，代表基层工人，直接向厂长汇报。',faction:'当地',score:7,status:0,x:240,y:300,ties:['plant','engineer'],hidden_ties:['gov','hr'],
     hidden_goal:'防止裁员，保护薪酬和工作条件',
-    prefs:{'压力':-0.25,'对抗':-0.25,'赋能':0.25,'叙事':0.15}},
+    prefs:{'压力':-0.25,'赋能':0.25,'叙事':0.15}},
   gov:{name:'当地骨干工人',role:'生产运营部下属',desc:'生产运营部下属，一线骨干工人。',faction:'当地',score:10,status:0,x:40,y:300,ties:['engineer'],hidden_ties:['union'],
     hidden_goal:'维护工人利益，确保工资和福利不下降，防止裁员',
-    prefs:{'赋能':0.25,'对话':0.20,'压力':-0.25,'对抗':-0.15}},
+    prefs:{'赋能':0.25,'对话':0.20,'压力':-0.25}},
   customer:{name:'大客户销售',role:'销售客户部下属',desc:'销售客户部下属，对接大客户。',faction:'当地',score:12,status:0,x:340,y:210,ties:['sales','finance'],hidden_ties:['ceo'],
     hidden_goal:'维持客户满意度，确保订单稳定，保护销售团队的提成',
-    prefs:{'验证':0.25,'制度':0.15,'叙事':0.10,'对抗':-0.20}},
+    prefs:{'验证':0.25,'制度':0.15,'叙事':0.10}},
   finance:{name:'当地数据分析师',role:'销售客户部下属',desc:'销售客户部下属，负责数据、成本与风险分析。',faction:'当地',score:13,status:0,x:340,y:300,ties:['sales','customer'],hidden_ties:['cfo'],
     hidden_goal:'确保财务安全，跟随强势方',
-    prefs:{'制度':0.20,'政治':0.15,'对抗':-0.15,'叙事':-0.10}}
+    prefs:{'制度':0.20,'政治':0.15,'叙事':-0.10}}
 };
 
 /* 状态字形（双编码核心）：未动○ → 觉醒◔ → 理解◑ → 参与◕ → 已转化● */
@@ -1855,49 +1855,6 @@ const ACTIONS=[
     }
     return affectAll(8,'KPI和时限制造了紧迫感，但也增加了压力。','压力');
   }},
-  {id:'confront',label:'强硬施压',weeks:1,cooldown:3,need:1,type:'对抗',reqCred:5,disrupt:3,desc:'对明确在挡路的人施加压力。这是所有动作里代价最高的一种：用错对象会严重损害你的可信度，还会让整个组织噤声——所以下手之前，你得先弄清楚谁才是真正在挡路的那个人。',cooldownReason:'强硬约谈是高风险的动作，需要充分时间观察效果，避免过度使用导致组织对抗升级。',run(ids){
-    const p=state.people[ids[0]];
-    const resistanceTargets = ['union','ops']; // 只有核心阻力角色才是合法的强硬约谈对象
-    const isLegitTarget = resistanceTargets.includes(ids[0]);
-
-    // 失败条件 B：对象已在变化中（status >= 2）——无论是否抵抗角色，都是严重失误
-    if(p.status >= 2){
-      const roleCtx = ids[0]==='union' ? '在欧洲工会体系下，对已表达支持的工会代表进行强硬表态，会被视为对集体谈判权的挑衅，引发正式投诉程序。' :
-                      ids[0]==='ops' ? '运营主管已开始转变，此时强硬约谈会被解读为「你不信任我的努力」，极易引发中层集体观望。' :
-                      `${p.name}已处于「${statusText(p.status)}」状态，正在向你期望的方向移动。强硬约谈会被解读为不信任和指责，毁掉来之不易的盟友。`;
-      // 额外惩罚：盟友分数下降
-      const oldScore = p.score;
-      p.score = Math.max(0, p.score - 15);
-      if(p.score !== oldScore) updateStatus(p);
-      state.pressure = Math.min(10, state.pressure + 1);
-      return {story:`你对${p.name}进行了强硬约谈，但对方已经展现出支持意愿——这次约谈让他/她感到被冒犯。`,
-        details:[
-          `❌ 对象选择严重失当：${p.name}当前已处于「${statusText(p.status)}」状态，强硬约谈直接损伤了这位潜在盟友（分数 -15，激进压力 +1）。`,
-          `📚 管理学原理：${roleCtx}`,
-          `💡 建议：强硬手段只该用在真正挡路、而且还没开始转向的人身上。对已在变化中的人，请改用「公开认可」或「小范围试点」来巩固其进展。`
-        ],fail:true};
-    }
-
-    // 失败条件 A：对象不是核心阻力角色（status < 2 但不是 union/ops）——恐吓了无辜者
-    if(!isLegitTarget){
-      const oldScore = p.score;
-      p.score = Math.max(0, p.score - 10);
-      if(p.score !== oldScore) updateStatus(p);
-      state.pressure = Math.min(10, state.pressure + 2);
-      return {story:`你对${p.name}进行了强硬约谈，但对方只是个普通的观望者——这场约谈在组织内引发了恐慌。`,
-        details:[
-          `❌ 对象选择失当：${p.name}并不在真正挡路，强硬约谈让他/她感到被恐吓（分数 -10），并在组织内传开，激进压力 +2。`,
-          `📚 管理学原理：强硬手段是针对「有意识地阻碍变革」的关键人物的工具。对普通观望者使用只会制造寒蝉效应，让更多人躲起来。`,
-          `💡 建议：先通过「私人约谈」确认谁才是阻力的源头。对普通观望者，请用「上手培训」「小范围试点」或「休闲聚会」。`
-        ],fail:true};
-    }
-
-    // 成功路径：合法目标（union 或 ops）且 status < 2
-    state.pressure = Math.min(10, state.pressure + 2); // 强硬动作必然带来压力代价
-    const r = affectTargets(ids, 10, `你对${p.name}进行了强硬约谈，对方意识到继续阻挠的代价。`, false, '对抗');
-    r.details.push(`⚠️ 强硬约谈代价：组织感受到了压力信号，激进压力 +2（现 ${state.pressure}）。`);
-    return r;
-  }},
   {id:'incentive',label:'调整激励与奖惩',weeks:4,cooldown:6,need:0,type:'制度',reqCred:8,disrupt:3,desc:'通过制度激励能推动全体。这是后期的终极武器——当其他方法都失效时，制度改变能突破瓶颈。但代价是会大幅提升组织压力。',cooldownReason:'激励制度的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){ return affectAll(12,'激励与奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','制度'); }},
   {id:'reorg',label:'调整汇报关系',weeks:3,cooldown:6,need:1,type:'制度',reqCred:6,disrupt:2,
    desc:'把某个人的汇报线改到已经认同变革的上级名下。组织结构本身就是杠杆：换了汇报对象，信息流向、资源分配和压力传导都会跟着改道。',
@@ -1969,7 +1926,7 @@ const ROLES = {
 let currentRoleId = 'integrator';
 
 /* v31：动作按变革管理的标准类别重排
-   联盟 → 沟通 → 赋能 → 成效 → 制度 → 纠偏 → 恢复
+   联盟 → 沟通 → 赋能 → 成效 → 制度 → 恢复
    这也是一条推荐的推进顺序：先立信、再对话、再给人能力、再让成果可见，
    最后才动制度。倒着走，每一步都会更贵。 */
 const ACTION_GROUPS = [
@@ -1978,7 +1935,6 @@ const ACTION_GROUPS = [
   { key:'enable',     label:'🎓 赋能与试点', hint:'让人从「不想」到「不会」，再到「会」', ids:['training','pilot'] },
   { key:'wins',       label:'🏆 让成效可见', hint:'短期成果是最便宜的说服工具', ids:['success-story','recognize'] },
   { key:'institution',label:'🏛 制度与结构', hint:'改规则比改人快，但代价也最大', ids:['kpi','incentive','reorg'] },
-  { key:'correct',    label:'⚡ 纠偏', hint:'只在确认有人挡路之后才用', ids:['confront'] },
   { key:'recover',    label:'🌿 组织恢复', hint:'组织会累，压力要放气', ids:['team-building'] }
 ];
 
@@ -2513,15 +2469,8 @@ function applyConsequences(action, impact){
     });
   }
 
-  /* Proposal C: 反制机制 - 针对阻力角色的特殊对抗机制 */
-  const stubbornChars = ['union', 'ops', 'engineer'];
-  if(stubbornChars.includes(targetId) && action.id === 'confront' && !impact.fail){
-    // 强硬约谈对阻力角色特别有效，但风险更高
-    state.pressure = Math.min(10, state.pressure + 2);
-    notes.push('⚡ 反制机制：强硬施压打在了真正挡路的人身上，冲击比预想的更强，但组织压力上升。');
-  }
-
   /* Proposal G: 盟友干扰 - 阻力角色可以通过其盟友影响他人 */
+  const stubbornChars = ['union', 'ops', 'engineer'];
   if(impact.fail && stubbornChars.includes(targetId)){
     const allies = {
       'union': ['plant', 'engineer'],
@@ -3138,13 +3087,10 @@ function buildActionCard(a, idx){
           if(mul>=1.15) prefMark=`<span style="color:var(--success);font-weight:700" title="正中偏好：这个动作对他有加成">▲${a.type} ×${mul.toFixed(2)}</span>`;
           else if(mul<=0.85) prefMark=`<span style="color:var(--danger);font-weight:700" title="逆其偏好：这个动作对他打折">▼${a.type} ×${mul.toFixed(2)}</span>`;
         }
-        // v17: 对抗动作的误用预警——目标已 status>=2 时显示警告且禁用
-        const confrontRisk = (a.id==='confront' && p.status>=2);
-        const riskMark = confrontRisk ? '<span title="已理解或已支持，不适合强硬约谈" style="color:var(--danger);font-weight:700">⚠️</span>' : '';
         const recogRisk = (a.id==='recognize' && p.status===0);
         const recogMark = recogRisk ? '<span title="尚未形成示范效应，公开表彰会失当" style="color:var(--danger);font-weight:700">⚠️</span>' : '';
-        const disabledAttr = (confrontRisk || recogRisk) ? 'data-risk="1"' : '';
-        const riskStyle = (confrontRisk || recogRisk) ? 'style="opacity:0.55;border-color:var(--danger)"' : '';
+        const disabledAttr = recogRisk ? 'data-risk="1"' : '';
+        const riskStyle = recogRisk ? 'style="opacity:0.55;border-color:var(--danger)"' : '';
         // Progress bar: score vs next threshold
         const stubborn = ['union','ops','engineer'];
         const thresholds = stubborn.includes(id) ? [25,50,70,90,100] : [25,45,65,85,100];
@@ -3156,7 +3102,7 @@ function buildActionCard(a, idx){
         const blocks = Math.round(barPct/20); // 0-5 filled blocks out of 5
         const barBlocks = '█'.repeat(blocks) + '░'.repeat(5-blocks);
         return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${disabledAttr} ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
-          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${soft}${bridge}${prefMark}${riskMark}${recogMark}</span>
+          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${soft}${bridge}${prefMark}${recogMark}</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
@@ -3438,7 +3384,7 @@ function endingNarratives(type){
   return {
     cls:'fail', title:'组织反弹 · 变革失败',
     story:`时间走完。${failCause}。员工代表把不满带到了园区接口，关键客户开始质疑交付稳定性。CEO 在最后一次例会上没有责备你，但桌上多了一份外部咨询公司的方案——这意味着你已经失去了主导权。`,
-    teach:'▶ 文化层：在变革早期，你是否用「总部逻辑」覆盖了当地行为规范？合法性危机是如何从目标人物扩散到外部节点的？\n▶ 制度层：你是否过早使用高扰动动作（KPI/激励/对抗）？「先对话后对抗」与「先对抗后对话」结果完全不同。\n▶ 个人层：关键桥梁人物（区域GM、HR）是否被晾在一边？你是否把阻力者当成「需要扭转的个人」而非「需要倾听的来源」？',
+    teach:'▶ 文化层：在变革早期，你是否用「总部逻辑」覆盖了当地行为规范？合法性危机是如何从目标人物扩散到外部节点的？\n▶ 制度层：你是否过早使用高扰动动作（KPI/激励/结构调整）？在没有先建立信任和一个本土案例之前就动制度，反弹会比预想的大得多。\n▶ 个人层：关键桥梁人物（区域GM、HR）是否被晾在一边？你是否把沉默的人当成「需要扭转的个人」，而不是「还没被听懂的人」？',
     realWorld:'▶ <strong>TCL·Thomson（2004）·BenQ·西门子手机（2005）</strong>：18 个月内重大亏损，共同症状是总部压 KPI、桥梁人物缺位、合法性节点被激怒。\n▶ <strong>安博·德国机场（2017）</strong>：沉没成本错觉+总部远程决策，被当地监管与工会回击。\n▶ <strong>复星·海外子公司（2022-）</strong>：跨文化沟通不到位叠加资本压力，员工罢工、客户流失。\n<div class="small" style="margin-top:8px;color:var(--danger);font-weight:600">⚠️ 失败不是努力的问题——是顺序的问题。</div>'
   };
 }
@@ -3454,12 +3400,12 @@ function actionGroupPieSvg(){
   const total = Object.values(counts).reduce((s,v)=>s+v.count, 0);
   if(total === 0) return '<div class="small muted">本局没有任何有效动作记录。</div>';
   const colors = {
-    trust:    '#0d8b96',
-    info:     '#3b7dd8',
-    spread:   '#4ade80',
-    pressure: '#e6a84b',
-    structure:'#7b4fd4',
-    confront: '#e85454'
+    coalition:  '#0d8b96',
+    communicate:'#3b7dd8',
+    enable:     '#4ade80',
+    wins:       '#e6a84b',
+    institution:'#7b4fd4',
+    recover:    '#6b7280'
   };
   const cx=80, cy=80, r=64;
   let angle = -Math.PI/2;
@@ -3617,7 +3563,7 @@ function debrief(){
   // 3. 压力是否爆掉
   if(state.endingType==='fail-rebound' && state.pressure>=7){
     out.push({tag:'压力失控', k:'warn',
-      t:`终局激进压力 ${state.pressure}/10。施压动作（KPI、强硬约谈、制度调整）确实能快速抬分，但它们同时抬高组织反弹的概率；反弹一旦触发，再施压就是崩盘。缓解压力不产出转化，它买的是后面几回合的行动空间。`});
+      t:`终局激进压力 ${state.pressure}/10。施压动作（KPI、制度调整）确实能快速抬分，但它们同时抬高组织反弹的概率；反弹一旦触发，再施压就是崩盘。缓解压力不产出转化，它买的是后面几回合的行动空间。`});
   }
 
   // 4. 网络扩散有没有真的被用上
@@ -3927,11 +3873,8 @@ function toggleTarget(id){
   const arr=state.selectedTargets;
   const pos=arr.indexOf(id);
   if(pos>=0){ arr.splice(pos,1); render(); return; }
-  // v17: 对抗/表彰的误用预警
+  // v17: 表彰的误用预警
   const p=state.people[id];
-  if(a.id==='confront' && p.status>=2){
-    if(!confirm(`⚠️ ${p.name} 已处于「${statusText(p.status)}」，强硬约谈会被视为冒犯，可信度大幅受损。确定即便如此依然选择？`)) return;
-  }
   if(a.id==='recognize' && p.status===0){
     if(!confirm(`⚠️ ${p.name} 尚未形成任何实际进展，公开表彰不仅会失当，还可能激起反感。确定仍然选择？`)) return;
   }
@@ -4061,7 +4004,7 @@ function diagnose(){
   // —— 1. 阈值锁：卡在「主动参与」的人
   if(stuck.length>=2){
     out.push({k:'tip', tag:'阈值锁', w:60,
-      t:`有 ${stuck.length} 个人卡在「主动参与」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 强硬约谈）打穿，广覆盖只剩 30% 力度。`});
+      t:`有 ${stuck.length} 个人卡在「主动参与」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 上手培训）打穿，广覆盖只剩 30% 力度。`});
   }
 
   // —— 2. 火力分散：近三回合碰了太多人
