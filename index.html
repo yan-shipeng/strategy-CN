@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>中国企业出海变革模拟 v22 · 教学增强版</title>
+  <title>中国企业出海整合管理 · 战略执行模拟</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -738,10 +738,10 @@
           <p class="intro-lead">
             中国制造业集团刚完成欧洲并购。<br>
             当地 <strong>12 位关键人物</strong>各有立场、各有算盘。<br>
-            你的任务：在 <strong>48 个资源</strong>内让他们真正接受变革。
+            你的任务：在 <strong>60 个资源</strong>内让他们真正接受变革。
           </p>
           <div class="intro-stats">
-            <div class="intro-stat"><span class="intro-stat-num">48</span><span class="intro-stat-label">可用资源</span></div>
+            <div class="intro-stat"><span class="intro-stat-num">60</span><span class="intro-stat-label">可用资源</span></div>
             <div class="intro-stat"><span class="intro-stat-num">12</span><span class="intro-stat-label">关键人物</span></div>
             <div class="intro-stat"><span class="intro-stat-num">≥50%</span><span class="intro-stat-label">转化目标</span></div>
           </div>
@@ -766,7 +766,7 @@
           <h1 class="intro-h1">赢得<em>人心</em>，<br>而非只是<em>服从</em>。</h1>
           <div class="intro-goal-box win">
             <strong>✅ 胜利条件</strong><br>
-            在 48 个资源内让 ≥50% 的关键人物进入「已转化」状态。<br>
+            在 60 个资源内让 ≥50% 的关键人物进入「已转化」状态。<br>
             <strong>剩余资源越多，排名越高。</strong>
           </div>
           <p class="intro-lead" style="margin-bottom:0;font-size:14px">
@@ -1035,8 +1035,8 @@
     <section class="screen" id="screen-task">
       <div class="hero">
         <h2>任务回顾 <span id="currentRoleBadge" class="badge" style="margin-left:8px;background:var(--primary-light);color:var(--primary);font-weight:600">🎛️ 整合负责人</span></h2>
-        <p id="roleBriefingText" style="margin:8px 0">你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 48 个资源内推动新的治理和协同方式落地。</p>
-        <div class="small" id="roleGoalText" style="padding:8px 12px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:4px"><strong>你的目标：</strong>在 48 个资源内让 ≥50% 的关键人物真正进入「已转化」状态。</div>
+        <p id="roleBriefingText" style="margin:8px 0">你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 60 个资源内推动新的治理和协同方式落地。</p>
+        <div class="small" id="roleGoalText" style="padding:8px 12px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:4px"><strong>你的目标：</strong>在 60 个资源内让 ≥50% 的关键人物真正进入「已转化」状态。</div>
         <div class="badges" style="margin-top:12px"><span class="badge">先理解任务</span><span class="badge">再看社会网络</span><span class="badge">然后做决策</span></div>
         <button class="btn btn-primary" id="startBtn2" style="margin-top:14px">查看社会网络 →</button>
       </div>
@@ -1599,15 +1599,15 @@ const ACTIONS=[
 /* =========================================================
    全局常量（v15）
    ========================================================= */
-const TOTAL_RESOURCES = 48;
+const TOTAL_RESOURCES = 60;
 /* v17：角色定义（精简为单一角色） */
 const ROLES = {
   integrator: {
     id:'integrator',
     name:'整合负责人',
     tag:'中方 · 总部派驻',
-    briefing:'你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 48 个资源内推动新的治理和协同方式落地。',
-    goal:'在 48 个资源内让 ≥50% 的关键人物真正进入「已转化」状态，同时尽量维持组织承受力。',
+    briefing:'你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 60 个资源内推动新的治理和协同方式落地。',
+    goal:'在 60 个资源内让 ≥50% 的关键人物真正进入「已转化」状态，同时尽量维持组织承受力。',
     startCred:6,
     startPressure:0,
     pressureCap:10,
@@ -1822,7 +1822,7 @@ function decayUntouched(){
   Object.entries(state.people).forEach(([id,p])=>{
     if(state.touchedThisTurn.has(id)) return;
     if(id==='pm') return; // 玩家自己不衰减
-    // v22：48 个资源后略加重衰减（-2/-4 → -3/-5），仍保留势能保底
+    // v22：60 个资源后略加重衰减（-2/-4 → -3/-5），仍保留势能保底
     const decay = p.status>=2 ? 3 : 5;
     const prev=p.status;
     // v14：势能保底——已经走到某一档的人，单回合不会一跌跨过两档
