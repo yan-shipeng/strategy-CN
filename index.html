@@ -607,7 +607,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v31</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v32</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -3119,6 +3119,7 @@ function buildActionCard(a, idx){
         <div class="target-selector-title">选择目标人物</div>
         <div class="target-selector-count">已选 ${state.selectedTargets.length} 人 · 需 ${tRangeText(a)}</div>
       </div>
+      <div style="font-size:11px;color:var(--muted);margin:-2px 0 10px;line-height:1.45">预计 ? = 没约谈过，推不准；谈过之后显示预计值和他吃哪一套（▲偏好 / ▼抵触）。</div>
       <div class="targets">${(()=>{ 
         // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
         let estMap=null;
@@ -3130,11 +3131,12 @@ function buildActionCard(a, idx){
         const soft = state.softened[id] ? '<span title="扩散圈" style="color:var(--success);font-weight:700">⚡</span>' : '';
         const bridge = isBridge(id) ? '<span title="桥梁节点" style="color:var(--primary)">🌉</span>' : '';
         // 如果已解锁偏好，显示对该动作的偏好标记
+        // v32：谈过的人，选人的时候直接把"他吃哪一套"写在脸上；没谈过的人什么都不给
         let prefMark='';
-        if(state.revealed[id] && p.prefs && p.prefs[a.type]){
-          const m=p.prefs[a.type];
-          if(m>=0.15) prefMark=`<span style="color:var(--success);font-weight:700" title="正中偏好">▲</span>`;
-          else if(m<=-0.15) prefMark=`<span style="color:var(--danger);font-weight:700" title="逆其偏好">▼</span>`;
+        if(knowsSecret(id)){
+          const mul=preferenceMultiplier(id, a.type);
+          if(mul>=1.15) prefMark=`<span style="color:var(--success);font-weight:700" title="正中偏好：这个动作对他有加成">▲${a.type} ×${mul.toFixed(2)}</span>`;
+          else if(mul<=0.85) prefMark=`<span style="color:var(--danger);font-weight:700" title="逆其偏好：这个动作对他打折">▼${a.type} ×${mul.toFixed(2)}</span>`;
         }
         // v17: 对抗动作的误用预警——目标已 status>=2 时显示警告且禁用
         const confrontRisk = (a.id==='confront' && p.status>=2);
@@ -3158,7 +3160,10 @@ function buildActionCard(a, idx){
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
-            ${(estMap&&estMap[id])?(()=>{const e=estMap[id];
+            ${(estMap&&estMap[id])?(()=>{
+              // v32：没约谈过就推不准——预计值不给数字，只给一个问号
+              if(!knowsSecret(id)) return `<span style="color:var(--muted);font-weight:700" title="没约谈过：你不知道他会怎么反应">预计 ?</span>`;
+              const e=estMap[id];
               const col=e.delta>0?'var(--success)':(e.delta<0?'var(--danger)':'var(--muted)');
               return `<span style="color:${col};font-weight:700">预计${e.delta>0?'+':''}${e.delta}</span>`;
             })():''}
@@ -3316,6 +3321,8 @@ function renderDecisionPreview(a, targetIds){
     const sim=simulateAction(a,targetIds);
     if(sim && sim.rows.length){
       perTarget = sim.rows.filter(r=>targetIds.includes(r.id)).map(r=>{
+        // v32：没约谈过的人，预估不出数字
+        if(!knowsSecret(r.id)) return `<span class="dp-item dp-neutral" title="没约谈过，推不准">${r.name} ?</span>`;
         const cls=r.delta>0?'dp-pos':(r.delta<0?'dp-neg':'dp-neutral');
         const up=(r.to!==r.from)?`（${STATUS_LABELS[r.from]}→${STATUS_LABELS[r.to]}）`:'';
         return `<span class="dp-item ${cls}">${r.name} ${r.delta>0?'+':''}${r.delta}${up}</span>`;
