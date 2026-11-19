@@ -261,7 +261,13 @@
     .decision-footer #runBtn{width:100%;font-size:14px;padding:0 16px;min-width:auto;height:48px;display:flex;align-items:center;justify-content:center}
     #runBtn:disabled{box-shadow:inset 0 0 0 2px var(--danger);background:rgba(224,80,104,.1);color:var(--danger);opacity:1}
     .predict-box-footer textarea{width:100%;min-height:48px;max-height:48px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:13px;resize:none;background:#0d1e2a !important;color:var(--text) !important;transition:border-color 0.2s ease,box-shadow 0.2s ease;line-height:1.6;color-scheme:dark}
-    .predict-box-footer .decision-preview{font-size:12px;color:var(--muted);padding:0 2px;line-height:1.4;max-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* v30：手机上预估条改成可横滑——原来 nowrap + ellipsis 只显示得下第一个人 */
+    .predict-box-footer .decision-preview{font-size:12px;color:var(--muted);padding:0 2px;line-height:1.4;
+      max-height:22px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;flex-wrap:nowrap;
+      -webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .predict-box-footer .decision-preview::-webkit-scrollbar{display:none}
+    .predict-box-footer .decision-preview .dp-item{flex:0 0 auto}
+    .predict-box-footer .decision-preview .dp-label{flex:0 0 auto}
     .predict-box-footer textarea::placeholder{color:var(--muted);opacity:0.7}
     .predict-box-footer textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(13,139,150,.1)}
     /* global textarea dark override */
@@ -535,8 +541,12 @@
     .net-toggle .chev{transition:transform .2s ease;font-size:15px}
     .net-collapsed .net-toggle .chev{transform:rotate(-90deg)}
 
-    /* 决策浮动条：叠在底部导航之上 */
-    body.decision-active .decision-footer{
+    /* 决策浮动条：叠在底部导航之上
+       v30：不再依赖 body.decision-active——万一这个 class 没打上，按钮会掉到 tabbar 后面看不见。
+       改成只要决策页是 active 就抬起来，双保险。 */
+    body.decision-active .decision-footer,
+    #screen-decision.active ~ .decision-footer,
+    .app:has(#screen-decision.active) .decision-footer{
       bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px));
       padding:8px 12px;z-index:900;
     }
