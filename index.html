@@ -2001,8 +2001,13 @@ function resetNodePositions(){
 function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 function statusText(s){ return STATUS_LABELS[s]; }
 function updateStatus(p){
+  // v30：已转化是终态，不会因为后来没人管就退回去
+  if(p.status>=4) return;
   const stubborn = ['union','ops','engineer'];
   const isStubborn = stubborn.includes(p.id);
+  /* 临界点不改门槛——它只做两件事：一次性把已经"主动参与"的人往前推一把，
+     以及永久提高广覆盖的渗透力。最后一跳仍然必须由学生自己打穿，
+     否则"过线即通关"会把整局的意义抹掉。 */
   if(isStubborn){
     if(p.score>=90) p.status=4;
     else if(p.score>=70) p.status=3;
@@ -3890,17 +3895,34 @@ function checkTippingPoint(){
   if(active<need) return null;
   state.tippingPointReached=true;
   state.tippingPointRound=state.round;
+
   // 过线那一刻，观望者被"多数人已经在做"这件事推了一把
   const pushed=[];
+  const flipped=[];
   ids.forEach(id=>{
     const p=state.people[id];
-    if(p.status>=3) return;
+    if(p.status>=4) return;
     const before=p.status;
-    applyGain(id, 5, '叙事', 'broad');
-    if(p.status>before) pushed.push(`${p.name}（${STATUS_LABELS[before]}→${STATUS_LABELS[p.status]}）`);
+    // 已经走到"主动参与"的人，规范一变就顺势过线；还没动的人只是被提醒了一下
+    // 用 spread 而不是 broad：这一刻要绕开"65 以上广覆盖只剩 30%"的阈值锁——它本来就是被这一下打破的
+    applyGain(id, before===3 ? 10 : 6, '', 'spread');   // 不挂任何偏好：这是规范效应，不是某个动作
+    if(p.status>before){
+      const note=`${p.name}（${STATUS_LABELS[before]}→${STATUS_LABELS[p.status]}）`;
+      if(p.status===4) flipped.push(note); else pushed.push(note);
+    }
+  });
+  // 门槛下降后，原本卡在 78-84 的人会顺势过线
+  ids.forEach(id=>{
+    const p=state.people[id];
+    if(p.status<4){
+      const b=p.status; updateStatus(p);
+      if(p.status===4 && !flipped.some(x=>x.indexOf(p.name)===0)) flipped.push(`${p.name}（${STATUS_LABELS[b]}→已转化）`);
+    }
   });
   state.credibility=Math.min(10, state.credibility+1);
-  const extra = pushed.length ? `当场被推起来的有：${pushed.join('、')}。` : '';
+  const extra = (flipped.length?`当场跨过转化线的有 ${flipped.length} 人：${flipped.join('、')}。`:'')+
+    (pushed.length?`另有 ${pushed.length} 人往上走了一档：${pushed.join('、')}。`:'')+
+    ' 此后广覆盖动作对还没动的人的渗透力从 40% 提到 58%——但最后一跳仍然要你亲自去打穿。';
   return `🔥 临界点被触发（第 ${state.round} 回合）：组织里已经有 ${active}/${ids.length} 人进入「主动参与」以上，超过 1/3。规范变了——继续不动开始有社交成本。你的可信度 +1（现 ${state.credibility}），此后广覆盖动作对未动者的力度从 40% 提到 58%。${extra}`;
 }
 
@@ -3927,6 +3949,20 @@ function diagnose(){
   const stuck=ids.filter(id=>state.people[id].status===3);
   const awake=ids.filter(id=>state.people[id].status===1);
   const silent=ids.filter(id=>state.people[id].status===0);
+
+  // —— 0. 临门一脚：离转化线只差几分的人
+  const THR={0:25,1:45,2:65,3:85};
+  const near=ids.map(id=>{
+    const p=state.people[id];
+    if(p.status>=4) return null;
+    const thr=['union','ops','engineer'].includes(id) ? ({0:25,1:50,2:70,3:90})[p.status] : THR[p.status];
+    return {id, name:p.name, gap:Math.round(thr-p.score), status:p.status};
+  }).filter(x=>x && x.gap>0 && x.gap<=8);
+  if(near.length>=2){
+    near.sort((a,b)=>a.gap-b.gap);
+    out.push({k:'warn', tag:'临门一脚', w:95,
+      t:`${near.length} 个人离下一档只差 1-8 分：${near.slice(0,4).map(x=>x.name+'（差 '+x.gap+'）').join('、')}${near.length>4?' 等':''}。这个位置最亏——你已经付了 90% 的成本，却没拿到那一档。下一轮把定向动作压到他们身上，比开新战场划算得多。`});
+  }
 
   // —— 1. 阈值锁：卡在「主动参与」的人
   if(stuck.length>=2){
@@ -4111,6 +4147,16 @@ function runTurn(){
   }
   const consequences = applyConsequences(a, impact);
   if(credOverridePenalty.length) consequences.unshift(...credOverridePenalty);
+
+  /* v30：组织会自己冷静下来
+     原来激进压力只升不降（除了"缓解压力"动作和首次转化），一次失手就永久背着。
+     现实里只要这一轮没有新的加压动作，情绪是会回落的。每回合 -1，地板 0。 */
+  if(a.disrupt===0 && state.pressure>0 && state.pressure>=before.pressure){
+    state.pressure = Math.max(0, state.pressure-1);
+    if(state.pressure < before.pressure){
+      consequences.push(`🌤 这一轮没有新的加压动作，组织情绪自然回落（激进压力 -1，现 ${state.pressure}）。`);
+    }
+  }
 
   // 自然衰减
   decayUntouched();
