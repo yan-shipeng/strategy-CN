@@ -1846,17 +1846,17 @@ const safeStorage = (function(){
    v13 数据：关键人物与利益偏好矩阵
    ========================================================= */
 /* 动作类型枚举，用于偏好矩阵键名 */
-// 类型：示范/政治/对话/沟通/赋能/验证/叙事/压力/制度
+// 类型：示范/政治/对话/沟通/赋能/验证/压力/制度（v65：偏好键必须与动作类型一一对应，不再有「叙事」这种游戏里不存在的类）
 const PEOPLE={
   ceo:{name:'总部CEO',role:'总部最高决策者',desc:'总部最高决策者，能提供公开背书，也决定这个项目的预算与时间表。',faction:'总部',score:18,status:0,x:40,y:30,ties:['pm','cfo'],hidden_ties:[],
     hidden_goal:'快速实现ROI，维持股价，避免重大失误',
-    prefs:{'验证':0.25,'政治':0.20,'对话':-0.15,'叙事':-0.05}},
+    prefs:{'验证':0.25,'政治':0.20,'对话':-0.15,'沟通':-0.05}},
   pm:{name:'你',role:'海外整合负责人',desc:'跨总部与当地组织协调推进，是整个变革的发起者。',score:100,status:4,x:140,y:75,ties:['ceo','region'],hidden_ties:[],
     hidden_goal:'在总部要求与当地合法性之间找到平衡',
     prefs:{}},
   cfo:{name:'总部CFO',role:'总部资源把关人',desc:'总部资源把关人，掌管预算与财务口径。',faction:'总部',score:12,status:0,x:40,y:120,ties:['ceo'],hidden_ties:['region'],
     hidden_goal:'控制成本，确保财务指标达成',
-    prefs:{'制度':0.25,'验证':0.15,'叙事':-0.20,'对话':-0.10}},
+    prefs:{'制度':0.25,'验证':0.15,'沟通':-0.20,'对话':-0.10}},
   region:{name:'当地区域总经理',role:'区域桥梁人物',desc:'连接总部与当地组织，直接管辖厂长和运营主管。',faction:'当地',score:16,status:0,x:240,y:30,ties:['pm','plant','ops'],hidden_ties:[],
     hidden_goal:'维持当地团队稳定，保护既得利益',
     prefs:{'对话':0.25,'赋能':0.15,'压力':-0.15}},
@@ -1865,28 +1865,28 @@ const PEOPLE={
     prefs:{'赋能':0.25,'验证':0.20,'压力':-0.20,'制度':-0.10}},
   hr:{name:'当地HR总监',role:'人力行政部主管',desc:'人力行政部主管，管人才与流程，向运营主管汇报。',faction:'当地',score:14,status:0,x:340,y:120,ties:['ops'],hidden_ties:['engineer','union'],
     hidden_goal:'防止关键人才流失，维持组织稳定',
-    prefs:{'对话':0.20,'赋能':0.20,'叙事':0.15}},
+    prefs:{'对话':0.20,'赋能':0.20,'沟通':0.15}},
   sales:{name:'当地销售主管',role:'销售客户部主管',desc:'销售客户部主管，管客户关系，向运营主管汇报。',faction:'当地',score:11,status:0,x:240,y:210,ties:['ops','customer'],hidden_ties:[],
     hidden_goal:'维持客户关系，保护销售团队独立性',
-    prefs:{'叙事':0.20,'对话':0.15,'压力':-0.20,'制度':-0.15}},
+    prefs:{'沟通':0.20,'对话':0.15,'压力':-0.20,'制度':-0.15}},
   ops:{name:'当地运营主管',role:'运营管理部主管',desc:'运营管理部主管，直接向区域总经理汇报，统筹销售与HR。',faction:'当地',score:8,status:0,x:240,y:120,ties:['region','hr','sales'],hidden_ties:[],
     hidden_goal:'保护现有流程权力，维持运营自主权',
-    prefs:{'验证':0.25,'赋能':0.15,'制度':-0.15,'叙事':-0.10}},
+    prefs:{'验证':0.25,'赋能':0.15,'制度':-0.15,'沟通':-0.10}},
   engineer:{name:'当地生产工程师',role:'生产运营部下属',desc:'生产运营部下属，负责生产工艺与现场技术。',faction:'当地',score:6,status:0,x:140,y:255,ties:['plant','union'],hidden_ties:[],
     hidden_goal:'保护自己的权力和职位，维持老团队利益',
     prefs:{'压力':-0.25,'对话':0.20,'赋能':0.20}},
   union:{name:'当地工会主席',role:'生产运营部下属',desc:'生产运营部下属，代表基层工人，直接向厂长汇报。',faction:'当地',score:7,status:0,x:240,y:300,ties:['plant','engineer'],hidden_ties:['gov','hr'],
     hidden_goal:'防止裁员，保护薪酬和工作条件',
-    prefs:{'压力':-0.25,'赋能':0.25,'叙事':0.15}},
+    prefs:{'压力':-0.25,'赋能':0.25,'沟通':0.15}},
   gov:{name:'当地骨干工人',role:'生产运营部下属',desc:'生产运营部下属，一线骨干工人。',faction:'当地',score:10,status:0,x:40,y:300,ties:['engineer'],hidden_ties:['union'],
     hidden_goal:'维护工人利益，确保工资和福利不下降，防止裁员',
     prefs:{'赋能':0.25,'对话':0.20,'压力':-0.25}},
   customer:{name:'大客户销售',role:'销售客户部下属',desc:'销售客户部下属，对接大客户。',faction:'当地',score:12,status:0,x:340,y:210,ties:['sales','finance'],hidden_ties:['ceo'],
     hidden_goal:'维持客户满意度，确保订单稳定，保护销售团队的提成',
-    prefs:{'验证':0.25,'制度':0.15,'叙事':0.10}},
+    prefs:{'验证':0.25,'制度':0.15,'沟通':0.10}},
   finance:{name:'当地数据分析师',role:'销售客户部下属',desc:'销售客户部下属，负责数据、成本与风险分析。',faction:'当地',score:13,status:0,x:340,y:300,ties:['sales','customer'],hidden_ties:['cfo'],
     hidden_goal:'确保财务安全，跟随强势方',
-    prefs:{'制度':0.20,'政治':0.15,'叙事':-0.10}}
+    prefs:{'制度':0.20,'政治':0.15,'沟通':-0.10}}
 };
 
 /* 状态字形（双编码核心，v47 四档）：初步理解◯ → 有限认同◕ → 完全配合● */
@@ -2195,7 +2195,7 @@ const ACTIONS=[
       const q=state.people[t];
       if(!q || q.status>=4 || t===ids[0]) return;
       const before=q.status;
-      const rr=applyGain(t, 6, '叙事', 'spread');
+      const rr=applyGain(t, 6, '沟通', 'spread');
       heard.push(`${q.name}${(STATUS_LABELS[q.status]!==STATUS_LABELS[before])?'（'+STATUS_LABELS[before]+'→'+STATUS_LABELS[q.status]+'）':''}`);
     });
     if(heard.length){
@@ -2541,12 +2541,13 @@ function stageFitTag(actionId, status){
   if(v>=1.2) return {k:'good', v, t:'正当时', tip:'这是他现在最需要的动作'};
   if(v>0.8)  return {k:'', v, t:'', tip:''};
   const best=bestStageOf(actionId);
+  /* v65：错配只说「效果可能削弱」，不说「空转」——他仍然会动，只是推得慢一些 */
   if(stageTierOf(best) > stageTierOf(status)){
     const label=STATUS_LABELS[best];
-    return {k:'bad', v, t:'未到认同', tip:'他还没到「'+label+'」，这一步对他是空转'};
+    return {k:'bad', v, t:'时机偏早', tip:'他还没到「'+label+'」这一步，现在做，效果可能会削弱'};
   }
   const label=STATUS_LABELS[status];
-  return {k:'bad', v, t:'已过这步', tip:'他已经在「'+label+'」，这个动作对他太浅了'};
+  return {k:'bad', v, t:'时机偏晚', tip:'他已经在「'+label+'」了，这一步对他作用有限，效果可能会削弱'};
 }
 
 function broadResistanceFactor(personId){
@@ -2748,7 +2749,7 @@ function affectTargets(ids, amount, story, spill=false, actionType){
     const fitNote=(()=>{
       const tag=stageFitTag(state.activeActionId, r.prev);
       if(tag.k==='good') return '——这一下正好补在他缺的地方';
-      if(tag.k==='bad')  return '——'+tag.tip.replace(/。$/,'')+'，大半是空转';
+      if(tag.k==='bad')  return '——'+tag.tip.replace(/。$/,'');
       return '';
     })();
     details.push(`${p.name}获得直接推动${prefHint}${fitNote}，当前状态为${statusText(p.status)}（${gainText(id, r.amount)}）。`);
@@ -3096,6 +3097,8 @@ function showScreen(name){
   document.body.dataset.screen = name;
   renderTabs();
   try{ updateFlowBar(); }catch(_){}
+  // v65：标签栏此刻才真正可见（介绍页会把它藏起来），量完再定位底栏
+  try{ syncTabbarMetrics(); }catch(_){}
   if(name==='log') renderLogScreen();
   if(name==='ending') renderEndingScreen();
   // v25：网络页 CTA 文案跟随回合数
@@ -5871,6 +5874,26 @@ function reset(){
   closeModal();
 }
 
+/* v65：底栏要贴着标签栏，中间不能有缝。
+   标签栏高度会随字号、安全区变化，写死 56px 会多出十几像素的空隙，
+   所以量一次真实高度（扣掉安全区）再写回 --tabbar-h。 */
+function syncTabbarMetrics(){
+  const tb=el('tabsBar');
+  if(!tb) return;
+  const h=tb.getBoundingClientRect().height;
+  if(!h) return;
+  let sab=0;
+  try{
+    const probe=document.createElement('div');
+    probe.style.cssText='position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';
+    document.body.appendChild(probe);
+    sab=probe.getBoundingClientRect().height || 0;
+    probe.remove();
+  }catch(_){}
+  document.documentElement.style.setProperty('--tabbar-h', Math.max(0, Math.round(h-sab))+'px');
+}
+window.addEventListener('resize', syncTabbarMetrics);
+
 /* v17：从「姓名 → 介绍 → 模拟」过渡时揭示顶栏/HUD/标签栏 */
 function revealSimulationChrome(){
   // v61：进入模拟后，底部推进栏常驻
@@ -5886,6 +5909,7 @@ function revealSimulationChrome(){
   if(hudBar) hudBar.style.display = '';
   const tabsBar = el('tabsBar');
   if(tabsBar) tabsBar.style.display = '';
+  try{ syncTabbarMetrics(); }catch(_){}
   const badge = el('learnerBadge');
   if(badge){
     if(state.learnerName){
