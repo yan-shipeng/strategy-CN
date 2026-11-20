@@ -634,7 +634,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v43</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v44</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1067,7 +1067,7 @@
           </div>
           <ul class="intro-warn-list">
             <li><span class="wi">⚠️</span><div><strong>别只靠一种动作</strong>单一策略会遇到瓶颈，需要组合使用。</div></li>
-            <li><span class="wi">⚠️</span><div><strong>有些人的门槛比看上去高</strong>——他们的顾虑不会写在脸上。想少走弯路，先花一周做「私人约谈」。</div></li>
+            <li><span class="wi">⚠️</span><div><strong>有些人的门槛比看上去高</strong>——他们的顾虑不会写在脸上。想少走弯路，先花一份资源做「私人约谈」。</div></li>
           </ul>
         </div>
 
@@ -1610,7 +1610,7 @@ const PRESSURE_RELIEF_ACTION = {
     if(state.pressure <= 0){
       return {
         story:'你张罗了一场聚会，但当前组织压力为零——大家并没有需要被"缓解"的焦虑，来的人只当是吃顿饭。',
-        details: ['⚠️ 本次聚会效果为零：它是一种"降压工具"，只有在压力积累后才有实质意义。在压力为零时使用，只是浪费了一周资源。', '💡 建议：等待压力自然积累（通常在使用高扰动动作后），或先推进其他变革动作再使用此工具。'],
+        details: ['⚠️ 本次聚会效果为零：它是一种"降压工具"，只有在压力积累后才有实质意义。在压力为零时使用，只是浪费了一份资源。', '💡 建议：等待压力自然积累（通常在使用高扰动动作后），或先推进其他变革动作再使用此工具。'],
         noCredChange: true,
         noEffect: true
       };
@@ -2606,7 +2606,7 @@ function renderTop(){
     else if(state.resources <= 10) bar.classList.add('urgent');
     // 无障访问标签
     const card = el('resourcesKpiCard');
-    if(card) card.setAttribute('title', `已用 ${used} / ${TOTAL_RESOURCES} 周（${pct}%）`);
+    if(card) card.setAttribute('title', `已用 ${used} / ${TOTAL_RESOURCES} 份资源（${pct}%）`);
   }
 }
 function renderTabs(){
@@ -3224,12 +3224,12 @@ function buildActionCard(a, idx){
     const reasonChips = [];
     if(credBad) reasonChips.push('<span class="chip bad reason-chip">可信度不足（需'+a.reqCred+'）</span>');
     if(wait>0) reasonChips.push('<span class="chip bad reason-chip">还需等待'+wait+'轮</span>');
-    if(state.resources<a.weeks) reasonChips.push('<span class="chip bad reason-chip">资源数不足（需'+a.weeks+'周）</span>');
+    if(state.resources<a.weeks) reasonChips.push('<span class="chip bad reason-chip">资源不足（需 '+a.weeks+'）</span>');
     if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有已转化的人可以当讲师</span>');
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[noTeacher?'还没有已转化的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源数不足需'+a.weeks+'周':''].filter(Boolean).join(' · ')}">
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有已转化的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
           ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
@@ -3265,7 +3265,7 @@ function buildActionCard(a, idx){
         </div>
         <!-- v20: 核心信息行（始终可见） -->
         <div class="chips" style="margin-top:6px">
-          <span class="chip" title="执行此动作消耗的资源周数">⏱ ${a.weeks}周</span>
+          <span class="chip" title="执行此动作消耗的资源数">⏱ ${a.weeks} 资源</span>
           <span class="chip ${a.need===0?'good':''}" title="${a.roleMode==='teacher'?'先点讲师（必须已转化），再点三位学员':(a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标')}">${a.roleMode==='teacher'?'🎓 1 讲师 + 3 学员':(a.need?'👤 '+tRangeText(a):'🌐 全体')}</span>
           ${credBad ? `<span class="chip warn" title="当前可信度${state.credibility}，需要${a.reqCred}">🔒 需信誉${a.reqCred}</span>` : ''}
           ${wait>0 ? `<span class="chip bad" title="冷却中">⏳ 冷却${wait}轮</span>` : ''}
@@ -3418,7 +3418,7 @@ function updateRunButton(){
   const warnings=[];
   if(a.need>0 && state.selectedTargets.length<tMin(a)) problems.push(`还需选${tMin(a)-state.selectedTargets.length}人（最少 ${tMin(a)} 人）`);
   if(wait>0) problems.push(`该动作还需等待${wait}轮`);
-  if(state.resources<a.weeks) problems.push(`资源数不足（需${a.weeks}周，剩${state.resources}周）`);
+  if(state.resources<a.weeks) problems.push(`资源不足（需 ${a.weeks}，剩 ${state.resources}）`);
   if(a.reqPressure && state.pressure < a.reqPressure) warnings.push(`⚠️ 当前压力为 ${state.pressure}，此动作需要压力 ≥ ${a.reqPressure} 才有实质效果（执行后会浪费资源）`);
   if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加激进压力 +${Math.min(3, a.reqCred-state.credibility)}`);
   if(problems.length){ hint.textContent = h + ' · ' + problems.join('；'); hint.className='hint-strip warn'; }
@@ -3444,7 +3444,7 @@ function endingNarratives(type){
   if(type==='win-early'){
     return {
       cls:'win', title:'提前成功 · 变革生根',
-      story:`仅用 ${weeksUsed} 周、${state.round-1} 个回合，你就把已转化率拉到 ${finalRate}%。会议室外的走廊上，工厂总经理主动跟区域GM讨论起下一步标准化方案——这是真正的"自驱动"信号。当总部CEO拿着你的复盘材料走进董事会时，他第一次没有带紧迫感，而是带着一份"可复制的整合方法论"。`,
+      story:`仅用 ${weeksUsed} 份资源、${state.round-1} 个回合，你就把已转化率拉到 ${finalRate}%。会议室外的走廊上，工厂总经理主动跟区域GM讨论起下一步标准化方案——这是真正的"自驱动"信号。当总部CEO拿着你的复盘材料走进董事会时，他第一次没有带紧迫感，而是带着一份"可复制的整合方法论"。`,
       teach:'▶ 文化层：在无法直接命令的文化边界上，示范者是如何取代「导入模板」成为合法性来源的？\n▶ 制度层：你在哪一回合用小范围试点/培训替代了硬 KPI？制度与叙事的时序，是否早期胜利的关键？\n▶ 个人层：示范者的扩散效应在哪一回合开始指数化？桥梁人物（区域GM/HR）的个人信誉是否被充分投资？',
       realWorld:'▶ <strong>美的·库卡（2016）</strong>：保留原团队、避免大规模派驻，用业绩和文化耐心实现相对成功整合。\n▶ <strong>吉利·沃尔沃（2010-2020）</strong>：「两个品牌·一个集团」的隔禄系设计，十年后沃尔沃盈利翻盘、吉利也反哺了新能源转型。\n▶ <strong>宁德时代·德国工厂（2019-2024）</strong>：以局部本地化管理➕总部技术赋能的方式实现 ESG 与合规平衡。'
     };
@@ -3471,7 +3471,7 @@ function endingNarratives(type){
     }
     return {
       cls:'pass', title:'阶段达标 · 破局启航',
-      story:`你在第 ${state.round-1} 回合、第 ${weeksUsed} 周时把已转化率推到 ${finalRate}%。恭喜你跨过了50%的关键门槛！${credPhrase}，${pressPhrase}。${verdict}。阶段性的胜利已经写入汇报材料，你成功撕开了旧体系的缺口，但真正的挑战才刚刚开始：如何将这50%的转化转化为不可逆的组织习惯？`,
+      story:`你在第 ${state.round-1} 回合、用掉 ${weeksUsed} 份资源时把已转化率推到 ${finalRate}%。恭喜你跨过了50%的关键门槛！${credPhrase}，${pressPhrase}。${verdict}。阶段性的胜利已经写入汇报材料，你成功撕开了旧体系的缺口，但真正的挑战才刚刚开始：如何将这50%的转化转化为不可逆的组织习惯？`,
       teach:'▶ 文化层：从「被动接受」到「内化认同」的跨越还需要什么？你现有的转化者中，谁能成为下一步的火种？\n▶ 制度层：回顾整个过程，KPI与压力的施加是否走在了信任积累的前面？这为后续管理留下了哪些隐患？\n▶ 个人层：如果重玩，你是否愿意用初期的进度换取更扎实的信任基础？',
       realWorld:'▶ <strong>联想·IBM PC（2005）</strong>：前三年达成业务整合的阶段性目标，随后通过引入熟悉双方文化的高管团队，耗时多年才实现深度的文化融合。\n▶ <strong>TikTok·海外治理（2020-）</strong>：通过架构隔离和本地化团队迅速达到合规要求，但建立真正的跨文化信任仍是一项长期工程。\n▶ <strong>宁德时代·德国工厂（2019-）</strong>：初期以硬性标准推动建厂，随后逐步转向本地化柔性管理，在效率与认同之间寻找平衡。'
     };
@@ -3494,7 +3494,7 @@ function endingNarratives(type){
   } else if (finalCred <= 4) {
     failCause = `已转化率止步于 ${finalRate}%，可信度仅剩 ${finalCred}，资源数也已耗尽`;
   } else {
-    failCause = `已转化率停在 ${finalRate}%，离达标线还差几个关键人，而 ${TOTAL_RESOURCES} 周已经用完`;
+    failCause = `已转化率停在 ${finalRate}%，离达标线还差几个关键人，而 ${TOTAL_RESOURCES} 份资源已经用完`;
   }
   return {
     cls:'fail', title:'组织反弹 · 变革失败',
@@ -3765,7 +3765,7 @@ function debrief(){
   const top = out.filter(x=>x.k==='warn')[0];
   const challenge = !top ? {
     tag:'下一局的目标', k:'good',
-    t:`这一局没有明显失误。下一局的挑战是效率：你用了 ${state.round} 回合、剩下 ${state.resources} 周资源完成 ${conv}/${total} 人的转化——试试用更少的资源做到同样的结果，剩余资源越多，排行榜上的位置越靠前。`
+    t:`这一局没有明显失误。下一局的挑战是效率：你用了 ${state.round} 回合、剩下 ${state.resources} 份资源完成 ${conv}/${total} 人的转化——试试用更少的资源做到同样的结果，剩余资源越多，排行榜上的位置越靠前。`
   } : null;
   return {items: out.slice(0,5), oneThing: top || null, challenge};
 }
@@ -4263,7 +4263,7 @@ function diagnose(){
   // —— 8. 资源告急
   if(state.resources<=15 && conv<need){
     out.push({k:'warn', tag:'资源', w:92,
-      t:`只剩 ${state.resources} 周，还差 ${need-conv} 人才到 50%。现在不要再开新战场了：挑最接近过线的 2-3 个人，把剩下的资源全砸进去。`});
+      t:`只剩 ${state.resources} 份资源，还差 ${need-conv} 人才到 50%。现在不要再开新战场了：挑最接近过线的 2-3 个人，把剩下的资源全砸进去。`});
   }
 
   // —— 9. 正向反馈：机制被用对了
@@ -4290,7 +4290,7 @@ function situationLine(){
   const need=Math.ceil(ids.length*0.5);
   if(state.pressure>=8) return {k:'warn', t:`激进压力 ${state.pressure}/10，再施压可能触发反弹。`};
   if(state.credibility<=3) return {k:'warn', t:`可信度 ${state.credibility}/10，动作力度被打折。`};
-  if(state.resources<=10) return {k:'warn', t:`只剩 ${state.resources} 周，还差 ${need-conv} 人。`};
+  if(state.resources<=10) return {k:'warn', t:`只剩 ${state.resources} 份资源，还差 ${need-conv} 人。`};
   const stuck=ids.filter(id=>state.people[id].status===3).length;
   if(stuck>=3) return {k:'tip', t:`${stuck} 人卡在「主动参与」，需要定向动作打穿最后一跳。`};
   return null;
