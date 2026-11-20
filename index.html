@@ -150,7 +150,6 @@
     .action-group-header:hover{background:rgba(13,139,150,.15)}
     .action-group-header .group-toggle{font-size:12px;color:var(--muted);width:12px}
     .action-group-header .group-label{font-weight:700;font-size:14px;flex:1;letter-spacing:.3px}
-    .action-group-header .group-en{font-weight:500;font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.2px}
     .action-group-header .group-meta{font-size:12px;color:var(--muted);background:rgba(13,139,150,.08);padding:2px 8px;border-radius:8px}
     .action-group-body{padding:10px;display:grid;gap:10px;background:rgba(0,0,0,.15)}
     .action-group-body .action{background:rgba(255,255,255,.02)}
@@ -524,7 +523,7 @@
     #swipeHint{display:none!important}
 
     /* ── 决策页：动作列表优先，网络图可折叠 ── */
-    body.decision-active #screen-decision{padding-bottom:calc(158px + env(safe-area-inset-bottom,0px))}
+    body.decision-active #screen-decision{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
     #screen-decision > div[data-decision-grid]{gap:12px!important}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:static!important;max-height:none!important;overflow:visible!important;order:1}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:300px!important}
@@ -549,11 +548,13 @@
     #screen-decision.active ~ .decision-footer,
     .app:has(#screen-decision.active) .decision-footer{
       bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px));
-      padding:8px 12px;z-index:900;
+      padding:6px 12px;z-index:900;
     }
-    .decision-footer-inner{grid-template-columns:1fr!important;gap:8px!important}
-    .decision-footer #runBtn{height:52px;font-size:15px;border-radius:14px}
-    .predict-box-footer textarea{min-height:44px;max-height:44px;font-size:12px}
+    /* v35：手机端只留一个按钮；minmax(0,1fr) 防止子元素撑破屏幕宽度 */
+    .decision-footer-inner{grid-template-columns:minmax(0,1fr)!important;gap:0!important}
+    .decision-footer #runBtn{height:46px;width:100%;font-size:15px;border-radius:12px}
+    .predict-box-footer #predictInput{display:none!important}
+    .predict-box-footer{padding-right:0}
 
     /* ── 网络页：底部「进入决策」CTA ── */
     #netCta{
@@ -608,7 +609,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v34</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v35</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1262,13 +1263,8 @@
       <!-- v27：机制速览——开局就把"这个模拟器在教什么"讲清楚 -->
       <div class="panel section" style="margin-top:16px">
         <h2>这个模拟器在教什么</h2>
-        <div class="small muted" style="margin-bottom:12px">五个机制加一副四框架的眼镜。不需要记住，玩两轮自然会感觉到。</div>
+        <div class="small muted" style="margin-bottom:12px">五个机制，互相咬合。不需要记住，玩两轮自然会感觉到。</div>
         <div class="mech-grid">
-          <div class="mech-card">
-            <div class="mech-icon">🕶</div>
-            <div class="mech-title">同一个局面，四副眼镜</div>
-            <div class="mech-text">动作按 Bolman &amp; Deal 的四框架分组：结构（改规则）、人员（给能力与安全感）、政治（处理权力与正当性）、符号（制造意义）。大多数管理者只用前两副，<b>而变革常常死在另外两副上。</b></div>
-          </div>
           <div class="mech-card">
             <div class="mech-icon">📊</div>
             <div class="mech-title">说服度是分档的</div>
@@ -1341,7 +1337,7 @@
       <div data-decision-grid style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
         <div class="panel section">
           <h2>本轮可选动作</h2>
-          <div class="small muted">动作按 Bolman &amp; Deal 四框架分组：<b>结构 / 人员 / 政治 / 符号</b>——同一局面，四副眼镜，没有唯一正确的顺序。先选动作，再点目标人物。</div>
+          <div class="small muted">先选动作，再点选目标人物（也可展开网络图直接点节点）。</div>
           <div id="situationLine" style="margin-top:12px"></div>
           <div id="actionList" class="cards" style="margin-top:14px"></div>
         </div>
@@ -1931,10 +1927,9 @@ const ROLES = {
 };
 let currentRoleId = 'integrator';
 
-/* v34：动作按 Bolman & Deal 的四个框架重排（《Reframing Organizations》）
-   Structural / Human Resource / Political / Symbolic
-   这四个框架不是一条先后路线，而是四副眼镜：同一个局面，你可以从任一框架下手。
-   大多数人只会用「结构 + 人员」这两副，而变革常常死在政治和符号上。 */
+/* v34：动作按四类打法重排——结构 / 人员 / 政治 / 符号。
+   这四类不是先后顺序，而是四种下手角度；多数人只用前两类。
+   （en 字段只作内部对照，不渲染到界面。） */
 const ACTION_GROUPS = [
   { key:'structure', label:'🏛 结构', en:'Structural',     hint:'改规则、改流程、改汇报线——用制度设计让人不得不动', ids:['kpi','incentive','reorg','pilot'] },
   { key:'people',    label:'👥 人员', en:'Human Resource', hint:'人要先有能力、有安全感、有参与感，才谈得上投入', ids:['training','interview','team-building'] },
@@ -2567,6 +2562,9 @@ function renderTop(){
 }
 function renderTabs(){
   document.querySelectorAll('#tabsBar [data-screen]').forEach(btn=>btn.classList.toggle('active', btn.dataset.screen===state.currentScreen));
+  // v35：任务页只是开场导览，做完第一轮决策后就不再占底栏
+  const taskTab = document.querySelector('#tabsBar [data-screen="task"]');
+  if(taskTab) taskTab.style.display = (state.round>1 ? 'none' : '');
   const order=['task','network','decision','log'];
   document.querySelectorAll('#swipeHint .dot').forEach(d=>{
     d.classList.toggle('active', order[parseInt(d.dataset.i)]===state.currentScreen);
@@ -3028,7 +3026,7 @@ function renderActions(){
     groupWrap.className = 'action-group' + (isOpen?' open':'');
     groupWrap.innerHTML = `<div class="action-group-header" role="button" tabindex="0" aria-expanded="${isOpen}" data-gkey="${group.key}" title="${group.hint||''}">
         <span class="group-toggle" aria-hidden="true">${isOpen?'▼':'▶'}</span>
-        <span class="group-label">${group.label}${group.en?`<span class="group-en">${group.en}</span>`:''}</span>
+        <span class="group-label">${group.label}</span>
         <span class="group-meta">${availCount}/${groupActions.length} 可用</span>
       </div>`;
     const body = document.createElement('div');
@@ -3555,36 +3553,35 @@ function debrief(){
     }
   }
 
-  // 2. 四框架覆盖：这一局你戴了几副眼镜（Bolman & Deal）
+  // 2. 动作类别覆盖：这一局你用了几类打法
   const _frameUse = ACTION_GROUPS.map(g=>({
     key:g.key,
     name:g.label.split(' ').pop(),
-    en:g.en,
     n:H.filter(h=>g.ids.includes(h.actionId)).length
   }));
   const _touched = _frameUse.filter(f=>f.n>0);
   const _missed  = _frameUse.filter(f=>f.n===0);
   if(H.length>=4 && _touched.length>0){
     if(_touched.length===1){
-      out.push({tag:'只有一副眼镜', k:'warn',
-        t:`整局你只用了「${_touched[0].name} ${_touched[0].en}」这一个框架。四个框架是四副眼镜：结构改规则，人员给能力与安全感，政治处理权力与正当性，符号制造意义。只用一副，事情要么推不动，要么推得动但没人认——你会觉得自己在硬拉。`});
+      out.push({tag:'只有一把锤子', k:'warn',
+        t:`整局你只用了「${_touched[0].name}」这一类动作。手里只有一把锤子，看什么都像钉子——问题往往不在力度不够，在于工具箱太窄。`});
     } else if(_touched.length===2){
-      out.push({tag:'两副眼镜', k:'warn',
-        t:`你用了「${_touched[0].name}」和「${_touched[1].name}」，一次没碰「${_missed.map(f=>f.name).join('」和「')}」。这是最常见的组合：大部分管理者只用结构和人员两副眼镜。而变革往往死在另外两副上——政治上没处理"谁的利益被动了"，符号上没给出"为什么值得"。`});
+      out.push({tag:'两类打法', k:'warn',
+        t:`你用了「${_touched[0].name}」和「${_touched[1].name}」，一次没碰「${_missed.map(f=>f.name).join('」和「')}」。这是最常见的组合：多数管理者只在制度和人的身上下功夫，因为这两类看得见、有抓手。而变革常常死在另外两类上——政治上没处理"谁的利益被动了"，符号上没回答"为什么值得"。`});
     } else if(_touched.length===3){
-      out.push({tag:'三副眼镜', k:'tip',
-        t:`你用了「${_touched.map(f=>f.name).join('」「')}」，只漏了「${_missed[0].name}」。漏掉的那一副通常不是不会用，而是没想到——下一局试试把它当主攻，看看同一个局面会怎么变。`});
+      out.push({tag:'三类打法', k:'tip',
+        t:`你用了「${_touched.map(f=>f.name).join('」「')}」，只漏了「${_missed[0].name}」。漏掉的那一类通常不是不会用，而是没想到——下一局把它当主攻试试，同一个局面会不一样。`});
     } else {
-      out.push({tag:'四个框架都用过', k:'good',
-        t:`四个框架你都动过：结构 ${_frameUse[0].n} 次、人员 ${_frameUse[1].n} 次、政治 ${_frameUse[2].n} 次、符号 ${_frameUse[3].n} 次。这就是"重构"的意思——不是找一个正确答案，而是在同一个局面里换着眼镜看，哪副能撬动就用哪副。`});
+      out.push({tag:'四类都动过', k:'good',
+        t:`四类动作你都动过：结构 ${_frameUse[0].n} 次、人员 ${_frameUse[1].n} 次、政治 ${_frameUse[2].n} 次、符号 ${_frameUse[3].n} 次。真正的难点不是找到唯一正解，而是同一个局面里换着角度下手，哪一类撬得动就用哪一类。`});
     }
   }
 
   // 3. 是否用过制度杠杆
   const usedInst = ['incentive','reorg','kpi'].filter(id=>state.usedActions.has(id));
   if(!usedInst.length && conv<Math.ceil(total*0.5)){
-    out.push({tag:'结构框架缺位', k:'warn',
-      t:`你整局没有动过结构框架（KPI / 激励与奖惩 / 汇报关系）。人际说服能推到 65 分，但 65→85 这一段靠说是不动的——它需要改变"做与不做的后果"。结构框架的代价是压力，但没有它，最后一跳永远差一口气。`});
+    out.push({tag:'没动过制度', k:'warn',
+      t:`你整局没有动过结构这一类动作（KPI / 激励与奖惩 / 汇报关系）。人际说服能推到 65 分，但 65→85 这一段靠说是不动的——它需要改变"做与不做的后果"。代价是压力，但没有它，最后一跳永远差一口气。`});
   }
 
   // 3. 压力是否爆掉
