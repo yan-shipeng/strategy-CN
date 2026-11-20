@@ -70,10 +70,10 @@
     @media (max-width:1200px){#screen-network .layout{grid-template-columns:1fr}#screen-network .svg-wrapper{height:460px !important}}
     .sidebar{display:grid;gap:16px;align-content:start;width:260px}
     .sticky{position:sticky;top:20px}
-    /* v14.2：桌面端决策页右栏网络图粘性，滚动查看底部动作时网络图跟随视线 */
-    #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky;top:16px;align-self:start;max-height:calc(100vh - 120px);overflow-y:auto}
-    #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:360px !important}
-    #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{max-height:140px !important}
+    /* v43：右栏不再自己滚动——面板按内容自然撑开，整页只留一条滚动条 */
+    #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:static;align-self:start}
+    #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:320px !important}
+    #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{max-height:none !important;overflow:visible !important}
 
     .cards{display:grid;gap:12px}
     .card{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);transition:all var(--transition)}
@@ -345,7 +345,7 @@
       #screen-decision > div[data-decision-grid] > .panel:nth-child(1){order:2}
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2){order:1;position:sticky;top:10px;z-index:50;max-height:45vh;overflow:hidden}
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:260px !important}
-      #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{max-height:100px !important}
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{max-height:none !important;overflow:visible !important}
       .swipe-hint{display:flex !important}
     }
     @media (max-width:768px){.hud{grid-template-columns:repeat(3,1fr)}.title{font-size:28px}.hero h2{font-size:32px}.layout{grid-template-columns:1fr}.topbar{flex-direction:column;align-items:flex-start}.action{padding:12px}.chips{flex-wrap:wrap}.targets{flex-direction:column}.target{width:100%}.modal-card{padding:20px}.sidebar{margin-top:20px}}
@@ -621,13 +621,20 @@
     #endingBody table th,#endingBody table td{padding:5px 4px!important;white-space:nowrap}
   }
 
-  </style>
+  
+  /* v43：滚动条收细、半透明，别在深色界面上抢戏 */
+  *::-webkit-scrollbar{width:8px;height:8px}
+  *::-webkit-scrollbar-track{background:transparent}
+  *::-webkit-scrollbar-thumb{background:rgba(13,139,150,.28);border-radius:99px}
+  *::-webkit-scrollbar-thumb:hover{background:rgba(13,139,150,.5)}
+  *{scrollbar-width:thin;scrollbar-color:rgba(13,139,150,.35) transparent}
+</style>
 </head>
 <body>
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v42</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v43</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1371,7 +1378,7 @@
           <div class="svg-wrapper" style="height:500px;margin-top:12px">
             <svg id="networkSvg2"></svg>
           </div>
-          <div id="detailBox2" class="detail" style="margin-top:12px;max-height:200px;overflow-y:auto"></div>
+          <div id="detailBox2" class="detail" style="margin-top:12px"></div>
         </div>
       </div>
   
