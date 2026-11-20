@@ -620,7 +620,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v37</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v38</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -3856,7 +3856,7 @@ function showModal(){
     const tips=diagnose();
     if(tips.length){
       const box=document.createElement('div'); box.className='log-item coach-box';
-      box.innerHTML='<strong>🎓 教练点评</strong>'+
+      box.innerHTML='<strong>💡 提示</strong>'+
         '<div class="small muted" style="margin:4px 0 8px">不替你选动作，只说明为什么卡住。</div>'+
         '<ul class="coach-list">'+tips.map(t=>
           `<li class="coach-${t.k}"><span class="coach-tag">${t.tag}</span><span>${t.t}</span></li>`
