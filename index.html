@@ -255,7 +255,7 @@
     /* v61：全局推进栏——固定底部，贯穿任务 / 网络 / 决策 / 日志 / 结算
        v62：按钮居中；左侧不再挂「预计影响」，只留回合与下一步提示 */
     .decision-footer{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--primary);padding:9px 16px 10px;border-radius:0;display:none;z-index:1200;box-shadow:0 -6px 20px rgba(26,24,21,.12)}
-    .decision-footer-inner{max-width:1240px;margin:0 auto;width:100%;display:flex;flex-direction:column;align-items:center;gap:7px}
+    .decision-footer-inner{max-width:1240px;margin:0 auto;width:100%;display:flex;flex-direction:column;align-items:center;gap:4px}
     body.sim-active .decision-footer{display:block}
     body.sim-active .app{padding-bottom:104px}
     .fb-status{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;max-width:100%}
@@ -481,6 +481,9 @@
   .action-details summary::-webkit-details-marker{display:none}
   .action-details summary::before{content:'▸ ';display:inline-block}
   .action-details[open] summary::before{content:'▾ '}
+  /* v64：选中的动作直接摊开详细参数，标签只是说明，不再是可点的三角 */
+  .action-details-open .ad-label{font-size:12px;color:var(--muted);padding:4px 0}
+  .action-details-open .ad-label::before{content:'';display:none}
   .action.desc-open .action-desc{max-height:260px;margin-top:6px}
   .desc-toggle{display:inline-block;margin-top:6px;font-size:11px;color:var(--muted);border:1px dashed var(--border);
     border-radius:999px;padding:2px 9px;cursor:pointer;user-select:none}
@@ -618,10 +621,11 @@
       padding:6px 12px;z-index:1200;
     }
     /* v62：手机端按钮居中占满一行，提示在上方一行居中 */
-    .decision-footer-inner{gap:6px!important}
+    /* v64：提示与按钮贴紧，中间不留缝 */
+    .decision-footer-inner{gap:1px!important}
     .decision-footer #runBtn{height:48px;width:100%;min-width:0;font-size:15px;border-radius:12px}
     /* v41：预判输入框已删；平时不占位，只在未选动作或有警告时冒一行小字 */
-    .decision-footer .hint-strip{font-size:11px;line-height:1.35;margin-bottom:4px}
+    .decision-footer .hint-strip{font-size:11px;line-height:1.3;margin-bottom:0}
     .predict-box-footer{padding-right:0}
 
     /* ── 网络页：v61 起由全局推进栏接管，旧 CTA 不再显示 ── */
@@ -3774,16 +3778,24 @@ function buildActionCard(a, idx){
       <span class="action-toggle" aria-hidden="true">${toggleIcon}</span>
     </div>
     <div class="action-content">
-      <!-- v20: 详细参数折叠区 -->
-      <details class="action-details" style="margin-top:4px" ${(state.detailsOpen&&state.detailsOpen.has(a.id))?'open':''}>
-        <summary style="cursor:pointer;font-size:12px;color:var(--muted);user-select:none;padding:4px 0">查看详细参数</summary>
-        <div class="chips" style="margin-top:8px">
+      <!-- v20: 详细参数折叠区
+           v64：选中的动作把详细参数直接摊开（不再需要点三角），没选中的才留折叠 -->
+      ${(()=>{
+        const params = `<div class="chips" style="margin-top:6px">
           <span class="chip" ${cooldownTitle} ${cooldownCursor}>冷却${a.cooldown}轮</span>
           <span class="chip">需可信度${a.reqCred}</span>
           <span class="chip ${a.disrupt>=3?'warn':''}">扰动${a.disrupt}</span>
           ${reasonChips.join('')}
-        </div>
-      </details>
+        </div>`;
+        if(state.selectedAction===idx){
+          return `<div class="action-details action-details-open" style="margin-top:4px">
+            <div class="ad-label">详细参数</div>${params}</div>`;
+        }
+        return `<details class="action-details" style="margin-top:4px" ${(state.detailsOpen&&state.detailsOpen.has(a.id))?'open':''}>
+          <summary style="cursor:pointer;font-size:12px;color:var(--muted);user-select:none;padding:4px 0">查看详细参数</summary>
+          ${params}
+        </details>`;
+      })()}
       ${targetsHtml}
     </div>`;
     card.addEventListener('click',(e)=>{
@@ -4692,7 +4704,7 @@ function toggleTarget(id){
   if(!a||a.need===0) return;
   const arr=state.selectedTargets;
   const pos=arr.indexOf(id);
-  if(pos>=0){ arr.splice(pos,1); state.targetHint=''; render(); return; }
+  if(pos>=0){ arr.splice(pos,1); state.targetHint=''; if(arr.length) state.focusedNode=arr[arr.length-1]; render(); return; }
   const p=state.people[id];
   // v39：内部培训——第一个点的是讲师，必须已经转化；完全配合的人不占学员名额
   if(a.roleMode==='teacher'){
@@ -4709,6 +4721,8 @@ function toggleTarget(id){
     if(!confirm(`⚠️ ${p.name} 尚未形成任何实际进展，公开表彰不仅会失当，还可能激起反感。确定仍然选择？`)) return;
   }
   if(arr.length<tMax(a)) arr.push(id);
+  /* v64：右侧「人物介绍」跟着你点的人走——选谁就看谁，不用再回网络图上找 */
+  state.focusedNode = id;
   render();
 }
 
