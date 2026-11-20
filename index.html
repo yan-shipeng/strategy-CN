@@ -2413,6 +2413,7 @@ function initState(){
     selectedAction:null,
     selectedTargets:[],
     detailsOpen:new Set(),   // v45：记住哪几张卡片的"详细参数"是展开的，重渲染后不丢
+    descOpen:new Set(),      // v70：「ⓘ 说明」摊开过的卡片，重渲染后也别合回去
     focusedNode:null,
     nextAvailable:{},
     lastImpact:null,
@@ -3707,7 +3708,8 @@ function renderActions(){
 
 function buildActionCard(a, idx){
     const card=document.createElement('div');
-    card.className='action'+(state.selectedAction===idx?' selected':'');
+    card.className='action'+(state.selectedAction===idx?' selected':'')
+      +((state.descOpen&&state.descOpen.has(a.id))?' desc-open':'');
     card.setAttribute('tabindex','0');
     card.setAttribute('role','button');
     card.setAttribute('aria-pressed', state.selectedAction===idx ? 'true' : 'false');
@@ -3875,12 +3877,16 @@ function buildActionCard(a, idx){
     </div>`;
     card.addEventListener('click',(e)=>{
       if(e.target.classList.contains('target')) return;
-      // v45：点"详细参数"或它展开的内容，不当作选中动作——否则重渲染会把刚展开的合上
-      if(e.target.closest('.action-details')) return;
-      if(e.target.classList.contains('desc-toggle')){ e.stopPropagation(); card.classList.toggle('desc-open'); return; }
-      // v67：不可用的卡不再"点了毫无反应"，直接把卡在哪一步说出来
+      /* v70：整张卡都算选中。
+         原来点「查看详细参数」「ⓘ 说明」只展开、不选中，学生以为要「先点开看看、再点才选上」，
+         白点两下。现在卡片上任何一处（除了人名）点下去都等于选它，说明区只是顺手摊开。 */
       if(isHardDisabled){ whyDisabled(a, wait, noTeacher, gate); return; }
-      chooseAction(idx);
+      const isDesc = !!e.target.closest('.desc-toggle');
+      if(isDesc){
+        if(!state.descOpen) state.descOpen=new Set();
+        if(state.descOpen.has(a.id)) state.descOpen.delete(a.id); else state.descOpen.add(a.id);
+      }
+      chooseAction(idx, isDesc ? {noReveal:true} : null);
     });
     // v45：把展开状态记进 state，选目标人物时重渲染也不会被关掉
     const det=card.querySelector('.action-details');
@@ -4764,7 +4770,7 @@ function updatePassBanner(){
    学生看到的就成了「有时候点开会展开，有时候点了没反应」。
    现在点已选中的卡＝重新摊开它（分组、详细参数、选人区），不会把它关掉；
    想换动作直接点另一张，不用先取消。 */
-function chooseAction(idx){
+function chooseAction(idx, opts){
   if(state.ended) return;
   const a=ACTIONS[idx];
   if(!a) return;
@@ -4782,7 +4788,8 @@ function chooseAction(idx){
   }
   render();
   // 选人区在卡片下半截，点了却在屏幕外就等于没展开——只在真的看不见时轻轻滚一下
-  if(a.need) revealTargets();
+  // v70：点「ⓘ 说明」是想读字，别把页面从字上拽走
+  if(a.need && !(opts && opts.noReveal)) revealTargets();
 }
 
 /* v67：不可用的动作被点到时，把卡在哪一步说出来。
