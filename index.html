@@ -359,6 +359,10 @@
       .chip{font-size:10px;padding:2px 6px}
       .reason-chip{font-size:9px}
       .action-header strong{font-size:13px}
+      /* v39：手机端头部改成竖排，那个 ▶ 会掉到左下方变成孤立符号，直接藏掉 */
+      .action-toggle{display:none!important}
+      /* 未选中的卡片不再显示"详细参数"那一段，卡片缩到三行 */
+      .action:not(.selected) .action-content{display:none!important}
       .action-header .disabled-badge{font-size:10px}
       .action-group-header .group-label{font-size:13px}
       .action-group-header .group-meta{font-size:10px;padding:1px 6px}
@@ -424,6 +428,12 @@
   .impact-table .down{color:var(--danger);font-weight:700;white-space:nowrap}
   .impact-table .flat{color:var(--muted);white-space:nowrap}
   .impact-table .band{font-weight:600;font-size:12px;white-space:nowrap;opacity:.92}
+  /* v39：动作卡默认只留一行要点，说明点开才看 */
+  .action-desc{max-height:0;overflow:hidden;margin:0;transition:max-height .22s ease, margin .22s ease}
+  .action.desc-open .action-desc{max-height:260px;margin-top:6px}
+  .desc-toggle{display:inline-block;margin-top:6px;font-size:11px;color:var(--muted);border:1px dashed var(--border);
+    border-radius:999px;padding:2px 9px;cursor:pointer;user-select:none}
+  .action.desc-open .desc-toggle{color:var(--primary);border-color:rgba(13,139,150,.45)}
   .rel-list{margin:8px 0 0 18px;padding:0;font-size:13px;line-height:1.8}
   .edge.informal{stroke:#f2b45c;stroke-width:2.2;stroke-dasharray:2 4;opacity:.95}
   /* v36：网络三视图 */
@@ -620,7 +630,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v38</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v39</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1712,94 +1722,68 @@ const ACTIONS=[
     }
     return res;
   }},
-  {id:'email',label:'发布组织邮件',weeks:1,cooldown:2,need:0,type:'沟通',reqCred:5,disrupt:0,desc:'广覆盖但说服深度有限；对还没动起来的人效果会大打折扣。若没有实际成果就群发邮件，会被认为是"纸上谈兵"。',cooldownReason:'邮件是低成本的广播工具，可以频繁使用。但过于频繁的邮件会导致"邮件疲劳"，人们开始忽视你的信息。',run(ids){
+  {id:'broadcast',label:'全员通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
-    // 早期（前5回）无任何转化成果——邮件被读成"空谈"
-    if(state.round < 5 && convCount === 0){
+    if(convCount === 0){
       state.credibility = Math.max(0, state.credibility - 1);
-      const r = affectNonAdopters(2,'邮件发出了，但插图后的行动计划空洞。','沟通');
-      r.details.unshift('⚠️ 早期空邮件：没有一个真正转化的案例能引用。收件人读完顶多觉得"又在喂PPT"。可信度 -1。');
+      const r = affectNonAdopters(2,'通报发出去了，但里面没有一件能拿出来说的事。','沟通');
+      r.details.unshift('⚠️ 空通报：一个真正转化的案例都没有，收件人读完只觉得"又在喂PPT"。可信度 -1。');
       return r;
     }
-    return affectNonAdopters(6,'邮件传达了清晰的方向。','沟通');
-  }},
-  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:4,min:1,type:'赋能',reqCred:5,disrupt:1,desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
-  {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
-  {id:'success-story',label:'讲述成功案例',weeks:1,cooldown:1,need:2,type:'叙事',reqCred:5,disrupt:0,desc:'用真实成功故事激励他人。必须有本土转化案例支撑，否则会被认为是"空谈"，并引发反感。',cooldownReason:'成功案例是低成本的激励工具，可以频繁使用。每个新的成功都能强化变革的合法性。',run(ids){
-    const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
-    // 失败：零转化时讲故事＝传销话术，听众反感
-    if(convCount === 0){
-      // 目标听众感到被愚弄，分数下降
-      const hitNames = [];
-      ids.forEach(id=>{
-        const q = state.people[id];
-        if(q && q.status < 4){
-          const old = q.score;
-          q.score = Math.max(0, q.score - 8);
-          if(q.score !== old){ updateStatus(q); hitNames.push(q.name); }
-        }
-      });
-      state.pressure = Math.min(10, state.pressure + 1);
-      return {
-        story:'你讲了一个「成功案例」，但在座同事内心OS：「你自己那里连一个真正打通的案例都没有，这是从PPT拷的吧？」',
-        details:[
-          '⚠️ 急于讲叙事但缺乏本土证据：听众感到被愚弄，激进压力 +1。',
-          hitNames.length ? `👥 反感：${hitNames.join('、')} 分数 -8（觉得你在画大饼）。` : '',
-          '💡 建议先用「小范围试点」或「上手培训」做出至少 1 个本土案例再讲。'
-        ].filter(Boolean),
-        fail:true
-      };
-    }
-    // 成功：有本土案例支撑
-    return affectTargets(ids, 10, '成功案例激励了更多人，变革的可行性得到了印证。', true, '叙事');
-  }},
-  {id:'progress',label:'发布阶段进展',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,desc:'让还在观望的人看到变革确实在推进。但如果没有真实成果就发布，会被做实事的人认为是"忽悠"。',cooldownReason:'进展报告需要足够素材（已转化的跟随者、实际落地的项目），频繁使用相同模板将引发「又来一篇水文」的质疑。',run(ids){
-    // v17.6：根据当前战果调整效果
-    const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
-    const roundsPlayed = state.round;
-    // 「早期」且「转化太少」——实干派视为空洞宣传：扣可信度 + 加压力 + 实干类人物分数下降
-    if(convCount < 3 && roundsPlayed < 6){
-      const doersHit = [];
-      const doers = ['plant','hr','ops','sales','finance']; // 实干派
-      doers.forEach(id=>{
-        const p = state.people[id];
-        if(p && p.status < 4){
-          const oldScore = p.score;
-          p.score = Math.max(0, p.score - 5);
-          if(p.score !== oldScore){
-            updateStatus(p);
-            doersHit.push(p.name);
-          }
-        }
-      });
-      state.credibility = Math.max(0, state.credibility - 2);
-      state.pressure = Math.min(10, state.pressure + 2);
-      const det = [
-        `⚠️ 进展报告反噬：满屏「变革正在发生」的PPT背后，真正落地的项目屈指可数。`,
-        `可信度 -2，激进压力 +2（怨言在底层制造部门串联）。`,
-        doersHit.length ? `👷 实干派质疑：${doersHit.join('、')} 心理距离拉大（分数 -5）。` : `👷 实干派尚未明表态，但反馈已在私下累积。`
-      ];
-      return {story:'你发布了一份「变革成果阶段汇报」，但车间组长在企业微信群里读完只回了一个「?」——没人知道文章里的成果是啥。', details:det};
-    }
-    // 「转化进展还不够明显」：效果减半，小幅扣可信度
     if(convCount < 3){
       state.credibility = Math.max(0, state.credibility - 1);
-      const r = affectNonAdopters(4,'报告消除了部分疑虑，但指标依然平淡。','沟通');
+      const r = affectNonAdopters(4,'通报里能引用的例子还太少，读的人半信半疑。','沟通');
       r.details.unshift('⚠️ 素材有限：可信度 -1（观察者认为「拿不出手」）。');
       return r;
     }
-    // 正常情境：有真实进展，效果就是正的
-    return affectNonAdopters(6,'进展报告组合了转化人物的真实案例，观察者开始整队。','沟通');
+    const r = affectNonAdopters(7,'通报里有了真实的转化案例，观望的人开始整队。','沟通');
+    r.details.unshift(`✅ 有料可讲：通报引用了 ${convCount} 个真实转化的例子，可信度没有掉。`);
+    return r;
   }},
-  {id:'recognize',label:'公开认可示范者',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,desc:'公开表彰有实际成果的人，放大示范效应。目标必须已处于「参与」状态或以上；表彰火候未到的人会引发全组织质疑。',cooldownReason:'公开认可是一种稀缺的资源，过于频繁会贬低其价值。每次认可都应该是有分量的，才能真正激励他人。',run(ids){
+  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:4,min:1,type:'赋能',reqCred:5,disrupt:1,desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
+  {id:'internal-training',label:'内部培训',weeks:2,cooldown:3,need:4,min:4,type:'赋能',reqCred:5,disrupt:1,roleMode:'teacher',
+   desc:'让一个已经转化的人去带三个还没动的人。外面请来的专家讲得再对，学员心里那句「你不懂我们这儿」消不掉；自己人讲，说服力来自关系，不来自内容。先点讲师（必须已转化），再点三位学员。',
+   cooldownReason:'内部讲师也要上自己的班，连续开课会拖垮他的本职。',
+   run(ids){
+     const tId=ids[0], t=state.people[tId];
+     if(!t || t.status!==4){
+       return {story:'这堂课没开成——你挑的讲师自己都还没转过弯来。', details:['⚠️ 讲师必须是已经转化的人。'], fail:true, noEffect:true};
+     }
+     const students=ids.slice(1).filter(id=>id!==tId && state.people[id]);
+     const bridge=isBridge(tId);
+     const weak=t.score<88;
+     const details=[];
+     students.forEach(sid=>{
+       const q=state.people[sid];
+       let mul=1;
+       const tags=[];
+       if(bridge){ mul*=1.4; tags.push('讲师是桥梁 ×1.4'); }
+       if(isInformalPair(tId,sid)){ mul*=1.5; tags.push('两人本来就有私交 ×1.5'); }
+       if(['union','ops','engineer'].includes(sid)){ mul*=0.6; tags.push('学员不服他 ×0.6'); }
+       if(weak){ mul*=0.6; tags.push('讲师自己刚过线 ×0.6'); }
+       const before=q.status;
+       const r=applyGain(sid, Math.round(10*mul), '赋能', 'direct');
+       const up = q.status>before ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）` : '';
+       details.push(`${q.name} 听了 ${t.name} 的课，+${r.amount} 分${up}${tags.length?'（'+tags.join('、')+'）':''}。`);
+       const gained=seedTrust(tId,sid,14);
+       if(gained>0) details.push(`🤝 ${t.name} ↔ ${q.name} 信任 +${gained}——一起备课、答疑，比任何动作都长得快。`);
+     });
+     applyGain(tId, 4, '赋能', 'direct');
+     details.push(`${t.name} 讲完这一课，自己也更认这件事了（+4）：公开讲过的话，自己更得做到。`);
+     state.pressure=Math.min(10, state.pressure+1);
+     details.push('⏳ 占用生产时间，激进压力 +1。');
+     return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
+   }},
+  {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
+  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「主动参与」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
     const p=state.people[ids[0]];
+    if(!p) return {story:'没有可表彰的对象。', details:[], noEffect:true};
 
-    // 失败条件 A：完全未动（status === 0）——最严重的失误，全组织觉得你在走形式
+    // 失败 A：完全未动——全组织觉得你在走形式
     if(p.status === 0){
-      const factionCtx = p.faction==='当地' ? '在欧洲当地文化中，公开表彰毫无行动的人会被视为「走形式」，整个组织的信任感会集体下滑。' :
-                         p.faction==='外部' ? '外部利益相关者对表彰的判断更为严苛——没有任何成果支撑的认可会被解读为公关噱头，并在外部传播负面印象。' :
-                         '总部背景的人物对表彰的期望更高，表彰完全未动者会被认为是「刷存在感」，损害整个变革项目的公信力。';
-      // 全图未转化者集体质疑，分数下降
+      const factionCtx = p.faction==='当地' ? '在當地文化里，公开表彰毫无行动的人会被视为「走形式」，整个组织的信任感会集体下滑。' :
+                         p.faction==='外部' ? '外部利益相关者对表彰的判断更严苛——没有成果支撑的认可会被解读为公关噱头。' :
+                         '总部背景的人物对表彰的期望更高，表彰完全未动者会被认为是「刷存在感」。';
       const hitNames = [];
       Object.entries(state.people).forEach(([id, q])=>{
         if(id !== 'pm' && id !== ids[0] && q.status < 4 && q.status >= 1){
@@ -1814,11 +1798,11 @@ const ACTIONS=[
           `❌ 表彰严重失当：${p.name}目前仍处于「${statusText(p.status)}」状态，尚未形成任何示范效应。激进压力 +2。`,
           `📚 管理学原理：${factionCtx}`,
           hitNames.length ? `👥 全组织质疑：${hitNames.join('、')} 对你的判断力产生怀疑（分数 -8）。` : '',
-          `💡 建议：目标必须至少达到「参与」状态（score ≥ 60）才能进行公开认可，才能形成真正的榜样效应。`
+          `💡 建议：目标必须至少达到「主动参与」状态才能表彰，才有真正的榜样效应。`
         ].filter(Boolean),fail:true};
     }
 
-    // 失败条件 B：火候未到（status 1 或 2）——捧杀，目标感到被孤立
+    // 失败 B：火候未到——捧杀
     if(p.status <= 2){
       const old = p.score;
       p.score = Math.max(0, p.score - 12);
@@ -1828,22 +1812,26 @@ const ACTIONS=[
         details:[
           `❌ 表彰时机失当：${p.name}当前处于「${statusText(p.status)}」状态，尚未有足够的成果支撑公开认可。${p.name}感到被孤立（分数 -12），激进压力 +1。`,
           `📚 管理学原理：过早的公开表彰会让被表彰者在同事中显得「被特殊对待」，反而引发同伴压力和孤立效应（Peer Isolation Effect）。`,
-          `💡 建议：等待${p.name}进入「参与」状态（score ≥ 60）后再进行公开认可，效果才能真正放大。`
+          `💡 建议：等${p.name}进入「主动参与」状态后再表彰。`
         ],fail:true};
     }
 
-    // 成功路径：status >= 3（参与/转化）
-    // 额外效果：对全图未转化者产生群体激励
-    const groupBoost = [];
-    Object.entries(state.people).forEach(([id, q])=>{
-      if(id !== 'pm' && id !== ids[0] && q.status >= 1 && q.status < 4){
-        const old = q.score;
-        q.score = Math.min(100, q.score + 6);
-        if(q.score !== old){ updateStatus(q); groupBoost.push(q.name); }
-      }
+    // 成功：表彰本人 + 故事顺着他的关系网传给两个还没动的人
+    const r = affectTargets(ids, 12, `你公开表彰了${p.name}，他的故事开始在组织里传。`, true, '政治');
+    const heard=[];
+    (p.ties||[]).forEach(t=>{
+      if(heard.length>=2) return;
+      const q=state.people[t];
+      if(!q || q.status>=4 || t===ids[0]) return;
+      const before=q.status;
+      const rr=applyGain(t, 6, '叙事', 'spread');
+      heard.push(`${q.name}${q.status>before?'（'+STATUS_LABELS[before]+'→'+STATUS_LABELS[q.status]+'）':''}`);
     });
-    const r = affectTargets(ids, 12, `你公开认可了${p.name}，榜样效应开始扩散。`, true, '政治');
-    if(groupBoost.length) r.details.push(`🌟 群体激励：${groupBoost.join('、')} 受到榜样感召，各 +6 分。`);
+    if(heard.length){
+      r.details.push(`🗣 故事传开了：${heard.join('、')} 听说了${p.name}的事，各 +6。`);
+    } else {
+      r.details.push('🗣 这一圈人大多已经转化了，故事没找到新的听众——换一个身边还有观望者的人来表彰，效果会更好。');
+    }
     return r;
   }},
   {id:'kpi',label:'宣布KPI与时限',weeks:2,cooldown:5,need:0,type:'压力',reqCred:7,disrupt:3,desc:'能制造紧迫感，但组织也会感到压力。若你的信誉还不够高（<8）且还没有几个真实成果，硬推KPI会被认为是"蛮干"而引发反弹。',cooldownReason:'指标和时限是强有力的管理工具，但频繁改变会导致组织混乱。每次宣布都需要足够的时间让组织消化和适应。',run(ids){
@@ -1949,9 +1937,9 @@ let currentRoleId = 'integrator';
    （en 字段只作内部对照，不渲染到界面。） */
 const ACTION_GROUPS = [
   { key:'structure', label:'🏛 结构', en:'Structural',     hint:'改规则、改流程、改汇报线——用制度设计让人不得不动', ids:['kpi','incentive','reorg','pilot'] },
-  { key:'people',    label:'👥 人员', en:'Human Resource', hint:'人要先有能力、有安全感、有参与感，才谈得上投入', ids:['training','interview','team-building'] },
-  { key:'politics',  label:'⚖️ 政治', en:'Political',      hint:'权力与正当性——谁支持你、谁挡你、你的位子站不站得住', ids:['ceo-endorse','recognize','progress'] },
-  { key:'symbol',    label:'✨ 符号', en:'Symbolic',       hint:'意义、故事、仪式——让人相信这件事值得做', ids:['exemplify','success-story','email'] }
+  { key:'people',    label:'👥 人员', en:'Human Resource', hint:'人要先有能力、有安全感、有参与感，才谈得上投入', ids:['interview','training','internal-training','team-building'] },
+  { key:'politics',  label:'⚖️ 政治', en:'Political',      hint:'权力与正当性——谁支持你、谁挡你、你的位子站不站得住', ids:['ceo-endorse','honor'] },
+  { key:'symbol',    label:'✨ 符号', en:'Symbolic',       hint:'意义、故事、仪式——让人相信这件事值得做', ids:['exemplify','broadcast'] }
 ];
 
 /* =========================================================
@@ -3130,7 +3118,9 @@ function buildActionCard(a, idx){
     const credBad=state.credibility<a.reqCred;
     // v21: credBad 不再阻断卡片点击——可信度不足时仍可选中（强行执行模式）
     // 只有冷却中或资源不足才真正禁用
-    const isHardDisabled=wait>0||state.resources<a.weeks;
+    // v39：内部培训需要一位已转化的讲师
+    const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
+    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher;
     const isDisabled=isHardDisabled; // credBad 仅作为视觉警告，不禁用卡片
     if(isHardDisabled) card.classList.add('disabled');
     else if(credBad) card.classList.add('cred-override'); // 新增：可信度不足但可强行
@@ -3138,14 +3128,19 @@ function buildActionCard(a, idx){
 
     const targetsHtml = a.need ? `<div class="target-selector ${state.selectedAction===idx?'show':''}">
       <div class="target-selector-header">
-        <div class="target-selector-title">选择目标人物</div>
-        <div class="target-selector-count">已选 ${state.selectedTargets.length} 人 · 需 ${tRangeText(a)}</div>
+        <div class="target-selector-title">${a.roleMode==='teacher'?'选择讲师与学员':'选择目标人物'}</div>
+        <div class="target-selector-count">${a.roleMode==='teacher'
+          ? (state.selectedTargets.length? `讲师 ${state.people[state.selectedTargets[0]].name} · 学员 ${Math.max(0,state.selectedTargets.length-1)}/3` : '还没选讲师')
+          : `已选 ${state.selectedTargets.length} 人 · 需 ${tRangeText(a)}`}</div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin:-2px 0 10px;line-height:1.45">预计 ? = 没约谈过，推不准；谈过之后显示预计值和他吃哪一套（▲偏好 / ▼抵触）。</div>
+      <div style="font-size:11px;color:var(--muted);margin:-2px 0 10px;line-height:1.45">${a.roleMode==='teacher'
+        ? '先点一位<span style="color:var(--success);font-weight:700">已转化</span>的人当讲师，再点三位还没动的学员。学员跟他有没有私交，直接决定这堂课有没有人真听。'
+        : '预计 ? = 没约谈过，推不准；谈过之后显示预计值和他吃哪一套（▲偏好 / ▼抵触）。'}</div>
+      ${state.targetHint?`<div class="sit-line warn" style="margin:-4px 0 10px;font-size:11.5px">${state.targetHint}</div>`:''}
       <div class="targets">${(()=>{ 
         // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
         let estMap=null;
-        if(state.selectedAction===idx && a.need){
+        if(state.selectedAction===idx && a.need && !a.roleMode){
           estMap={};
           Object.keys(state.people).forEach(pid=>{ if(pid==='pm') return; const e=estimateOne(a,pid); if(e) estMap[pid]=e; });
         }
@@ -3160,10 +3155,20 @@ function buildActionCard(a, idx){
           if(mul>=1.15) prefMark=`<span style="color:var(--success);font-weight:700" title="正中偏好：这个动作对他有加成">▲${a.type} ×${mul.toFixed(2)}</span>`;
           else if(mul<=0.85) prefMark=`<span style="color:var(--danger);font-weight:700" title="逆其偏好：这个动作对他打折">▼${a.type} ×${mul.toFixed(2)}</span>`;
         }
-        const recogRisk = (a.id==='recognize' && p.status===0);
+        const recogRisk = (a.id==='honor' && p.status===0);
         const recogMark = recogRisk ? '<span title="尚未形成示范效应，公开表彰会失当" style="color:var(--danger);font-weight:700">⚠️</span>' : '';
+        // v39：内部培训——讲师位/学员位
+        let roleMark='';
+        let roleDim=false;
+        if(a.roleMode==='teacher'){
+          const sel=state.selectedTargets.indexOf(id);
+          if(sel===0) roleMark='<span title="讲师">🎓</span>';
+          else if(sel>0) roleMark='<span title="学员">👤</span>';
+          if(state.selectedTargets.length===0) roleDim = (p.status!==4);
+          else roleDim = (p.status===4);
+        }
         const disabledAttr = recogRisk ? 'data-risk="1"' : '';
-        const riskStyle = recogRisk ? 'style="opacity:0.55;border-color:var(--danger)"' : '';
+        const riskStyle = (recogRisk||roleDim) ? `style="opacity:${roleDim?0.45:0.55};${recogRisk?'border-color:var(--danger)':''}"` : '';
         // Progress bar: score vs next threshold
         const stubborn = ['union','ops','engineer'];
         const thresholds = stubborn.includes(id) ? [25,50,70,90,100] : [25,45,65,85,100];
@@ -3175,7 +3180,7 @@ function buildActionCard(a, idx){
         const blocks = Math.round(barPct/20); // 0-5 filled blocks out of 5
         const barBlocks = '█'.repeat(blocks) + '░'.repeat(5-blocks);
         return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${disabledAttr} ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
-          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${soft}${bridge}${prefMark}${recogMark}</span>
+          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
@@ -3195,11 +3200,12 @@ function buildActionCard(a, idx){
     if(credBad) reasonChips.push('<span class="chip bad reason-chip">可信度不足（需'+a.reqCred+'）</span>');
     if(wait>0) reasonChips.push('<span class="chip bad reason-chip">还需等待'+wait+'轮</span>');
     if(state.resources<a.weeks) reasonChips.push('<span class="chip bad reason-chip">资源数不足（需'+a.weeks+'周）</span>');
+    if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有已转化的人可以当讲师</span>');
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源数不足需'+a.weeks+'周':''].filter(Boolean).join(' · ')}">
-          ⛔ ${wait>0?'冷却'+wait+'轮':'资源数不足'}
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有已转化的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源数不足需'+a.weeks+'周':''].filter(Boolean).join(' · ')}">
+          ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
         ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加激进压力">
@@ -3229,11 +3235,12 @@ function buildActionCard(a, idx){
         <!-- v20: 核心信息行（始终可见） -->
         <div class="chips" style="margin-top:6px">
           <span class="chip" title="执行此动作消耗的资源周数">⏱ ${a.weeks}周</span>
-          <span class="chip ${a.need===0?'good':''}" title="${a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标'}">${a.need?'👤 '+tRangeText(a):'🌐 全体'}</span>
+          <span class="chip ${a.need===0?'good':''}" title="${a.roleMode==='teacher'?'先点讲师（必须已转化），再点三位学员':(a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标')}">${a.roleMode==='teacher'?'🎓 1 讲师 + 3 学员':(a.need?'👤 '+tRangeText(a):'🌐 全体')}</span>
           ${credBad ? `<span class="chip warn" title="当前可信度${state.credibility}，需要${a.reqCred}">🔒 需信誉${a.reqCred}</span>` : ''}
           ${wait>0 ? `<span class="chip bad" title="冷却中">⏳ 冷却${wait}轮</span>` : ''}
         </div>
-        <div class="small muted" style="margin-top:6px">${a.desc}</div>
+        <div class="action-desc small muted">${a.desc}</div>
+        <span class="desc-toggle" role="button" tabindex="0">ⓘ 说明</span>
       </div>
       <span class="action-toggle" aria-hidden="true">${toggleIcon}</span>
     </div>
@@ -3250,7 +3257,11 @@ function buildActionCard(a, idx){
       </details>
       ${targetsHtml}
     </div>`;
-    card.addEventListener('click',(e)=>{ if(e.target.classList.contains('target')) return; if(!isHardDisabled) chooseAction(idx); });
+    card.addEventListener('click',(e)=>{
+      if(e.target.classList.contains('target')) return;
+      if(e.target.classList.contains('desc-toggle')){ e.stopPropagation(); card.classList.toggle('desc-open'); return; }
+      if(!isHardDisabled) chooseAction(idx);
+    });
     card.addEventListener('keydown',(e)=>{
       if((e.key==='Enter'||e.key===' ') && !isHardDisabled){ e.preventDefault(); chooseAction(idx); }
     });
@@ -3969,10 +3980,20 @@ function toggleTarget(id){
   if(!a||a.need===0) return;
   const arr=state.selectedTargets;
   const pos=arr.indexOf(id);
-  if(pos>=0){ arr.splice(pos,1); render(); return; }
-  // v17: 表彰的误用预警
+  if(pos>=0){ arr.splice(pos,1); state.targetHint=''; render(); return; }
   const p=state.people[id];
-  if(a.id==='recognize' && p.status===0){
+  // v39：内部培训——第一个点的是讲师，必须已经转化；已转化的人不占学员名额
+  if(a.roleMode==='teacher'){
+    if(arr.length===0){
+      if(p.status!==4){ state.targetHint='讲师必须是已经转化的人——先有人真的信了，才谈得上让他去带人。'; render(); return; }
+    } else {
+      if(p.status===4){ state.targetHint='已经转化的人当讲师，不当学员。'; render(); return; }
+      if(arr.length-1>=3){ state.targetHint='一堂课只带三个人，再多就成公开课了。'; render(); return; }
+    }
+  }
+  state.targetHint='';
+  // v17: 表彰的误用预警
+  if(a.id==='honor' && p.status===0){
     if(!confirm(`⚠️ ${p.name} 尚未形成任何实际进展，公开表彰不仅会失当，还可能激起反感。确定仍然选择？`)) return;
   }
   if(arr.length<tMax(a)) arr.push(id);
