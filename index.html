@@ -224,6 +224,8 @@
     .action.cred-override .disabled-badge{background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)}
     .disabled-badge{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:rgba(224,80,104,.12);color:#e87a8a;border:1px solid rgba(224,80,104,.3);font-size:11px;font-weight:600;vertical-align:middle;white-space:nowrap;cursor:help}
     .action-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;cursor:pointer}
+    /* v40：ADKAR 角标——分组说"推到哪一段"，这个字母说"治哪种卡点" */
+    .adkar-tag{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:5px;border:1px solid;font-size:10.5px;font-weight:800;line-height:1;cursor:help;flex:none;letter-spacing:0;vertical-align:middle}
     .action-toggle{font-size:18px;transition:transform var(--transition);flex-shrink:0}
     .action.collapsed .action-toggle{transform:rotate(-90deg)}
     .action-content{display:grid;gap:10px}
@@ -630,7 +632,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v39</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v40</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1596,6 +1598,7 @@ const PRESSURE_RELIEF_ACTION = {
   need:6,
   min:2,
   type:'沟通',
+  adkar:'DE',
   reqCred:5,
   reqPressure:1,
   disrupt:-1,
@@ -1649,7 +1652,7 @@ const PRESSURE_RELIEF_ACTION = {
 };
 
 const ACTIONS=[
-  {id:'exemplify',label:'以身作则',weeks:2,cooldown:4,need:0,type:'示范',reqCred:2,disrupt:0,desc:'先用行动建立可信度，再推动别人。连用两次以上而无其他实质动作配合，会退化为“作秀”。',cooldownReason:'这个动作建立的信任需要时间沉淀，过于频繁会显得虚伪。信任是组织变革的基础，不能急功近利。',run(ids){
+  {id:'exemplify',label:'以身作则',weeks:2,cooldown:4,need:0,type:'示范',reqCred:2,disrupt:0,adkar:'DE',desc:'先用行动建立可信度，再推动别人。连用两次以上而无其他实质动作配合，会退化为“作秀”。',cooldownReason:'这个动作建立的信任需要时间沉淀，过于频繁会显得虚伪。信任是组织变革的基础，不能急功近利。',run(ids){
     // 上一轮也是 exemplify——连用导致信号退化为"作秀"
     if(state.lastActionId === 'exemplify'){
       state.credibility = Math.max(0, state.credibility - 1);
@@ -1659,7 +1662,7 @@ const ACTIONS=[
     }
     return affectAll(9,'你以身作则，组织开始观察你的真实行动。','示范');
   }},
-  {id:'ceo-endorse',label:'争取总部公开背书',weeks:2,cooldown:5,need:0,type:'政治',reqCred:2,disrupt:1,desc:'通过公开支持提升你的正当性。首次背书信号最强；反复求背书会消耗与CEO的政治资本。',cooldownReason:'总部的每次公开表态都会被组织内部反复解读。频繁的背书反而会削弱信号的可信度，让人觉得这是"作秀"而非真正的承诺。',run(ids){
+  {id:'ceo-endorse',label:'争取总部公开背书',weeks:2,cooldown:5,need:0,type:'政治',reqCred:2,disrupt:1,adkar:'DE',desc:'通过公开支持提升你的正当性。首次背书信号最强；反复求背书会消耗与CEO的政治资本。',cooldownReason:'总部的每次公开表态都会被组织内部反复解读。频繁的背书反而会削弱信号的可信度，让人觉得这是"作秀"而非真正的承诺。',run(ids){
     const useN = state.actionUseCount[this.id] || 1; // 本次包含在内
     // 第二次及以后使用——CEO耐心耗尽
     if(useN >= 2){
@@ -1682,7 +1685,7 @@ const ACTIONS=[
     // 首次使用——信号清晰
     return affectAll(7,'总部公开支持了这次变革，信号清晰。','政治');
   }},
-  {id:'interview',label:'私人约谈',weeks:1,cooldown:2,need:2,min:1,type:'对话',reqCred:3,disrupt:0,desc:'一对一坐下来，摸清顾虑、识别非正式关系。这是唯一能解锁对方真实想法与隐藏目标的动作——只谈一个人时对方最愿意说实话，同时谈两个就会明显变浅。注意：对同一人重复约谈超过 2 次会显得烦人。',cooldownReason:'私人约谈是低成本的信息收集方式，可以频繁进行。但每次约谈都需要时间来消化信息和建立信任。',run(ids){
+  {id:'interview',label:'私人约谈',weeks:1,cooldown:2,need:2,min:1,type:'对话',reqCred:3,disrupt:0,adkar:'AW',desc:'一对一坐下来，摸清顾虑、识别非正式关系。这是唯一能解锁对方真实想法与隐藏目标的动作——只谈一个人时对方最愿意说实话，同时谈两个就会明显变浅。注意：对同一人重复约谈超过 2 次会显得烦人。',cooldownReason:'私人约谈是低成本的信息收集方式，可以频繁进行。但每次约谈都需要时间来消化信息和建立信任。',run(ids){
     ids.forEach(id=>{ state.revealed[id]=true; });
     // 统计本轮被重复访谈（第3次及以上）的对象
     const overused = [];
@@ -1722,7 +1725,7 @@ const ACTIONS=[
     }
     return res;
   }},
-  {id:'broadcast',label:'全员通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
+  {id:'broadcast',label:'全员通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,adkar:'AW',desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
     if(convCount === 0){
       state.credibility = Math.max(0, state.credibility - 1);
@@ -1740,8 +1743,8 @@ const ACTIONS=[
     r.details.unshift(`✅ 有料可讲：通报引用了 ${convCount} 个真实转化的例子，可信度没有掉。`);
     return r;
   }},
-  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:4,min:1,type:'赋能',reqCred:5,disrupt:1,desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
-  {id:'internal-training',label:'内部培训',weeks:2,cooldown:3,need:4,min:4,type:'赋能',reqCred:5,disrupt:1,roleMode:'teacher',
+  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:4,min:1,type:'赋能',reqCred:5,disrupt:1,adkar:'KN',desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
+  {id:'internal-training',label:'内部培训',weeks:2,cooldown:3,need:4,min:4,type:'赋能',reqCred:5,disrupt:1,adkar:'AB',roleMode:'teacher',
    desc:'让一个已经转化的人去带三个还没动的人。外面请来的专家讲得再对，学员心里那句「你不懂我们这儿」消不掉；自己人讲，说服力来自关系，不来自内容。先点讲师（必须已转化），再点三位学员。',
    cooldownReason:'内部讲师也要上自己的班，连续开课会拖垮他的本职。',
    run(ids){
@@ -1774,8 +1777,8 @@ const ACTIONS=[
      details.push('⏳ 占用生产时间，激进压力 +1。');
      return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
    }},
-  {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
-  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「主动参与」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
+  {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
+  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「主动参与」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
     const p=state.people[ids[0]];
     if(!p) return {story:'没有可表彰的对象。', details:[], noEffect:true};
 
@@ -1834,7 +1837,7 @@ const ACTIONS=[
     }
     return r;
   }},
-  {id:'kpi',label:'宣布KPI与时限',weeks:2,cooldown:5,need:0,type:'压力',reqCred:7,disrupt:3,desc:'能制造紧迫感，但组织也会感到压力。若你的信誉还不够高（<8）且还没有几个真实成果，硬推KPI会被认为是"蛮干"而引发反弹。',cooldownReason:'指标和时限是强有力的管理工具，但频繁改变会导致组织混乱。每次宣布都需要足够的时间让组织消化和适应。',run(ids){
+  {id:'kpi',label:'宣布KPI与时限',weeks:2,cooldown:5,need:0,type:'压力',reqCred:7,disrupt:3,adkar:'RE',desc:'能制造紧迫感，但组织也会感到压力。若你的信誉还不够高（<8）且还没有几个真实成果，硬推KPI会被认为是"蛮干"而引发反弹。',cooldownReason:'指标和时限是强有力的管理工具，但频繁改变会导致组织混乱。每次宣布都需要足够的时间让组织消化和适应。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
     // 可信度刚刚过阈——又没有实际转化支撑：反弹
     if(state.credibility < 8 && convCount < 3){
@@ -1862,8 +1865,8 @@ const ACTIONS=[
     }
     return affectAll(8,'KPI和时限制造了紧迫感，但也增加了压力。','压力');
   }},
-  {id:'incentive',label:'调整激励与奖惩',weeks:4,cooldown:6,need:0,type:'制度',reqCred:8,disrupt:3,desc:'通过制度激励能推动全体。这是后期的终极武器——当其他方法都失效时，制度改变能突破瓶颈。但代价是会大幅提升组织压力。',cooldownReason:'激励制度的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){ return affectAll(12,'激励与奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','制度'); }},
-  {id:'reorg',label:'调整汇报关系',weeks:3,cooldown:6,need:1,type:'制度',reqCred:6,disrupt:2,
+  {id:'incentive',label:'调整激励与奖惩',weeks:4,cooldown:6,need:0,type:'制度',reqCred:8,disrupt:3,adkar:'RE',desc:'通过制度激励能推动全体。这是后期的终极武器——当其他方法都失效时，制度改变能突破瓶颈。但代价是会大幅提升组织压力。',cooldownReason:'激励制度的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){ return affectAll(12,'激励与奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','制度'); }},
+  {id:'reorg',label:'调整汇报关系',weeks:3,cooldown:6,need:1,type:'制度',reqCred:6,disrupt:2,adkar:'RE',
    desc:'把某个人的汇报线改到已经认同变革的上级名下。组织结构本身就是杠杆：换了汇报对象，信息流向、资源分配和压力传导都会跟着改道。',
    cooldownReason:'动组织结构是大事，一年内反复调整会让人觉得你在乱折腾，反而摧毁可信度。',
    run(ids){
@@ -1932,15 +1935,34 @@ const ROLES = {
 };
 let currentRoleId = 'integrator';
 
-/* v34：动作按四类打法重排——结构 / 人员 / 政治 / 符号。
-   这四类不是先后顺序，而是四种下手角度；多数人只用前两类。
+/* v40：动作按 Kotter 八步压成四段重排——造势 / 动员 / 赋能 / 固化。
+   这不是四个抽屉，而是一条有先后的推进线；跳步是变革失败的头号死法。
    （en 字段只作内部对照，不渲染到界面。） */
 const ACTION_GROUPS = [
-  { key:'structure', label:'🏛 结构', en:'Structural',     hint:'改规则、改流程、改汇报线——用制度设计让人不得不动', ids:['kpi','incentive','reorg','pilot'] },
-  { key:'people',    label:'👥 人员', en:'Human Resource', hint:'人要先有能力、有安全感、有参与感，才谈得上投入', ids:['interview','training','internal-training','team-building'] },
-  { key:'politics',  label:'⚖️ 政治', en:'Political',      hint:'权力与正当性——谁支持你、谁挡你、你的位子站不站得住', ids:['ceo-endorse','honor'] },
-  { key:'symbol',    label:'✨ 符号', en:'Symbolic',       hint:'意义、故事、仪式——让人相信这件事值得做', ids:['exemplify','broadcast'] }
+  { key:'unfreeze', label:'🔥 造势', en:'Urgency & Coalition',
+    hint:'第 1–2 步：先解决「为什么非变不可」和「谁跟我一起」。这两步没做够就往下走，后面每一步都在还债',
+    ids:['interview','team-building','ceo-endorse'] },
+  { key:'mobilize', label:'📣 动员', en:'Vision & Communication',
+    hint:'第 3–4 步：把方向讲成一件具体、可信、能重复讲的事，而不是一句口号',
+    ids:['broadcast','exemplify'] },
+  { key:'enable',   label:'🚀 赋能', en:'Empower & Quick Wins',
+    hint:'第 5–6 步：拆掉「不会做」和「做不成」的障碍，尽快做出一个能拿出手的成果',
+    ids:['pilot','training','internal-training','honor'] },
+  { key:'anchor',   label:'🔒 固化', en:'Consolidate & Anchor',
+    hint:'第 7–8 步：把新做法写进考核、激励和汇报关系，让它不再依赖你个人去推',
+    ids:['kpi','incentive','reorg'] }
 ];
+
+/* v40：ADKAR 五个字母挂在动作卡片角上。
+   分组回答「我现在该推到哪一段」，字母回答「这个动作在治哪种卡点」。
+   A 出现两次（认知 Awareness / 能力 Ability），内部用 AW / AB 区分。 */
+const ADKAR_META = {
+  AW:{ letter:'A', name:'认知', desc:'他知不知道为什么要变、不变会怎样' },
+  DE:{ letter:'D', name:'意愿', desc:'他愿不愿意为这件事出力' },
+  KN:{ letter:'K', name:'知识', desc:'他知不知道具体该怎么做' },
+  AB:{ letter:'A', name:'能力', desc:'他做不做得到、有没有条件做' },
+  RE:{ letter:'R', name:'巩固', desc:'他会不会退回老做法' }
+};
 
 /* =========================================================
    状态
@@ -3224,10 +3246,16 @@ function buildActionCard(a, idx){
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
     })();
 
+    // v40：ADKAR 角标
+    const _ak = a.adkar ? ADKAR_META[a.adkar] : null;
+    const _AKC = {AW:'#4a90d9', DE:'#e08a3a', KN:'#8b6ad4', AB:'#0d8b96', RE:'#3f9e5a'};
+    const adkarTag = _ak ? `<span class="adkar-tag" style="color:${_AKC[a.adkar]};border-color:${_AKC[a.adkar]}66;background:${_AKC[a.adkar]}1f" title="ADKAR · ${_ak.name}（${a.adkar==='AB'?'Ability':_ak.letter==='A'?'Awareness':_ak.letter==='D'?'Desire':_ak.letter==='K'?'Knowledge':'Reinforcement'}）：${_ak.desc}">${_ak.letter}</span>` : '';
+
     card.innerHTML=`<div class="action-header">
       <div style="min-width:0;flex:1">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <strong>${a.label}</strong>
+          ${adkarTag}
           <span class="chip" style="font-size:11px">${a.type}</span>
           ${headerBadge}
           <span class="chip ${successHint.cls}" style="font-size:11px" title="${successHint.tip}">${successHint.label}</span>
@@ -3484,10 +3512,10 @@ function actionGroupPieSvg(){
   const total = Object.values(counts).reduce((s,v)=>s+v.count, 0);
   if(total === 0) return '<div class="small muted">本局没有任何有效动作记录。</div>';
   const colors = {
-    structure:'#7b4fd4',
-    people:   '#0d8b96',
-    politics: '#e6a84b',
-    symbol:   '#4ade80'
+    unfreeze:'#e6a84b',
+    mobilize:'#8b6ad4',
+    enable:  '#0d8b96',
+    anchor:  '#4ade80'
   };
   const cx=80, cy=80, r=64;
   let angle = -Math.PI/2;
@@ -3635,35 +3663,53 @@ function debrief(){
     }
   }
 
-  // 2. 动作类别覆盖：这一局你用了几类打法
-  const _frameUse = ACTION_GROUPS.map(g=>({
+  // 2. 四段推进（v40：Kotter）——顺序比覆盖面更要紧
+  const _segUse = ACTION_GROUPS.map(g=>({
     key:g.key,
     name:g.label.split(' ').pop(),
     n:H.filter(h=>g.ids.includes(h.actionId)).length
   }));
-  const _touched = _frameUse.filter(f=>f.n>0);
-  const _missed  = _frameUse.filter(f=>f.n===0);
-  if(H.length>=4 && _touched.length>0){
-    if(_touched.length===1){
-      out.push({tag:'只有一把锤子', k:'warn',
-        t:`整局你只用了「${_touched[0].name}」这一类动作。手里只有一把锤子，看什么都像钉子——问题往往不在力度不够，在于工具箱太窄。`});
-    } else if(_touched.length===2){
-      out.push({tag:'两类打法', k:'warn',
-        t:`你用了「${_touched[0].name}」和「${_touched[1].name}」，一次没碰「${_missed.map(f=>f.name).join('」和「')}」。这是最常见的组合：多数管理者只在制度和人的身上下功夫，因为这两类看得见、有抓手。而变革常常死在另外两类上——政治上没处理"谁的利益被动了"，符号上没回答"为什么值得"。`});
-    } else if(_touched.length===3){
-      out.push({tag:'三类打法', k:'tip',
-        t:`你用了「${_touched.map(f=>f.name).join('」「')}」，只漏了「${_missed[0].name}」。漏掉的那一类通常不是不会用，而是没想到——下一局把它当主攻试试，同一个局面会不一样。`});
-    } else {
-      out.push({tag:'四类都动过', k:'good',
-        t:`四类动作你都动过：结构 ${_frameUse[0].n} 次、人员 ${_frameUse[1].n} 次、政治 ${_frameUse[2].n} 次、符号 ${_frameUse[3].n} 次。真正的难点不是找到唯一正解，而是同一个局面里换着角度下手，哪一类撬得动就用哪一类。`});
+  const segN = {}; _segUse.forEach(s=>segN[s.key]=s.n);
+  const _touched = _segUse.filter(f=>f.n>0);
+  const _missed  = _segUse.filter(f=>f.n===0);
+  const firstAt = (key)=>{
+    const g = ACTION_GROUPS.find(x=>x.key===key);
+    return H.findIndex(h=>g.ids.includes(h.actionId));   // -1 = 整局没用过
+  };
+  const fUn = firstAt('unfreeze'), fEn = firstAt('enable'), fAn = firstAt('anchor');
+
+  if(H.length>=4){
+    if(fAn>=0 && (fUn<0 || fAn<fUn)){
+      out.push({tag:'顺序反了', k:'warn',
+        t:`你在第 ${fAn+1} 回合就动了固化类动作（KPI／激励／汇报关系），而造势${fUn<0?'整局一次都没做':'到第 '+(fUn+1)+' 回合才第一次出现'}。前两步是紧迫感和联盟——没做够就动制度，同一张 KPI 在员工眼里不是「改革」，是「新官上任」。顺序一错，后面每一步都在还债。`});
+    } else if(segN.unfreeze>0 && segN.mobilize>0 && segN.enable===0 && segN.anchor===0){
+      out.push({tag:'只造势不落地', k:'warn',
+        t:`力气全花在前两段（造势 ${segN.unfreeze} 次、动员 ${segN.mobilize} 次），赋能和固化一次没碰。紧迫感讲得再好，组织看不到一件做成的事也不会信——第 6 步「创造速赢」不是锦上添花，它是把口头承诺变成可验证证据的唯一办法。`});
+    } else if(segN.enable===0){
+      out.push({tag:'没有速赢', k:'warn',
+        t:`整局没有一次赋能类动作（试点／培训／内部培训／表彰）。这类动作负责把「我信你」变成「我看见了」——缺一个能拿出手的成果，观望的人会一直观望到时间用完。`});
+    } else if(_touched.length>=3 && _missed.length===0){
+      out.push({tag:'四段走齐', k:'good',
+        t:`四段你都走过了：造势 ${segN.unfreeze}、动员 ${segN.mobilize}、赋能 ${segN.enable}、固化 ${segN.anchor}。这条线不是流程表，是承重顺序——造势攒下的信用，用来付赋能和固化的账。`});
+    } else if(_touched.length<=2 && _missed.length>=2){
+      out.push({tag:'只走了半程', k:'tip',
+        t:`你只走了「${_touched.map(f=>f.name).join('」和「')}」，没碰「${_missed.map(f=>f.name).join('」和「')}」。这是变革做一半最常见的形态：前半程靠个人魅力推得动，后半程要靠机制接住——接不住，人一走就回原样。`});
     }
   }
 
+  // 2b. ADKAR 覆盖：你一直在治"想不想"，还是也治过"会不会"
+  const _akUse = {};
+  H.forEach(h=>{ const a=ACTIONS.find(x=>x.id===h.actionId); if(a&&a.adkar) _akUse[a.adkar]=(_akUse[a.adkar]||0)+1; });
+  if(H.length>=5 && !_akUse.KN && !_akUse.AB){
+    out.push({tag:'只治意愿', k:'warn',
+      t:`整局的动作全落在认知、意愿、巩固上，知识（K）和能力（A）一次没碰。很多被当成「抵触」的表现，其实是「不会做又不好意思说」——培训、试点补的正是这一块，而它们最容易被跳过，因为看起来不像「一把手该亲自干的事」。`});
+  }
+
   // 3. 是否用过制度杠杆
-  const usedInst = ['incentive','reorg','kpi'].filter(id=>state.usedActions.has(id));
+  const usedInst = ['incentive','reorg','kpi'].filter(id=>H.some(h=>h.actionId===id));
   if(!usedInst.length && conv<Math.ceil(total*0.5)){
-    out.push({tag:'没动过制度', k:'warn',
-      t:`你整局没有动过结构这一类动作（KPI / 激励与奖惩 / 汇报关系）。人际说服能推到 65 分，但 65→85 这一段靠说是不动的——它需要改变"做与不做的后果"。代价是压力，但没有它，最后一跳永远差一口气。`});
+    out.push({tag:'没有固化', k:'warn',
+      t:`你整局没有动过固化类动作（KPI / 激励与奖惩 / 汇报关系）。人际说服能推到 65 分，但 65→85 这一段靠说是不动的——它需要改变「做与不做的后果」。代价是压力，但没有它，最后一跳永远差一口气。`});
   }
 
   // 3. 压力是否爆掉
@@ -3769,7 +3815,7 @@ function renderEndingScreen(){
   const dash = document.createElement('div'); dash.className='log-item';
   dash.innerHTML = `<strong>📊 本局战略复盘仪表板</strong>
     <div class="dashboard-grid">
-      <div class="dash-card compact"><div class="dash-title">动作类型分布</div>${actionGroupPieSvg()}</div>
+      <div class="dash-card compact"><div class="dash-title">四段推进分布</div>${actionGroupPieSvg()}</div>
       <div class="dash-card compact"><div class="dash-title">已转化率曲线</div>${ratesCurveSvg()}</div>
     </div>
     <div class="dash-card" style="margin-top:24px;clear:both"><div class="dash-title">转折点（已转化人数变动最大的 3 个回合）</div>${turningPointsList()}</div>`;
@@ -4512,7 +4558,7 @@ function exportGamePdf(){
     <section class="section">
       <h2>📈 战略复盘仪表板</h2>
       <div class="dash">
-        <div class="dash-box"><h4>动作类型分布</h4>${(typeof actionGroupPieSvg==='function')?actionGroupPieSvg():''}</div>
+        <div class="dash-box"><h4>四段推进分布</h4>${(typeof actionGroupPieSvg==='function')?actionGroupPieSvg():''}</div>
         <div class="dash-box"><h4>已转化率曲线</h4>${(typeof ratesCurveSvg==='function')?ratesCurveSvg():''}</div>
       </div>
       <h4 style="margin-top:20px">转折点（已转化人数变动最大的 3 个回合）</h4>
