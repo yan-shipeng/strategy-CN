@@ -1987,14 +1987,14 @@ const PRESSURE_RELIEF_ACTION = {
   label:'休闲聚会',
   weeks:1,
   cooldown:3,
-  need:6,
+  need:4,
   min:2,
   type:'沟通',
   adkar:'DE',
   reqCred:5,
   reqPressure:1,
   disrupt:-1,
-  desc:'把几个人约到非正式场合——吃饭、看球、喝一杯。人越多越热闹，但每个人分到的时间越少、话越浅；它能让关系变软、压力下降，也会让一起在场的人彼此熟起来，但聊不出私人约谈那种深度。',
+  desc:'把几个人约到非正式场合——吃饭、看球、喝一杯。人越多越热闹，但每个人分到的时间越少、话越浅；它能让关系变软、压力下降，也会让一起在场的人彼此熟起来，但聊不出私人约谈那种深度。已经到「有限认同」以上的人，饭桌上推不动——它只能让他这轮不至于冷下去。',
   cooldownReason:'非正式聚会是低成本的压力释放方式，但需要先建立足够的可信度才能让人愿意真实对话。频繁聚会会让人觉得你在搞小圈子。',
   run(ids){
     const details = [];
@@ -2016,10 +2016,19 @@ const PRESSURE_RELIEF_ACTION = {
     ids.forEach(id=>{
       const p=state.people[id];
       const before=p.status;
-      const r=applyGain(id, per, '沟通', 'direct');
+      /* v68：已经进了「有限认同」以上的人，一顿饭吃不动他。
+         以前它对 11/12 个人都有效，1 个资源换 30 分 + 2 点降压，成了全场最划算的推人键；
+         现在它只对还没上道的人生效，对已经认同的人只剩「别让他这轮冷掉」这点作用。 */
+      const deep = p.status>=3, done = p.status>=4;
+      const give = done ? 0 : (deep ? 2 : per);
+      const r=applyGain(id, give, '沟通', 'direct');
       const prefHint=describePrefHit(id,'沟通');
       const delta = (STATUS_LABELS[p.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${statusText(p.status)}）` : '';
-      details.push(`${p.name}在放松的场合里放下了戒备${prefHint}，${gainText(id, r.amount)}${delta}。`);
+      details.push(done
+        ? `${p.name}已经完全配合了——这顿饭对他只是维系，推不动，也不至于冷。`
+        : deep
+          ? `${p.name}已经在「${statusText(p.status)}」了——饭桌上只能松动一点点，真正推得动他的是别的东西。`
+          : `${p.name}在放松的场合里放下了戒备${prefHint}，${gainText(id, r.amount)}${delta}。`);
     });
     if(n>=4) details.push('👥 一桌坐了 '+n+' 个人，话题只能停在表面——人多热闹，但每个人都只分到几分钟。');
     else details.push('☕ 人不多，反而聊得开一些；但这不是访谈，你听到的仍是场面话。');
@@ -2125,7 +2134,10 @@ const ACTIONS=[
       r.details.unshift('⚠️ 空通报：一个真正转化的案例都没有，收件人读完只觉得"又在喂PPT"。可信度 -1。');
       return r;
     }
-    if(convCount < 3){
+    /* v68：门槛从 3 个案例降到 2 个。
+       原来是死结——要 3 个转化才不掉信用，可等到有 3 个时，它面对的已经是 50 分以上的人，
+       广覆盖在那里只剩三成。条件满足了，效果没了。 */
+    if(convCount < 2){
       state.credibility = Math.max(0, state.credibility - 1);
       const r = affectNonAdopters(4,'通报里能引用的例子还太少，读的人半信半疑。','沟通');
       r.details.unshift('⚠️ 素材有限：可信度 -1（观察者认为「拿不出手」）。');
@@ -2135,7 +2147,7 @@ const ACTIONS=[
     r.details.unshift(`✅ 有料可讲：通报引用了 ${convCount} 个真实转化的例子，可信度没有掉。`);
     return r;
   }},
-  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:4,min:1,type:'赋能',reqCred:5,disrupt:1,adkar:'KN',desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
+  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:3,min:1,type:'赋能',reqCred:5,disrupt:1,adkar:'KN',desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课（一次最多带三个）。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
   {id:'internal-training',label:'内部培训',weeks:2,cooldown:3,need:4,min:4,type:'赋能',reqCred:5,disrupt:1,adkar:'AB',roleMode:'teacher',
    desc:'让一个已经转化的人去带三个还没动的人。外面请来的专家讲得再对，学员心里那句「你不懂我们这儿」消不掉；自己人讲，说服力来自关系，不来自内容。先点讲师（必须完全配合），再点三位学员。',
    cooldownReason:'内部讲师也要上自己的班，连续开课会拖垮他的本职。',
@@ -2156,8 +2168,13 @@ const ACTIONS=[
        if(isInformalPair(tId,sid)){ mul*=1.5; tags.push('两人本来就有私交 ×1.5'); }
        if(['union','ops','engineer'].includes(sid)){ mul*=0.6; tags.push('学员不服他 ×0.6'); }
        if(weak){ mul*=0.6; tags.push('讲师自己刚过线 ×0.6'); }
+       /* v68：乘数封顶 1.8。桥梁（1.4）× 私交（1.5）= 2.1 时，
+          一个学员能一次拿走 34 分，三个学员加讲师一次顶别人两轮——
+          凑齐条件是本事，但不该一步登天。 */
+       const mulUsed=Math.min(1.8, mul);
+       if(mul>1.8+1e-9) tags.push('合计按 ×1.8 计');
        const before=q.status;
-       const r=applyGain(sid, Math.round(10*mul), '赋能', 'direct');
+       const r=applyGain(sid, Math.round(10*mulUsed), '赋能', 'direct');
        const up = (STATUS_LABELS[q.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）` : '';
        details.push(`${q.name} 听了 ${t.name} 的课，${gainText(sid, r.amount)}${up}${tags.length?'（'+tags.join('、')+'）':''}。`);
        const gained=seedTrust(tId,sid,14);
@@ -2170,7 +2187,7 @@ const ACTIONS=[
      return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
    }},
   {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
-  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「有限认同」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
+  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,minConverted:2,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「有限认同」就上台，会被当成捧杀，全组织都会质疑你的判断。至少 2 个人已经真的转过弯，你才有「案例」可讲。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
     const p=state.people[ids[0]];
     if(!p) return {story:'没有可表彰的对象。', details:[], noEffect:true};
 
@@ -2229,7 +2246,7 @@ const ACTIONS=[
     }
     return r;
   }},
-  {id:'kpi',label:'宣布KPI与时限',weeks:2,cooldown:5,need:0,type:'压力',reqCred:7,disrupt:3,adkar:'RE',desc:'能制造紧迫感，但组织也会感到压力。若你的信誉还不够高（<8）且还没有几个真实成果，硬推KPI会被认为是"蛮干"而引发反弹。',cooldownReason:'指标和时限是强有力的管理工具，但频繁改变会导致组织混乱。每次宣布都需要足够的时间让组织消化和适应。',run(ids){
+  {id:'kpi',label:'宣布KPI与时限',weeks:2,cooldown:5,need:0,type:'压力',reqCred:7,minConverted:3,disrupt:3,adkar:'RE',desc:'能制造紧迫感，但组织也会感到压力。若你的信誉还不够高（<8）且还没有几个真实成果，硬推KPI会被认为是"蛮干"而引发反弹。至少 3 个人真的动过，这个指标才有人信。',cooldownReason:'指标和时限是强有力的管理工具，但频繁改变会导致组织混乱。每次宣布都需要足够的时间让组织消化和适应。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
     // 可信度刚刚过阈——又没有实际转化支撑：反弹
     if(state.credibility < 8 && convCount < 3){
@@ -2257,8 +2274,8 @@ const ACTIONS=[
     }
     return affectAll(8,'KPI和时限制造了紧迫感，但也增加了压力。','压力');
   }},
-  {id:'incentive',label:'调整激励与奖惩',weeks:4,cooldown:6,need:0,type:'制度',reqCred:8,disrupt:3,adkar:'RE',desc:'通过制度激励能推动全体。这是后期的终极武器——当其他方法都失效时，制度改变能突破瓶颈。但代价是会大幅提升组织压力。',cooldownReason:'激励制度的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){ return affectAll(12,'激励与奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','制度'); }},
-  {id:'reorg',label:'调整汇报关系',weeks:3,cooldown:6,need:1,type:'制度',reqCred:6,disrupt:2,adkar:'RE',
+  {id:'incentive',label:'调整激励与奖惩',weeks:3,cooldown:6,need:0,type:'制度',reqCred:8,minConverted:5,disrupt:3,adkar:'RE',desc:'通过制度激励能推动全体。这是后期的终极武器——当其他方法都失效时，制度改变能突破瓶颈。但代价是会大幅提升组织压力，而且得有底子：至少 4 个人已经真的转过弯，制度才推得动。',cooldownReason:'激励制度的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){ return affectAll(12,'激励与奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','制度'); }},
+  {id:'reorg',label:'调整汇报关系',weeks:2,cooldown:6,need:1,type:'制度',reqCred:6,disrupt:2,adkar:'RE',
    desc:'把某个人的汇报线改到已经认同变革的上级名下。组织结构本身就是杠杆：换了汇报对象，信息流向、资源分配和压力传导都会跟着改道。',
    cooldownReason:'动组织结构是大事，一年内反复调整会让人觉得你在乱折腾，反而摧毁可信度。',
    run(ids){
@@ -2489,6 +2506,15 @@ function updateStatus(p){
   }
 }
 function convertedCount(){ return Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length; }
+/* v68：后期动作的闸门从「信用值」换成「已经有几个人真的转过弯」。
+   信用值是每次成功 +1、起手 6，两三回合就到 8——用它当门槛，等于没有门槛。
+   「已经有 4 个人完全配合」这件事买不到，只能一回合一个动作攒出来。 */
+function unlockGate(a){
+  if(!a || !a.minConverted) return null;
+  const conv=convertedCount();
+  if(conv>=a.minConverted) return null;
+  return `需要已有 ${a.minConverted} 人完全配合（现在 ${conv} 人）`;
+}
 function convertedRate(){ const total = Object.keys(state.people).filter(id=>id!=='pm').length; return total>0 ? Math.round(convertedCount()/total*100) : 0; }
 /* v17.1：变革早期判定——原本依赖 phase()==='动员'，现改成数据粒度：
    完全配合者 < 3 人算作「早期」（原理与原 phase '动员' 条件一致）。*/
@@ -2651,12 +2677,19 @@ function softeningBonus(targetId){  if(!(state.softened[targetId]>0)) return 1.0
   return 1.40;
 }
 
+/* v68：广覆盖的「50 分以上打三折」不再一刀切。
+   制度和通报本来就是「对已经认同的人重新定规矩」，它们在决胜带该留一点力气；
+   喊话、示范、KPI 仍是三折——喊话推不动最后那一跳，这一课不能丢。 */
+const BROAD_LOCK_RATE = { incentive:0.45, broadcast:0.50 };
+function broadLockRate(){
+  const id=state.activeActionId;
+  return (id && BROAD_LOCK_RATE[id]) ? BROAD_LOCK_RATE[id] : 0.30;
+}
 function thresholdLock(personId, gainedAmount, viaDirectOrSpread){
   // 从 50 → 85 的最后跳必须来自定向或扩散
   const p=state.people[personId];
   if(p.score>=50 && !viaDirectOrSpread){
-    // 广覆盖：在 50 以上只给 30% 权重
-    return Math.round(gainedAmount * 0.30);
+    return Math.round(gainedAmount * broadLockRate());
   }
   return gainedAmount;
 }
@@ -2804,7 +2837,9 @@ function affectAll(amount, story, actionType){
 function affectNonAdopters(amount, story, actionType){
   const newlyConverted=[];
   Object.entries(state.people).forEach(([id,p])=>{
-    if(p.status<2){
+    /* v68：口径从「还没到 50 分」放宽到「还没到有限认同」（<65）。
+       通报本来就是对观望的人讲话，卡在 55-64 这批人最该听见；原来他们根本不在名单里。 */
+    if(p.status<3){
       const r = applyGain(id, amount, actionType, 'broad');
       if(r.newlyConverted) newlyConverted.push(id);
     }
@@ -3670,7 +3705,9 @@ function buildActionCard(a, idx){
     // 只有冷却中或资源不足才真正禁用
     // v39：内部培训需要一位完全配合的讲师
     const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher;
+    // v68：后期动作要先有底子（已经有几个人完全配合），这个门槛不能靠信用值凑出来
+    const gate=unlockGate(a);
+    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher||!!gate;
     const isDisabled=isHardDisabled; // credBad 仅作为视觉警告，不禁用卡片
     if(isHardDisabled) card.classList.add('disabled');
     else if(credBad) card.classList.add('cred-override'); // 新增：可信度不足但可强行
@@ -3753,11 +3790,12 @@ function buildActionCard(a, idx){
     if(wait>0) reasonChips.push('<span class="chip bad reason-chip">还需等待'+wait+'轮</span>');
     if(state.resources<a.weeks) reasonChips.push('<span class="chip bad reason-chip">资源不足（需 '+a.weeks+'）</span>');
     if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有完全配合的人可以当讲师</span>');
+    if(gate) reasonChips.push('<span class="chip bad reason-chip">'+gate+'</span>');
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
-          ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,gate||'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
+          ⛔ ${gate?'还差底子':(noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足'))}
         </span>`
       : credBad
         ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加压力">
@@ -3772,7 +3810,7 @@ function buildActionCard(a, idx){
         // v20: 渐进式信息展示 - 计算成功率估计
     const successHint = (() => {
       // v45：已经不可用时别再打"可执行"的绿标，两个徽章互相打脸
-      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
+      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,gate||'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
       if(credBad) return { label: '⚠️ 强行', cls: 'warn', tip: '可信度不足，强行执行将增加压力' };
       if(a.disrupt >= 3 && isEarlyChange()) return { label: '⚡ 高风险', cls: 'bad', tip: '早期使用高扰动动作会引发组织反弹' };
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
@@ -3829,7 +3867,7 @@ function buildActionCard(a, idx){
       if(e.target.closest('.action-details')) return;
       if(e.target.classList.contains('desc-toggle')){ e.stopPropagation(); card.classList.toggle('desc-open'); return; }
       // v67：不可用的卡不再"点了毫无反应"，直接把卡在哪一步说出来
-      if(isHardDisabled){ whyDisabled(a, wait, noTeacher); return; }
+      if(isHardDisabled){ whyDisabled(a, wait, noTeacher, gate); return; }
       chooseAction(idx);
     });
     // v45：把展开状态记进 state，选目标人物时重渲染也不会被关掉
@@ -3843,7 +3881,7 @@ function buildActionCard(a, idx){
     card.addEventListener('keydown',(e)=>{
       if(e.key==='Enter'||e.key===' '){
         e.preventDefault();
-        if(isHardDisabled) whyDisabled(a, wait, noTeacher); else chooseAction(idx);
+        if(isHardDisabled) whyDisabled(a, wait, noTeacher, gate); else chooseAction(idx);
       }
     });
     return card;
@@ -4737,8 +4775,9 @@ function chooseAction(idx){
 
 /* v67：不可用的动作被点到时，把卡在哪一步说出来。
    以前是直接 return，学生只会觉得"这张卡点不动"，却不知道为什么。 */
-function whyDisabled(a, wait, noTeacher){
+function whyDisabled(a, wait, noTeacher, gate){
   const why=[];
+  if(gate) why.push(gate);
   if(noTeacher) why.push('还没有完全配合的人可以当讲师');
   if(wait>0) why.push(`冷却中，还要等 ${wait} 回合`);
   if(state.resources<a.weeks) why.push(`资源不够：这个动作要 ${a.weeks}，你只剩 ${state.resources}`);
@@ -5310,6 +5349,9 @@ function runTurn(){
   const credOverride = !credOk && state.credibility >= 1; // 可信度至少为 1 才能强行
   if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<a.weeks) return;
   if(!credOk && !credOverride) return; // 完全无可信度时不允许
+  // v68：后期动作的「底子」门槛是硬门槛，不能靠强行执行绕过去
+  const gate=unlockGate(a);
+  if(gate){ cheatToast(`⛔ 「${a.label}」还推不动 —— ${gate}`); return; }
 
   // v51：先放节拍，再算账——过场结束才揭结果
   playActionCinematic(a, state.selectedTargets);
