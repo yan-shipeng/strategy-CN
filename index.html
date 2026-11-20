@@ -4255,12 +4255,15 @@ function showModal(){
         <td class="why">${r.reasons.join(' · ')}</td>
       </tr>`;
     }).join('');
+    // v55：回冷只报平均，不报总数——7 个人一起掉 14 分，写总数像在训人
+    const _decayTotal = Math.abs(decayed.reduce((s,r)=>s+r.delta,0));
+    const _decayAvg = decayed.length ? Math.round(_decayTotal/decayed.length*10)/10 : 0;
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
       '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 50 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
-        '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，一共掉了 '+Math.abs(decayed.reduce((s,r)=>s+r.delta,0))+' 分：</strong>'+
+        '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，平均每人掉了 '+_decayAvg+' 分：</strong>'+
         decayed.map(r=>r.name).join('、')+'。'+
         '<div style="margin-top:5px;color:var(--muted)">还停在「初步理解」的人会一直往回掉，越冷掉得越快；进了「有限认同」就不再自然回冷。</div></div>'):'');
     body.appendChild(box);
