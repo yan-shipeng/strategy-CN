@@ -2616,6 +2616,19 @@ function stageFitTag(actionId, status){
   return {k:'bad', v, t:'时机偏晚', tip:'他已经在「'+label+'」了，这一步对他作用有限，效果可能会削弱'};
 }
 
+/* v72：离下一档还有多远。
+   结果页用它回答那个最容易被问住的问题：「明明涨了十几分，怎么没升档？」
+   分数是连续的说服度，档位是三道硬门槛（50 / 85，硬骨头 55 / 90）——
+   涨了 12 分但还差 15 分才过线，这一下就没有改变他在组织里的位置。 */
+function nextStepGap(id, score){
+  const stubborn=['union','ops','engineer'];
+  /* 界面上只露出两道线：50（有限认同）和 85（完全配合），硬骨头是 55 / 90。
+     内部还有 25 / 40 两个小台阶，但它们不改标签，学生看不见，也就不该出现在距离里。 */
+  const th=(stubborn.includes(id)?[55,90]:[50,85]).find(t=>score<t);
+  if(!th) return {gap:0, label:'完全配合', done:true};
+  return {gap:th-score, label:(th<=55?'有限认同':'完全配合'), done:false};
+}
+
 function broadResistanceFactor(personId){
   // 仅对「面向全体 / 面向观望者」的广覆盖动作生效
   const p=state.people[personId];
@@ -3739,7 +3752,7 @@ function buildActionCard(a, idx){
       </div>
       <div style="font-size:11px;color:var(--muted);margin:-2px 0 10px;line-height:1.45">${a.roleMode==='teacher'
         ? '先点一位<span style="color:var(--success);font-weight:700">完全配合</span>的人当讲师，再点三位还没动的学员。学员跟他有没有私交，直接决定这堂课有没有人真听。'
-        : '谈过的人会标出他吃哪一套（▲ 偏好 / ▼ 抵触）；能推多少，执行后才揭晓。'}</div>
+        : '谈过的人会标出他吃哪一套（▲ 偏好 / ▼ 抵触）。这个动作对他现在这一步对不对路、能推多少，执行后在结果页逐人告诉你。'}</div>
       ${state.targetHint?`<div class="sit-line warn" style="margin:-4px 0 10px;font-size:11.5px">${state.targetHint}</div>`:''}
       ${(()=>{ // v47：把 ❄ 的含义就地解释，别让学生猜
         const cold=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status<2);
@@ -3759,8 +3772,8 @@ function buildActionCard(a, idx){
           if(mul>=1.15) prefMark=`<span style="color:var(--success);font-weight:700" title="他吃这一套：同类动作对他更有效">▲${a.type}</span>`;
           else if(mul<=0.85) prefMark=`<span style="color:var(--danger);font-weight:700" title="他反感这一套：同类动作对他效果打折">▼${a.type}</span>`;
         }
-        const recogRisk = (a.id==='honor' && p.status===0);
-        const recogMark = recogRisk ? '<span title="尚未形成示范效应，公开表彰会失当" style="color:var(--danger);font-weight:700">⚠️</span>' : '';
+        /* v72：连「⚠️ 这个人现在不能表彰」也撤掉了——它是同一个判断的另一半。
+           误用表彰仍然有代价，但代价由执行后的结果页来教，不在点之前先告诉你答案。 */
         // v39：内部培训——讲师位/学员位
         let roleMark='';
         let roleDim=false;
@@ -3771,8 +3784,12 @@ function buildActionCard(a, idx){
           if(state.selectedTargets.length===0) roleDim = (p.status!==4);
           else roleDim = (p.status===4);
         }
-        const disabledAttr = recogRisk ? 'data-risk="1"' : '';
-        const riskStyle = (recogRisk||roleDim) ? `style="opacity:${roleDim?0.45:0.55};${recogRisk?'border-color:var(--danger)':''}"` : '';
+        /* v72：选人区不再预判「这个动作对他合不合适」。
+           v48 起每个人名后面挂着「正当时 / 时机偏早 / 时机偏晚」，等于把这一局最该练的判断
+           直接印在按钮上——学生照着标签点，练不到「先看他在哪一步，再挑工具」。
+           现在选人时只给观察得到的东西：他现在哪一档、多少分、你谈出来的偏好方向。
+           对路与否、能推多少，执行后在结果页逐人交代。 */
+        const riskStyle = roleDim ? `style="opacity:${roleDim?0.45:1}"` : '';
         // Progress bar: score vs next threshold
         const stubborn = ['union','ops','engineer'];
         // v48：三档——初步理解(0-64) / 有限认同(65-84) / 完全配合(85+)
@@ -3784,18 +3801,11 @@ function buildActionCard(a, idx){
         const scoreLabel = `${p.score}分`;
         const blocks = Math.round(barPct/20); // 0-5 filled blocks out of 5
         const barBlocks = '█'.repeat(blocks) + '░'.repeat(5-blocks);
-        return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${disabledAttr} ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
-          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="还在「初步理解」：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
+        return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
+          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${p.status<2?'<span class="cold-mark" title="还在「初步理解」：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
-            ${(()=>{ // v48：这一下对他是不是对路——档位匹配度直接标出来
-              if(state.selectedAction===null) return '';
-              const act=ACTIONS[state.selectedAction];
-              const tag=stageFitTag(act.id, p.status);
-              if(!tag.t) return '';
-              return `<span class="fit ${tag.k}" title="${tag.tip}">${tag.t}</span>`;
-            })()}
             ${(state.selectedAction===idx && a.need && !a.roleMode && !knowsSecret(id))?`<span style="color:var(--muted);font-weight:700" title="没约谈过：你不知道他会怎么反应">?</span>`:''}
           </span>
         </button>`;
@@ -3843,7 +3853,7 @@ function buildActionCard(a, idx){
           <strong>${a.label}</strong>
           <span class="chip" style="font-size:11px">${a.type}</span>
           ${headerBadge}
-          <span class="chip ${successHint.cls}" style="font-size:11px" title="${successHint.tip}">${successHint.label}</span>
+          ${successHint.label==='⚡ 高风险'?`<span class="chip ${successHint.cls}" style="font-size:11px" title="${successHint.tip}">${successHint.label}</span>`:''}
         </div>
         <!-- v20: 核心信息行（始终可见） -->
         <div class="chips" style="margin-top:6px">
@@ -4507,9 +4517,14 @@ function showModal(){
         ? `${glyph(r.to)} ${STATUS_LABELS[r.to]}`
         : `${glyph(r.from)} ${STATUS_LABELS[r.from]} → ${glyph(r.to)} <b>${STATUS_LABELS[r.to]}</b>`;
       // v46：没约谈过的人，不显示说服度——结果可以观察（变化列），刻度得谈过才知道
+      // v72：谈过的人，除了分数，还给出「离下一档还差几分」——这一下到底有没有改变他的位置
       const scoreCell = (r.revealed===false)
         ? `<span class="locked-score" title="没约谈过他：你知道他这轮动了，但不知道他站在哪一格。谈一次就解锁。">🔒 约谈解锁</span>`
-        : `${r.scoreFrom} → ${r.scoreTo}`;
+        : `${r.scoreFrom} → ${r.scoreTo}`+
+          (()=>{ const g=nextStepGap(r.id, r.scoreTo);
+            return g.done
+              ? `<div class="small muted" style="font-size:11px;line-height:1.35;margin-top:2px">已经在最后一档</div>`
+              : `<div class="small muted" style="font-size:11px;line-height:1.35;margin-top:2px">距「${g.label}」还差 ${g.gap} 分</div>`; })();
       return `<tr>
         <td>${r.name}</td>
         <td>${statusCell}</td>
@@ -4525,6 +4540,13 @@ function showModal(){
       '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 50 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
+      /* v72：学生最容易在这里困惑——「明明涨了十几分，怎么什么都没发生」。
+         分数和档位是两套刻度：分数是连续的说服度，档位是三道硬门槛。 */
+      (active.some(r=>r.stageBad)?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.07);border-left:3px solid #e0a050;border-radius:6px">'+
+        '<strong style="color:#e0a050">分数涨了，但档位没动——这两件事不是一回事。</strong>'+
+        '<div style="margin-top:5px;color:var(--muted);line-height:1.6">「变化」是这一下给他加了多少说服度；「状态」才是他真正走到了哪一步：跨过 50 才叫「有限认同」，跨过 85 才叫「完全配合」。'+
+        '同一个动作砸在不对的阶段上，分数照样会涨，但离那条线可能还差十几分——看上去在动，其实位置没变。'+
+        '换一个对他这一步更对路的动作，同样一份资源能把他推过线。</div></div>'):'')+
       (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
         '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，平均每人掉了 '+_decayAvg+' 分：</strong>'+
         decayed.map(r=>r.name).join('、')+'。'+
@@ -4893,9 +4915,12 @@ function buildPeopleImpact(before, after){
     if(modes.direct) reasons.push('直接推动');
     // v48：档位匹配——同一把锤子砸在不同阶段的人身上，效果不一样
     const stageEv=evs.find(e=>e.stage && Math.abs(e.stage-1)>0.01);
+    let stageBad=false, stageGood=false;
     if(stageEv){
       const tag=stageFitTag(state.activeActionId, b.status);
       if(tag.t) reasons.push(tag.k==='good' ? '正当时' : tag.tip.replace(/。$/,''));
+      stageBad = tag.k==='bad';
+      stageGood = tag.k==='good';
     }
     if(modes.spread) reasons.push('网络扩散');
     if(modes.broad) reasons.push('广覆盖');
@@ -4915,7 +4940,8 @@ function buildPeopleImpact(before, after){
     if(evs.some(e=>e.locked)) reasons.push('阈值锁（广覆盖打不穿最后一跳）');
     const onlyDecay = evs.length>0 && evs.every(e=>e.mode==='decay');
     rows.push({id, name:state.people[id].name, from:b.status, to:a.status,
-      scoreFrom:Math.round(b.score), scoreTo:Math.round(a.score), delta:dScore, reasons, onlyDecay, revealed});
+      scoreFrom:Math.round(b.score), scoreTo:Math.round(a.score), delta:dScore, reasons, onlyDecay, revealed,
+      stageBad, stageGood});
   });
   // 被动作影响到的人排前面，纯自然衰减的沉到最后
   rows.sort((x,y)=>{
