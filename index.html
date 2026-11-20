@@ -891,10 +891,9 @@
         color:#c0a0a8;
       }
       .intro-goal-box.lose strong{color:#e8b4bc;}
-      /* progress dots */
+      /* progress dots（v63：并入底栏，不再绝对定位） */
       .intro-dots{
-        position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-        display:flex;justify-content:center;gap:8px;padding:0;
+        display:flex;justify-content:center;align-items:center;gap:8px;padding:0;
       }
       .intro-dot{
         width:8px;height:8px;border-radius:50%;
@@ -907,16 +906,25 @@
         background:#0d8b96;
         width:24px;border-radius:4px;
       }
-      /* nav bar */
+      /* nav bar（v63：和模拟内底栏同一套语言——上行状态，下行一颗宽按钮） */
       .intro-foot{
         position:relative;z-index:3;flex:none;
-        display:flex;align-items:center;justify-content:space-between;gap:16px;
-        padding:14px 32px;
-        max-width:720px;margin:0 auto;width:100%;box-sizing:border-box;
-        border-top:1px solid rgba(255,255,255,.07);
-        background:rgba(4,13,19,.92);
+        display:flex;flex-direction:column;align-items:center;gap:7px;
+        padding:9px 16px calc(10px + env(safe-area-inset-bottom,0px));
+        width:100%;box-sizing:border-box;
+        border-top:2px solid var(--primary);
+        background:rgba(4,13,19,.94);
         -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+        box-shadow:0 -6px 20px rgba(0,0,0,.35);
       }
+      .intro-foot-status{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;min-width:0;max-width:100%}
+      .intro-foot-hint{font-size:12px;color:var(--muted);text-align:center;line-height:1.4}
+      .intro-foot #introNextBtn{width:min(520px,100%);min-width:280px;margin:0 auto;height:50px;font-size:15px;padding:0 28px;display:flex;align-items:center;justify-content:center}
+      .intro-links{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;color:var(--muted);min-height:16px}
+      .intro-links button{background:none;border:none;padding:2px 2px;color:var(--muted);font-size:12.5px;font-family:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+      .intro-links button:hover{color:var(--primary)}
+      .intro-links .sep{opacity:.4}
+      .intro-links .hide{display:none}
       /* 姓名区：一行放提示与跳过入口 */
       .intro-name-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:9px;flex-wrap:wrap}
       .intro-skip-link{
@@ -1030,12 +1038,14 @@
         .intro-name-block{margin-top:14px;}
         /* 底部一条常驻，不用滚也能看到「下一步」 */
         .intro-foot{
-          padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));
-          gap:10px;
+          padding:8px 14px calc(9px + env(safe-area-inset-bottom,0px));
+          gap:6px;
         }
-        .intro-nav-back,.intro-nav-next{min-height:44px;}
-        .intro-nav-back{padding:9px 14px;font-size:12.5px;}
-        .intro-nav-next{padding:11px 20px;font-size:14px;}
+        .intro-foot #introNextBtn{height:48px;width:100%;min-width:0;border-radius:12px;font-size:15px}
+        .intro-foot-hint{font-size:11.5px}
+        .intro-dots{gap:6px}
+        .intro-dot{width:7px;height:7px}
+        .intro-dot.active{width:20px}
         .intro-slides{-webkit-overflow-scrolling:touch;}
         .intro-name-foot{margin-top:8px;}
       }
@@ -1373,27 +1383,36 @@
           </div>
           <div class="intro-eyebrow" style="justify-content:center">准备就绪</div>
           <h1 class="intro-h1" style="text-align:center">出发，<em id="introReadyName">出海负责人</em>。</h1>
-          <p class="intro-lead" style="text-align:center;margin-bottom:32px">
+          <p class="intro-lead" style="text-align:center;margin-bottom:0">
             第一次玩有挑战很正常。<br>
             每一局都会让你更了解这 12 个人。
           </p>
-          <button class="intro-nav-next" id="startBtn" style="width:100%;max-width:320px;padding:16px 32px;font-size:17px">开始模拟 →</button>
-          <button class="intro-nav-back" id="backToNameBtn" style="margin-top:12px;border:none;font-size:13px">← 修改姓名</button>
+          <!-- 兼容旧绑定：真正的「开始模拟」由底栏那颗按钮触发 -->
+          <button class="intro-hidden-btn" id="startBtn" aria-hidden="true" tabindex="-1">开始模拟</button>
+          <button class="intro-hidden-btn" id="backToNameBtn" aria-hidden="true" tabindex="-1">修改姓名</button>
         </div>
 
       </div><!-- /intro-slides -->
 
-      <!-- 底部一条：进度点 + 前后翻页（最后一页整条隐藏） -->
-      <div class="intro-foot" id="introNavBar">
-        <button class="intro-nav-back" id="introPrevBtn">← 上一步</button>
-        <div class="intro-dots" id="introDots">
-          <button class="intro-dot active" data-slide="1" aria-label="第 1 页"></button>
-          <button class="intro-dot" data-slide="2" aria-label="第 2 页"></button>
-          <button class="intro-dot" data-slide="3" aria-label="第 3 页"></button>
-          <button class="intro-dot" data-slide="4" aria-label="第 4 页"></button>
-          <button class="intro-dot" data-slide="5" aria-label="第 5 页"></button>
+      <!-- 底部一条（v63）：上行「第 N / 5 页 + 这页讲什么 + 进度点」，下行一颗宽按钮，最下一行是文字链接 -->
+      <div class="intro-foot" id="introNavBar" role="region" aria-label="介绍翻页">
+        <div class="intro-foot-status">
+          <span class="fb-chip" id="introChip">第 1 / 5 页</span>
+          <span class="intro-foot-hint" id="introHint">任务简报</span>
+          <div class="intro-dots" id="introDots">
+            <button class="intro-dot active" data-slide="1" aria-label="第 1 页"></button>
+            <button class="intro-dot" data-slide="2" aria-label="第 2 页"></button>
+            <button class="intro-dot" data-slide="3" aria-label="第 3 页"></button>
+            <button class="intro-dot" data-slide="4" aria-label="第 4 页"></button>
+            <button class="intro-dot" data-slide="5" aria-label="第 5 页"></button>
+          </div>
         </div>
-        <button class="intro-nav-next" id="introNextBtn">下一步 →</button>
+        <button class="btn btn-primary" id="introNextBtn">下一步 →</button>
+        <div class="intro-links" id="introLinks">
+          <button id="introPrevBtn">← 上一步</button>
+          <span class="sep" id="introLinkSep">·</span>
+          <button id="introBackNameBtn" class="hide">修改姓名</button>
+        </div>
       </div>
 
       <!-- hidden span kept for JS compat -->
@@ -1405,10 +1424,30 @@
     /* ── Intro slideshow controller ── */
     (function(){
       const TOTAL = 5;
+      const TITLES = ['任务简报','胜负条件','核心玩法','策略要点','准备就绪'];
       let cur = 1;
 
       function slide(n){ return document.getElementById('iSlide'+n); }
       function dot(n){ return document.querySelector('#introDots [data-slide="'+n+'"]'); }
+
+      /* v63：底栏与模拟内同一条语言——上行报「第几页 + 这页讲什么」，下行报「下一步是什么」 */
+      function paintBar(){
+        const chip = document.getElementById('introChip');
+        if(chip) chip.textContent = '第 ' + cur + ' / ' + TOTAL + ' 页';
+        const hint = document.getElementById('introHint');
+        if(hint) hint.textContent = TITLES[cur-1] || '';
+        const nb = document.getElementById('introNextBtn');
+        if(nb) nb.textContent = cur===TOTAL ? '开始模拟 →' : '下一步 →';
+        const pb = document.getElementById('introPrevBtn');
+        const sep = document.getElementById('introLinkSep');
+        const bn = document.getElementById('introBackNameBtn');
+        const showPrev = cur>1;
+        if(pb) pb.classList.toggle('hide', !showPrev);
+        if(bn) bn.classList.toggle('hide', cur!==TOTAL);
+        if(sep) sep.classList.toggle('hide', !(showPrev && cur===TOTAL));
+        const links = document.getElementById('introLinks');
+        if(links) links.style.display = (showPrev || cur===TOTAL) ? '' : 'none';
+      }
 
       function goTo(n, dir){
         if(n<1||n>TOTAL) return;
@@ -1422,32 +1461,36 @@
           dot(cur).classList.remove('active');
           cur = n;
           dot(cur).classList.add('active');
-          // hide nav on last slide
-          const nav = document.getElementById('introNavBar');
-          if(nav) nav.style.display = cur===TOTAL ? 'none' : '';
-          // update next btn label
-          const nb = document.getElementById('introNextBtn');
-          if(nb) nb.textContent = cur===TOTAL-1 ? '准备好了 →' : '下一步 →';
-          const pb = document.getElementById('introPrevBtn');
-          if(pb) pb.disabled = (cur===1);
+          paintBar();
         }, 280);
       }
 
       const nextBtnEl = document.getElementById('introNextBtn');
       const prevBtnEl = document.getElementById('introPrevBtn');
-      // 第 1 页的「下一步」交给姓名校验（toIntroBtn 的 handler）去处理
+      // 第 1 页的「下一步」交给姓名校验（toIntroBtn 的 handler）去处理；
+      // 第 5 页的「开始模拟」交给 startBtn 的 handler
       nextBtnEl.addEventListener('click',()=>{
         if(cur===1){
           const b = document.getElementById('toIntroBtn');
           if(b){ b.click(); return; }
         }
+        if(cur===TOTAL){
+          const s = document.getElementById('startBtn');
+          if(s){ s.click(); return; }
+        }
         goTo(cur+1);
       });
       prevBtnEl.addEventListener('click',()=>{ if(cur>1) goTo(cur-1); });
-      prevBtnEl.disabled = true;   // 首页没有上一页
+      const backNameEl = document.getElementById('introBackNameBtn');
+      if(backNameEl) backNameEl.addEventListener('click',()=>{
+        const b = document.getElementById('backToNameBtn');
+        if(b){ b.click(); return; }
+        goTo(1);
+      });
       document.querySelectorAll('#introDots .intro-dot').forEach(btn=>{
         btn.addEventListener('click',()=>goTo(parseInt(btn.dataset.slide)));
       });
+      paintBar();
       // keyboard nav
       document.addEventListener('keydown',(e)=>{
         const intro = document.getElementById('screen-intro');
@@ -1486,10 +1529,7 @@
             dot(1).classList.add('active');
             const nav=document.getElementById('introNavBar');
             if(nav) nav.style.display='';
-            const nb=document.getElementById('introNextBtn');
-            if(nb) nb.textContent='下一步 →';
-            const pb2=document.getElementById('introPrevBtn');
-            if(pb2) pb2.disabled=true;
+            paintBar();
             refreshIntroName();
           }
         };
