@@ -941,13 +941,24 @@
       .intro-links .sep{opacity:.4}
       .intro-links .hide{display:none}
       /* 姓名区：一行放提示与跳过入口 */
-      .intro-name-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:9px;flex-wrap:wrap}
+      .intro-name-foot{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;margin-top:9px;flex-wrap:wrap}
+      .intro-name-foot .intro-name-hint{margin:0}
+      /* v69：回流用户的「跳过简报」原来只是一行 12.5px 的下划线小字，指不准也点不着。
+         现在给它次要按钮的分量：有边框、有底色、最小 40px 高，手机上整行宽 46px。 */
       .intro-skip-link{
-        background:none;border:none;padding:2px 0;cursor:pointer;
-        color:#3ecfdc;font-size:12.5px;font-family:inherit;
-        text-decoration:underline;text-underline-offset:3px;
+        display:inline-flex;align-items:center;justify-content:center;
+        min-height:40px;padding:0 18px;
+        background:rgba(13,139,150,.14);
+        border:1px solid rgba(62,207,220,.5);
+        border-radius:10px;
+        cursor:pointer;
+        color:#5fdfec;font-size:13.5px;font-weight:600;font-family:inherit;
+        letter-spacing:.2px;line-height:1.2;
+        transition:background .18s ease,border-color .18s ease,color .18s ease,transform .1s ease;
       }
-      .intro-skip-link:hover{color:#7ce8f5}
+      .intro-skip-link:hover{background:rgba(13,139,150,.26);border-color:#5fdfec;color:#a8f3fc}
+      .intro-skip-link:active{transform:translateY(1px)}
+      .intro-skip-link:focus-visible{outline:2px solid #5fdfec;outline-offset:2px}
       .intro-hidden-btn{display:none}
       .intro-nav-back{
         background:transparent;border:1px solid rgba(255,255,255,.15);
@@ -1062,7 +1073,8 @@
         .intro-dot{width:7px;height:7px}
         .intro-dot.active{width:20px}
         .intro-slides{-webkit-overflow-scrolling:touch;}
-        .intro-name-foot{margin-top:8px;}
+        .intro-name-foot{margin-top:10px;gap:8px;}
+        .intro-skip-link{width:100%;min-height:46px;font-size:14px}
       }
 
       /* =========================================================
@@ -1329,7 +1341,7 @@
             <input id="learnerNameInput" type="text" maxlength="24" placeholder="例：张小明" aria-label="输入姓名" autocomplete="off" class="intro-name-input" />
             <div class="intro-name-foot">
               <span id="learnerNameHint" class="intro-name-hint">姓名只存在本地，用来导出报告。</span>
-              <button class="intro-skip-link" id="skipIntroBtn" style="display:none">已有记录 · 直接开始 →</button>
+              <button class="intro-skip-link" id="skipIntroBtn" style="display:none">跳过简报 · 直接开始 →</button>
             </div>
           </div>
           <!-- 兼容旧绑定：真正的"进入介绍"由底栏「下一步」触发 -->
@@ -6101,7 +6113,12 @@ document.querySelectorAll('#netViewBar .nv-btn').forEach(btn=>{
   }catch(_){}
 
   el('skipIntroBtn') && el('skipIntroBtn').addEventListener('click', ()=>{
-    const name = currentName();
+    // v69：既然叫「跳过简报」，就允许直接拿本机存过的姓名走，不必先手打一遍
+    let name = currentName();
+    if(!name){
+      try{ name = (safeStorage.getItem('co-v17-learnerName') || '').trim(); }catch(_){}
+      if(name && nameInput) nameInput.value = name;
+    }
     if(!name){
       if(hint){ hint.classList.add('error'); hint.textContent = '请输入姓名后继续。'; }
       if(nameInput){ nameInput.classList.add('error'); nameInput.focus(); }
