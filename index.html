@@ -421,6 +421,12 @@
   .impact-table th{text-align:left;padding:6px 8px;background:var(--surface2);color:var(--muted);font-weight:600;white-space:nowrap}
   .impact-table td{padding:7px 8px;border-top:1px solid var(--border);vertical-align:top}
   .impact-table td.why{color:var(--muted);font-size:12px;line-height:1.5}
+  .impact-table td:nth-child(1),.impact-table td:nth-child(2){white-space:nowrap}
+  .impact-table td:nth-child(3){white-space:nowrap}
+  /* v46：未约谈者的说服度占位 */
+  .locked-score{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;
+    color:var(--muted);background:rgba(255,255,255,.05);border:1px dashed var(--border);cursor:help;
+    white-space:nowrap;word-break:keep-all}
   .impact-table .up{color:var(--success);font-weight:700;white-space:nowrap}
   .impact-table .down{color:var(--danger);font-weight:700;white-space:nowrap}
   .impact-table .flat{color:var(--muted);white-space:nowrap}
@@ -616,7 +622,7 @@
     .impact-table td{border:none!important;padding:0!important}
     .impact-table td:nth-child(1){grid-column:1;grid-row:1;font-weight:700;font-size:14px;white-space:nowrap}
     .impact-table td:nth-child(4){grid-column:2;grid-row:1;text-align:right;font-size:14px}
-    .impact-table td:nth-child(2){grid-column:1/-1;grid-row:2;font-size:12px}
+    .impact-table td:nth-child(2){grid-column:1/-1;grid-row:2;font-size:12px;white-space:normal}
     .impact-table td:nth-child(3){grid-column:1;grid-row:3;font-size:12px;color:var(--muted)}
     .impact-table td:nth-child(3)::before{content:'说服度 ';opacity:.7}
     .impact-table td:nth-child(5){grid-column:1/-1;grid-row:4;font-size:11.5px;line-height:1.5}
@@ -639,7 +645,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v45</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v46</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1632,7 +1638,7 @@ const PRESSURE_RELIEF_ACTION = {
       const r=applyGain(id, per, '沟通', 'direct');
       const prefHint=describePrefHit(id,'沟通');
       const delta = p.status>before ? `（${STATUS_LABELS[before]}→${statusText(p.status)}）` : '';
-      details.push(`${p.name}在放松的场合里放下了戒备${prefHint}，+${r.amount} 分${delta}。`);
+      details.push(`${p.name}在放松的场合里放下了戒备${prefHint}，${gainText(id, r.amount)}${delta}。`);
     });
     if(n>=4) details.push('👥 一桌坐了 '+n+' 个人，话题只能停在表面——人多热闹，但每个人都只分到几分钟。');
     else details.push('☕ 人不多，反而聊得开一些；但这不是访谈，你听到的仍是场面话。');
@@ -1772,7 +1778,7 @@ const ACTIONS=[
        const before=q.status;
        const r=applyGain(sid, Math.round(10*mul), '赋能', 'direct');
        const up = q.status>before ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）` : '';
-       details.push(`${q.name} 听了 ${t.name} 的课，+${r.amount} 分${up}${tags.length?'（'+tags.join('、')+'）':''}。`);
+       details.push(`${q.name} 听了 ${t.name} 的课，${gainText(sid, r.amount)}${up}${tags.length?'（'+tags.join('、')+'）':''}。`);
        const gained=seedTrust(tId,sid,14);
        if(gained>0) details.push(`🤝 ${t.name} ↔ ${q.name} 信任 +${gained}——一起备课、答疑，比任何动作都长得快。`);
      });
@@ -1912,7 +1918,9 @@ const ACTIONS=[
        story:`你把${p.name}的汇报线从${oldBoss?oldBoss.name:'原上级'}改到了${bossLabel}名下。`,
        details:[
          `🏛 汇报关系变更：${p.name} → 汇报给 ${bossLabel}（原：${oldBoss?oldBoss.name:'—'}）。`,
-         `📈 ${p.name} 说服度 +${Math.round(p.score-scoreBefore)}（现 ${Math.round(p.score)}）。${note}`,
+         state.revealed[id]
+           ? `📈 ${p.name} 说服度 +${Math.round(p.score-scoreBefore)}（现 ${Math.round(p.score)}）。${note}`
+           : `📈 ${p.name} 动了——具体到哪一格，得谈过才知道。${note}`,
          `⚠️ 动组织结构的代价：激进压力 +2（现 ${state.pressure}），这类动作短期内不宜重复。`,
          `💡 网络图上这条线已经改道——信息以后沿着新的汇报线流动。再推动${q.name}时，${p.name}受到的影响会更直接。`
        ]
@@ -2289,7 +2297,7 @@ function affectTargets(ids, amount, story, spill=false, actionType){
     const r = applyGain(id, amount, actionType, 'direct');
     const p = state.people[id];
     const prefHint = describePrefHit(id, actionType);
-    details.push(`${p.name}获得直接推动${prefHint}，当前状态为${statusText(p.status)}（+${r.amount}）。`);
+    details.push(`${p.name}获得直接推动${prefHint}，当前状态为${statusText(p.status)}（${gainText(id, r.amount)}）。`);
     if(r.newlyConverted) newlyConverted.push(id);
     if(spill){
       p.ties.forEach(t=>{
@@ -3900,8 +3908,9 @@ function showModal(){
       const statusCell = (r.from===r.to)
         ? `${glyph(r.to)} ${STATUS_LABELS[r.to]}`
         : `${glyph(r.from)} ${STATUS_LABELS[r.from]} → ${glyph(r.to)} <b>${STATUS_LABELS[r.to]}</b>`;
+      // v46：没约谈过的人，不显示说服度——结果可以观察（变化列），刻度得谈过才知道
       const scoreCell = (r.revealed===false)
-        ? `<span class="muted">${r.scoreFrom} → ${r.scoreTo}</span>`
+        ? `<span class="locked-score" title="没约谈过他：你知道他这轮动了，但不知道他站在哪一格。谈一次就解锁。">🔒 约谈解锁</span>`
         : `${r.scoreFrom} → ${r.scoreTo}`;
       return `<tr>
         <td>${r.name}</td>
@@ -3912,7 +3921,7 @@ function showModal(){
       </tr>`;
     }).join('');
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
-      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，每跨过 25 / 45 / 65 / 85 就升一档。没约谈过的人只告诉你"动了多少档"——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，每跨过 25 / 45 / 65 / 85 就升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       (decayed.length?('<div class="small muted" style="margin-top:8px">另有 '+decayed.length+' 人本轮没被触及，自然衰减 '+
@@ -4084,6 +4093,12 @@ function toggleTarget(id){
 /* v37：没约谈过的人，只说"动了多少档"，不给精确数字
    原则：结果可以观察，动机需要对话。分数是公开的（决策页就在显示），
    但"这一下到底推动了多少"只有坐下来谈过的人，你才量得准。 */
+/* v46：没约谈过的人，只给"动了多少"的定性，不给精确分数。
+   结果可以观察，刻度得谈过才知道。 */
+function gainText(id, amount){
+  if(state.revealed && state.revealed[id]) return `+${amount} 分`;
+  return deltaBand(amount).t;
+}
 function deltaBand(d){
   if(d>=15) return {t:'明显推动', k:'up'};
   if(d>=8)  return {t:'有推动',   k:'up'};
