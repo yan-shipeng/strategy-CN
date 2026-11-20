@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>中国企业出海整合管理 · 战略执行模拟</title>
+  <title>战略落地模拟</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -534,7 +534,6 @@
     #hudBar .kpi .small{font-size:9px;line-height:1.15;margin:0;white-space:nowrap;letter-spacing:-.2px}
     #hudBar .kpi .small span{display:none}
     #hudBar .kpi .num{font-size:15px;line-height:1.3;margin:0;letter-spacing:-.3px}
-    #hudBar #tipKpiSub{font-size:8px!important;opacity:.75}
     #hudBar #convertedKpiSub{display:none}
     #hudBar .resources-bar-wrap{height:3px;margin-top:4px}
 
@@ -654,7 +653,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v50</span></div>
+      <div class="title">战略落地模拟</div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -671,8 +670,8 @@
     <div class="kpi"><div class="small">回合</div><div class="num" id="roundKpi">1</div></div>
     <div class="kpi"><div class="small">完全配合率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
-    <div class="kpi"><div class="small">激进压力</div><div class="num" id="pressureKpi">0</div></div>
-    <div class="kpi" id="tipKpiCard"><div class="small">临界点 <span title="有限认同及以上的人占到 1/3，观望的心理成本就会变高">ⓘ</span></div><div class="num" id="tipKpi">0/4</div><div class="small" id="tipKpiSub" style="margin-top:2px">有限认同以上</div></div>
+    <div class="kpi"><div class="small">积分 <span title="成果分 + 效率分 + 组织分 + 里程碑分，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
+    <div class="kpi"><div class="small">压力</div><div class="num" id="pressureKpi">0</div></div>
   </div>
 
   <div class="tabs" id="tabsBar" style="display:none">
@@ -1068,6 +1067,19 @@
         opacity:0;transition:opacity .22s ease,transform .22s ease;pointer-events:none;
       }
       .cheat-toast.on{opacity:1;transform:translate(-50%,0)}
+
+      /* v53：本局积分卡（结局页） */
+      .score-box{background:linear-gradient(160deg,rgba(13,139,150,.13),rgba(13,139,150,.03));border:1px solid rgba(13,139,150,.32)}
+      .score-head{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+      .score-num{font-size:54px;font-weight:800;line-height:1;letter-spacing:-1px;
+        background:linear-gradient(135deg,#7ce8f5,#0d8b96);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+      .score-grade{font-size:16px;font-weight:800;letter-spacing:1px}
+      .grade-S{color:#f0c85a}.grade-A{color:#6fd05a}.grade-B{color:#3ecfdc}.grade-C{color:#e0a050}.grade-D{color:#e05068}
+      .score-parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:16px}
+      .sp-item{background:rgba(255,255,255,.035);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+      .sp-item b{display:block;font-size:19px;color:var(--text);line-height:1.3}
+      .sp-item span{display:block;margin-top:3px;font-size:11.5px;color:var(--muted);line-height:1.5}
+      .sp-item.neg b{color:var(--danger)}
       @media(max-width:820px){
         .cheat-toast{bottom:148px;width:calc(100vw - 28px);max-width:calc(100vw - 28px);font-size:12.5px;padding:10px 14px}
       }
@@ -1201,7 +1213,7 @@
             <div class="intro-card">
               <span class="intro-card-icon">📊</span>
               <div class="intro-card-title">四个关键指标</div>
-              <div class="intro-card-body">剩余资源 · 完全配合率 · 可信度 · 激进压力。压力过高会触发反弹。</div>
+              <div class="intro-card-body">剩余资源 · 完全配合率 · 可信度 · 压力。压力过高会触发反弹。</div>
             </div>
             <div class="intro-card">
               <span class="intro-card-icon">🔗</span>
@@ -1231,7 +1243,7 @@
             </div>
             <div class="intro-step">
               <div class="intro-step-num">3</div>
-              <div class="intro-step-text"><strong>控制激进压力</strong>——动制度、下 KPI 见效快但代价高；压力接近上限时，用「休闲聚会」放气。</div>
+              <div class="intro-step-text"><strong>控制压力</strong>——动制度、下 KPI 见效快但代价高；压力接近上限时，用「休闲聚会」放气。</div>
             </div>
           </div>
           <ul class="intro-warn-list">
@@ -1575,7 +1587,7 @@
         <div class="log-list" id="logList"></div>
 
         <h3 style="margin-top:26px">指标演化</h3>
-        <div class="small muted">三条曲线分别对应完全配合人数、可信度、激进压力。黄点是里程碑。</div>
+        <div class="small muted">三条曲线分别对应完全配合人数、可信度、压力。黄点是里程碑。</div>
         <div class="trend-wrap" id="trendWrap"></div>
       </div>
     </section>
@@ -1860,7 +1872,7 @@ const ACTIONS=[
       const r = affectAll(2, '你再次请总部站台，但这一次信号强度明显衰减。', '政治');
       r.details.unshift(
         `⚠️ 政治资本透支：这已是你第 ${useN} 次请CEO背书，组织内部开始议论「是不是自己搞不定」。`,
-        `可信度 -2，激进压力 +1。` + (ceoHit.length ? `CEO对你的评分 -8（被频繁"消费"）。` : 'CEO态度已冷淡。')
+        `可信度 -2，压力 +1。` + (ceoHit.length ? `CEO对你的评分 -8（被频繁"消费"）。` : 'CEO态度已冷淡。')
       );
       return r;
     }
@@ -1956,7 +1968,7 @@ const ACTIONS=[
      applyGain(tId, 4, '赋能', 'direct');
      details.push(`${t.name} 讲完这一课，自己也更认这件事了（+4）：公开讲过的话，自己更得做到。`);
      state.pressure=Math.min(10, state.pressure+1);
-     details.push('⏳ 占用生产时间，激进压力 +1。');
+     details.push('⏳ 占用生产时间，压力 +1。');
      return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
    }},
   {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
@@ -1980,7 +1992,7 @@ const ACTIONS=[
       state.pressure = Math.min(10, state.pressure + 2);
       return {story:`你公开表彰了${p.name}，但台下的人面面相觑——他们都知道${p.name}还没有任何实质性的变革行动。`,
         details:[
-          `❌ 表彰严重失当：${p.name}目前仍处于「${statusText(p.status)}」状态，尚未形成任何示范效应。激进压力 +2。`,
+          `❌ 表彰严重失当：${p.name}目前仍处于「${statusText(p.status)}」状态，尚未形成任何示范效应。压力 +2。`,
           `📚 管理学原理：${factionCtx}`,
           hitNames.length ? `👥 全组织质疑：${hitNames.join('、')} 对你的判断力产生怀疑（分数 -8）。` : '',
           `💡 建议：目标必须至少达到「有限认同」状态才能表彰，才有真正的榜样效应。`
@@ -1995,7 +2007,7 @@ const ACTIONS=[
       state.pressure = Math.min(10, state.pressure + 1);
       return {story:`你公开表彰了${p.name}，但${p.name}还没有足够的成果——这次表彰让他/她感到被「捧杀」，同事也开始质疑你的判断。`,
         details:[
-          `❌ 表彰时机失当：${p.name}当前处于「${statusText(p.status)}」状态，尚未有足够的成果支撑公开认可。${p.name}感到被孤立（分数 -12），激进压力 +1。`,
+          `❌ 表彰时机失当：${p.name}当前处于「${statusText(p.status)}」状态，尚未有足够的成果支撑公开认可。${p.name}感到被孤立（分数 -12），压力 +1。`,
           `📚 管理学原理：过早的公开表彰会让被表彰者在同事中显得「被特殊对待」，反而引发同伴压力和孤立效应（Peer Isolation Effect）。`,
           `💡 建议：等${p.name}进入「有限认同」状态后再表彰。`
         ],fail:true};
@@ -2039,7 +2051,7 @@ const ACTIONS=[
       return {
         story:'你在全体会上宣布了硬性KPI与时限，但台下的议论是「你自己还没打通一个案例，凭什么压我们」。',
         details:[
-          '⚠️ 信用未立而先推KPI：实干派怒火起来。可信度 -2，激进压力 +2。',
+          '⚠️ 信用未立而先推KPI：实干派怒火起来。可信度 -2，压力 +2。',
           hit.length ? `👥 反弹：${hit.join('、')} 分数 -6（感到被“指标绱架”）。` : '👥 所有实干派已表态或完全配合，反弹较小。',
           '💡 建议：先通过试点/培训达到 3 以上转化，或可信度提升到 8+ 再推硬性KPI。'
         ]
@@ -2092,7 +2104,7 @@ const ACTIONS=[
          state.revealed[id]
            ? `📈 ${p.name} 说服度 +${Math.round(p.score-scoreBefore)}（现 ${Math.round(p.score)}）。${note}`
            : `📈 ${p.name} 动了——具体到哪一格，得谈过才知道。${note}`,
-         `⚠️ 动组织结构的代价：激进压力 +2（现 ${state.pressure}），这类动作短期内不宜重复。`,
+         `⚠️ 动组织结构的代价：压力 +2（现 ${state.pressure}），这类动作短期内不宜重复。`,
          `💡 网络图上这条线已经改道——信息以后沿着新的汇报线流动。再推动${q.name}时，${p.name}受到的影响会更直接。`
        ]
      };
@@ -2213,6 +2225,11 @@ function initState(){
 
 function clonePeople(){
   const cloned = JSON.parse(JSON.stringify(PEOPLE));
+  /* v53：把 id 写进每个人身上。
+     updateStatus 里判断"硬骨头"（工会 / 运营主管 / 工程师）用的是 p.id，
+     而 PEOPLE 的键才是 id、对象里没有这个字段——所以那道"门槛高 5 分"的规则
+     自 v48 以来其实一直没生效过。这里补上，规则才真的是规则。 */
+  Object.keys(cloned).forEach(id=>{ cloned[id].id = id; });
   // v17: 恢复用户拖拽过的节点坐标
   try{
     const saved = JSON.parse(safeStorage.getItem('co-v17-nodePos') || '{}');
@@ -2709,8 +2726,8 @@ function applyConsequences(action, impact){
     if(state.resources < 5) penalty = Math.ceil(penalty * 1.5); // 资源紧张时惩罚放大
     if(state.pressure >= 6) penalty = Math.ceil(penalty * 1.5); // 高压状态下惩罚放大
     state.credibility = Math.max(0, state.credibility - penalty); // 允许降至 0（原保底为 1）
-    state.pressure = Math.min(10, state.pressure + 1); // 任何失败都额外增加组织激进压力 +1
-    notes.push(`决策失误，组织对你的判断产生严重疑虑（可信度 -${penalty}，激进压力 +1）。`);
+    state.pressure = Math.min(10, state.pressure + 1); // 任何失败都额外增加组织压力 +1
+    notes.push(`决策失误，组织对你的判断产生严重疑虑（可信度 -${penalty}，压力 +1）。`);
     state.consecutiveSuccesses = 0;
   }
   else {
@@ -2824,6 +2841,7 @@ function renderTop(){
   setText('resourcesKpi',state.resources); setText('roundKpi',state.round);
   setText('convertedKpi',convertedRate()+'%');
   setText('credKpi',state.credibility); setText('pressureKpi',state.pressure);
+  try{ setText('scoreKpi', scoreBreakdown().total); }catch(_){ }
   // v27：临界点进度
   try{
     const ids=Object.keys(state.people).filter(id=>id!=='pm');
@@ -3313,7 +3331,7 @@ function renderLegend(){
     </div>`;
   }).join('')
   + `<div class="legend-item" style="grid-column:1/-1;margin-top:2px;opacity:.85">
-      <span style="font-size:11px;line-height:1.45">跨过 <b>50 分</b>进入「有限认同」就不再自然掉分；50 分以下每回合会自己冷掉，越冷掉得越快。</span>
+      <span style="font-size:11px;line-height:1.45">「初步理解」的人每回合会自己冷掉，越冷掉得越快；进了「有限认同」就站得住，不再自然掉分。</span>
     </div>`;
 
   let edgeItems='';
@@ -3435,7 +3453,7 @@ function buildActionCard(a, idx){
       ${state.targetHint?`<div class="sit-line warn" style="margin:-4px 0 10px;font-size:11.5px">${state.targetHint}</div>`:''}
       ${(()=>{ // v47：把 ❄ 的含义就地解释，别让学生猜
         const cold=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status<2);
-        return cold.length ? `<div class="small" style="margin:-2px 0 10px;font-size:11.5px;color:#8fb9d4">❄ 标记的人还在 50 分以下：这一轮不管他，每回合会自己往回掉；推过 50 分才站得住。</div>` : '';
+        return cold.length ? `<div class="small" style="margin:-2px 0 10px;font-size:11.5px;color:#8fb9d4">❄ 标记的人还停在「初步理解」：这一轮不管他，每回合会自己往回掉；推到「有限认同」才站得住。</div>` : '';
       })()}
       <div class="targets">${(()=>{ 
         // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
@@ -3481,7 +3499,7 @@ function buildActionCard(a, idx){
         const blocks = Math.round(barPct/20); // 0-5 filled blocks out of 5
         const barBlocks = '█'.repeat(blocks) + '░'.repeat(5-blocks);
         return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${disabledAttr} ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
-          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="50 分以下：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
+          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="还在「初步理解」：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
@@ -3516,7 +3534,7 @@ function buildActionCard(a, idx){
           ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
-        ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加激进压力">
+        ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加压力">
             ⚠️ 强行可执行
           </span>`
         : '';
@@ -3668,7 +3686,7 @@ function renderDecisionPreview(a, targetIds){
   const p = predictImpact(a, targetIds);
   if(!p){ box.style.display='none'; return; }
   const credTxt = p.credDir>0 ? '<span class="dp-pos">可信度 ↑</span>' : '<span class="dp-neg">可信度 ↓</span>';
-  const pressTxt = p.pressDir>0 ? `<span class="dp-neg">激进压力 +${p.pressDir}</span>` : '<span class="dp-neutral">压力~</span>';
+  const pressTxt = p.pressDir>0 ? `<span class="dp-neg">压力 +${p.pressDir}</span>` : '<span class="dp-neutral">压力~</span>';
   const rateTxt = (a.need===0 || tCountOk(a,targetIds.length))
     ? `<span class="dp-pos">有望推进转化</span>`
     : `<span class="dp-neutral">待选目标</span>`;
@@ -3716,7 +3734,7 @@ function updateRunButton(){
   if(wait>0) problems.push(`该动作还需等待${wait}轮`);
   if(state.resources<a.weeks) problems.push(`资源不足（需 ${a.weeks}，剩 ${state.resources}）`);
   if(a.reqPressure && state.pressure < a.reqPressure) warnings.push(`⚠️ 当前压力为 ${state.pressure}，此动作需要压力 ≥ ${a.reqPressure} 才有实质效果（执行后会浪费资源）`);
-  if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加激进压力 +${Math.min(3, a.reqCred-state.credibility)}`);
+  if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加压力 +${Math.min(3, a.reqCred-state.credibility)}`);
   if(problems.length){ hint.textContent = h + ' · ' + problems.join('；'); hint.className='hint-strip warn'; }
   else if(warnings.length){ hint.textContent = h + ' · ' + warnings.join('；') + '，确认强行执行'; hint.className='hint-strip warn'; }
   else { hint.textContent = h; hint.className='hint-strip'; }
@@ -3753,9 +3771,9 @@ function endingNarratives(type){
     else if (finalCred >= 5) credPhrase = `可信度还有 ${finalCred}（尚可）`;
     else credPhrase = `可信度只剩 ${finalCred}（已透支）`;
     let pressPhrase;
-    if (state.pressure <= 1) pressPhrase = `激进压力仅 ${state.pressure}（较低）`;
-    else if (state.pressure <= 3) pressPhrase = `激进压力 ${state.pressure}（可控）`;
-    else pressPhrase = `激进压力高达 ${state.pressure}`;
+    if (state.pressure <= 1) pressPhrase = `压力仅 ${state.pressure}（较低）`;
+    else if (state.pressure <= 3) pressPhrase = `压力 ${state.pressure}（可控）`;
+    else pressPhrase = `压力高达 ${state.pressure}`;
     // 根据整体爆发风险给出内部估评描述
     let verdict;
     if (finalCred >= 7 && state.pressure <= 2) {
@@ -3786,7 +3804,7 @@ function endingNarratives(type){
   // 组织反弹失败也需要区分成因：压力爆表 vs 资源数耗尽进展不够
   let failCause;
   if (state.pressure >= 7 || finalCred <= 2) {
-    failCause = `可信度跌至 ${finalCred}、激进压力高达 ${state.pressure}，组织开始反弹`;
+    failCause = `可信度跌至 ${finalCred}、压力高达 ${state.pressure}，组织开始反弹`;
   } else if (finalCred <= 4) {
     failCause = `完全配合率止步于 ${finalRate}%，可信度仅剩 ${finalCred}，资源数也已耗尽`;
   } else {
@@ -4024,7 +4042,7 @@ function debrief(){
   // 3. 压力是否爆掉
   if(state.endingType==='fail-rebound' && state.pressure>=7){
     out.push({tag:'压力失控', k:'warn',
-      t:`终局激进压力 ${state.pressure}/10。施压动作（KPI、制度调整）确实能快速抬分，但它们同时抬高组织反弹的概率；反弹一旦触发，再施压就是崩盘。缓解压力不产出转化，它买的是后面几回合的行动空间。`});
+      t:`终局压力 ${state.pressure}/10。施压动作（KPI、制度调整）确实能快速抬分，但它们同时抬高组织反弹的概率；反弹一旦触发，再施压就是崩盘。缓解压力不产出转化，它买的是后面几回合的行动空间。`});
   }
 
   // 4. 网络扩散有没有真的被用上
@@ -4092,6 +4110,30 @@ function renderEndingScreen(){
   banner.className='ending-banner '+e.cls;
   banner.innerHTML=`<h3>${e.title}</h3><div>${e.story}</div>`;
   wrap.appendChild(banner);
+
+  /* v53：本局积分——把"赢没赢"拆成成果 / 效率 / 组织三件事 */
+  try{
+    const sc = scoreBreakdown();
+    const sb = document.createElement('div');
+    sb.className = 'log-item score-box'; sb.id = 'scoreBox';
+    const cls = (v)=> v<0 ? 'sp-item neg' : 'sp-item';
+    sb.innerHTML =
+      '<div class="score-head">'+
+        `<div class="score-num">${sc.total}</div>`+
+        '<div>'+
+          `<div class="score-grade grade-${sc.grade.k}">${sc.grade.k} · ${sc.grade.label}</div>`+
+          '<div class="small muted">本局总积分</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="score-parts">'+
+        `<div class="${cls(sc.parts.outcome)}"><b>${sc.parts.outcome}</b><span>成果分 · 完全配合 ${sc.conv} 人 × ${SCORE_RULES.perConvert}</span></div>`+
+        `<div class="${cls(sc.parts.efficiency)}"><b>${sc.parts.efficiency}</b><span>效率分 · 剩余 ${Math.max(0,state.resources)} 资源 × ${SCORE_RULES.perResource}</span></div>`+
+        `<div class="${cls(sc.parts.org)}"><b>${sc.parts.org}</b><span>组织分 · (可信度 ${state.credibility} − 压力 ${state.pressure}) × ${SCORE_RULES.orgWeight}</span></div>`+
+        `<div class="${cls(sc.parts.milestone)}"><b>${sc.parts.milestone}</b><span>里程碑分 · ${sc.ms} 个关键节点 × ${SCORE_RULES.perMilestone}</span></div>`+
+      '</div>'+
+      '<div class="small muted" style="margin-top:12px;line-height:1.7">分数不是排名，是把三件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少</b>（效率）、<b>留下的是什么组织</b>（组织分）。用高压换来的转化会在组织分里被扣回去——所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
+    wrap.appendChild(sb);
+  }catch(_){}
 
   // v27：全局诊断——先用他自己的日志告诉他"你的操盘模式是什么"
   try{
@@ -4208,7 +4250,7 @@ function showModal(){
       (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
         '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，一共掉了 '+Math.abs(decayed.reduce((s,r)=>s+r.delta,0))+' 分：</strong>'+
         decayed.map(r=>r.name).join('、')+'。'+
-        '<div style="margin-top:5px;color:var(--muted)">50 分以下的人会一直往回掉，越冷掉得越快；跨过 50 分进入「有限认同」就不再自然回冷。</div></div>'):'');
+        '<div style="margin-top:5px;color:var(--muted)">还停在「初步理解」的人会一直往回掉，越冷掉得越快；进了「有限认同」就不再自然回冷。</div></div>'):'');
     body.appendChild(box);
   }
 
@@ -4338,6 +4380,9 @@ function chooseAction(idx){
   // v42：选中动作时只展开它所在的那一组
   if(state.selectedAction!=null){
     const a=ACTIONS[state.selectedAction];
+    // v53：点开动作就直接把详细参数摊开，别让人再点一次三角
+    if(!state.detailsOpen) state.detailsOpen=new Set();
+    state.detailsOpen.add(a.id);
     const g=ACTION_GROUPS.find(x=>x.ids.includes(a.id));
     if(g){
       ACTION_GROUPS.forEach(x=>{ state.groupOpen[x.key]=false; });
@@ -4576,7 +4621,7 @@ function diagnose(){
   // —— 6. 压力水位
   if(state.pressure>=7){
     out.push({k:'warn', tag:'压力', w:90,
-      t:`激进压力 ${state.pressure}/10。再叠加一两个施压动作就会触发组织反弹；反弹之后还继续施压，会直接崩盘。「缓解压力」不产出转化，但它买的是后面几回合的行动空间。`});
+      t:`压力 ${state.pressure}/10。再叠加一两个施压动作就会触发组织反弹；反弹之后还继续施压，会直接崩盘。「缓解压力」不产出转化，但它买的是后面几回合的行动空间。`});
   }
 
   // —— 7. 可信度
@@ -4613,7 +4658,7 @@ function situationLine(){
   const ids=Object.keys(state.people).filter(id=>id!=='pm');
   const conv=ids.filter(id=>state.people[id].status===4).length;
   const need=Math.ceil(ids.length*0.5);
-  if(state.pressure>=8) return {k:'warn', t:`激进压力 ${state.pressure}/10，再施压可能触发反弹。`};
+  if(state.pressure>=8) return {k:'warn', t:`压力 ${state.pressure}/10，再施压可能触发反弹。`};
   if(state.credibility<=3) return {k:'warn', t:`可信度 ${state.credibility}/10，动作力度被打折。`};
   if(state.resources<=10) return {k:'warn', t:`只剩 ${state.resources} 份资源，还差 ${need-conv} 人。`};
   const stuck=ids.filter(id=>state.people[id].status===3).length;
@@ -4786,6 +4831,38 @@ function revealAfter(fn, newlyConverted){
   }, wait);
 }
 
+/* =========================================================
+   v53：本局积分
+   四个维度，各自回答一个问题：
+     成果分  —— 你到底把人推过去了没有（完全配合人数 × 50）
+     效率分  —— 同样的结果，你花了多少（剩余资源 × 3）
+     组织分  —— 你留下的是一个还能继续干活的组织，还是一地灰（(可信度 − 压力) × 8）
+     里程碑分 —— 关键节点（首次转化、转化过半、关键人物）有没有被点亮（每个 10，上限 100）
+   压力和信誉是加权的：用高压换来的转化，会在组织分里被扣回去。
+   ========================================================= */
+const SCORE_RULES = { perConvert:50, perResource:3, orgWeight:8, perMilestone:10, milestoneCap:100 };
+function scoreBreakdown(){
+  const ids = Object.keys(state.people).filter(id=>id!=='pm');
+  const conv = ids.filter(id=>state.people[id].status===4).length;
+  const ms = (state.history||[]).reduce((sum,h)=>
+    sum + (h.milestones||[]).filter(m=>/^(首次转化|转化过半|关键节点转化)/.test(m)).length, 0);
+  const parts = {
+    outcome: conv * SCORE_RULES.perConvert,
+    efficiency: Math.max(0, state.resources) * SCORE_RULES.perResource,
+    org: Math.round((state.credibility - state.pressure) * SCORE_RULES.orgWeight),
+    milestone: Math.min(SCORE_RULES.milestoneCap, ms * SCORE_RULES.perMilestone)
+  };
+  const total = Math.max(0, parts.outcome + parts.efficiency + parts.org + parts.milestone);
+  return { total, parts, conv, ms, grade: scoreGrade(total) };
+}
+function scoreGrade(t){
+  if(t>=750) return {k:'S', label:'教科书级'};
+  if(t>=600) return {k:'A', label:'漂亮'};
+  if(t>=450) return {k:'B', label:'及格'};
+  if(t>=300) return {k:'C', label:'勉强'};
+  return {k:'D', label:'没落地'};
+}
+
 function runTurn(){
   if(state.ended) return;
   if(_cineBusy) return;
@@ -4793,7 +4870,7 @@ function runTurn(){
   const a=ACTIONS[state.selectedAction];
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
   const credOk=state.credibility>=a.reqCred;
-  // v20: 允许在可信度不足时强行执行，但承担额外激进压力代价
+  // v20: 允许在可信度不足时强行执行，但承担额外压力代价
   const credOverride = !credOk && state.credibility >= 1; // 可信度至少为 1 才能强行
   if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<a.weeks) return;
   if(!credOk && !credOverride) return; // 完全无可信度时不允许
@@ -4819,13 +4896,13 @@ function runTurn(){
   if(a.need===0) { Object.keys(state.people).forEach(id=>state.touchedThisTurn.add(id)); }
   else { state.selectedTargets.forEach(id=>state.touchedThisTurn.add(id)); }
 
-  // v20: 强行执行惩罚：可信度不足时额外增加激进压力
+  // v20: 强行执行惩罚：可信度不足时额外增加压力
   const credOverridePenalty = [];
   if(credOverride){
     const credGap = a.reqCred - state.credibility;
     const extraPressure = Math.min(3, credGap); // 差距每 1 点增加 1 压力，最多 +3
     state.pressure = Math.min(10, state.pressure + extraPressure);
-    credOverridePenalty.push(`⚠️ 强行执行（可信度 ${state.credibility}/${a.reqCred}）：组织感知到你并没有足够的信用基础就强行推进。激进压力 +${extraPressure}（现 ${state.pressure}）。`);
+    credOverridePenalty.push(`⚠️ 强行执行（可信度 ${state.credibility}/${a.reqCred}）：组织感知到你并没有足够的信用基础就强行推进。压力 +${extraPressure}（现 ${state.pressure}）。`);
     credOverridePenalty.push(`💡 建议：先通过「以身作则」、「小范围试点」等动作提升可信度至 ${a.reqCred} 再执行此动作，效果会明显更好。`);
   }
 
@@ -4864,12 +4941,12 @@ function runTurn(){
   if(credOverridePenalty.length) consequences.unshift(...credOverridePenalty);
 
   /* v30：组织会自己冷静下来
-     原来激进压力只升不降（除了"缓解压力"动作和首次转化），一次失手就永久背着。
+     原来压力只升不降（除了"缓解压力"动作和首次转化），一次失手就永久背着。
      现实里只要这一轮没有新的加压动作，情绪是会回落的。每回合 -1，地板 0。 */
   if(a.disrupt===0 && state.pressure>0 && state.pressure>=before.pressure){
     state.pressure = Math.max(0, state.pressure-1);
     if(state.pressure < before.pressure){
-      consequences.push(`🌤 这一轮没有新的加压动作，组织情绪自然回落（激进压力 -1，现 ${state.pressure}）。`);
+      consequences.push(`🌤 这一轮没有新的加压动作，组织情绪自然回落（压力 -1，现 ${state.pressure}）。`);
     }
   }
 
@@ -4949,8 +5026,8 @@ function runTurn(){
   const dPress = after.pressure - before.pressure;
   if(dCred > 0) sideEffects.push({ kind:'pos', text:`可信度 +${dCred}（现 ${after.cred}）` });
   else if(dCred < 0) sideEffects.push({ kind:'neg', text:`可信度 ${dCred}（现 ${after.cred}）` });
-  if(dPress > 0) sideEffects.push({ kind:'neg', text:`激进压力 +${dPress}（现 ${after.pressure}）` });
-  else if(dPress < 0) sideEffects.push({ kind:'pos', text:`激进压力 ${dPress}（现 ${after.pressure}）` });
+  if(dPress > 0) sideEffects.push({ kind:'neg', text:`压力 +${dPress}（现 ${after.pressure}）` });
+  else if(dPress < 0) sideEffects.push({ kind:'pos', text:`压力 ${dPress}（现 ${after.pressure}）` });
   if(deltaConverted > 0) sideEffects.push({ kind:'pos', text:`新增完全配合 +${deltaConverted} 人（累计 ${Object.entries(after.people).filter(([id,x])=>id!=='pm' && x.status===4).length}）` });
   sideEffects.push({ kind:'neutral', text:`消耗 ${a.weeks} 资源，剩余 ${state.resources} / ${TOTAL_RESOURCES} 资源` });
   sideEffects.push({ kind:'neutral', text:`本动作覆盖 ${touched} 人，冷却 ${a.cooldown} 回合` });
@@ -5030,13 +5107,16 @@ function exportGamePdf(){
 
   // KPI 表
   const convRate = (typeof convertedRate==='function') ? convertedRate() : '-';
+  let scBlock = null;
+  try{ scBlock = scoreBreakdown(); }catch(_){}
   const kpiBlock = `
     <section class="section">
       <h2>📊 关键指标</h2>
       <table class="kpi">
         <tr><th>完全配合率</th><td>${convRate}%</td><th>完全配合人数</th><td>${(typeof convertedCount==='function')?convertedCount():'-'} / 12</td></tr>
-        <tr><th>可信度</th><td>${state.credibility}</td><th>激进压力</th><td>${state.pressure}</td></tr>
+        <tr><th>可信度</th><td>${state.credibility}</td><th>压力</th><td>${state.pressure}</td></tr>
         <tr><th>剩余资源</th><td>${state.resources}/${typeof TOTAL_RESOURCES!=='undefined'?TOTAL_RESOURCES:32}</td><th>回合数</th><td>${Math.max(1, state.round-1)}</td></tr>
+        ${scBlock?`<tr><th>本局总积分</th><td colspan="3"><b>${scBlock.total} 分</b>（${scBlock.grade.k} · ${scBlock.grade.label}）　成果 ${scBlock.parts.outcome} ＋ 效率 ${scBlock.parts.efficiency} ＋ 组织 ${scBlock.parts.org} ＋ 里程碑 ${scBlock.parts.milestone}</td></tr>`:''}
       </table>
     </section>`;
 
@@ -5095,7 +5175,7 @@ function exportGamePdf(){
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>中国企业出海变革模拟 · PDF 报告 · ${escapeHtml(state.learnerName||'用户')}<\/title>
+<title>战略落地模拟 · PDF 报告 · ${escapeHtml(state.learnerName||'用户')}<\/title>
 <style>
   @page { size: A4; margin: 14mm 12mm; }
   *{box-sizing:border-box}
@@ -5234,7 +5314,7 @@ function renderLogScreen(){
   const wrap = el('trendWrap'); wrap.innerHTML='';
   wrap.appendChild(buildTrendCard('完全配合人数', state.trend.converted, 'var(--success)', 0, 12));
   wrap.appendChild(buildTrendCard('可信度', state.trend.cred, 'var(--s3)', 0, 12));
-  wrap.appendChild(buildTrendCard('激进压力', state.trend.pressure, 'var(--danger)', 0, Math.max(10, ...state.trend.pressure)));
+  wrap.appendChild(buildTrendCard('压力', state.trend.pressure, 'var(--danger)', 0, Math.max(10, ...state.trend.pressure)));
 
   const list = el('logList'); list.innerHTML='';
   if(state.history.length===0){
@@ -6068,7 +6148,10 @@ document.addEventListener('keydown',(e)=>{
       box=document.createElement('div'); box.className='log-item';
       box.innerHTML=panelHTML();
       const wrap=body.firstElementChild;
-      if(wrap && wrap.children.length>1) wrap.insertBefore(box, wrap.children[1]);
+      // v53：积分卡排在横幅之后、排行榜之前——学生先看到自己这一局值多少分
+      const hasScore = wrap && wrap.querySelector && wrap.querySelector('#scoreBox');
+      const anchor = hasScore ? wrap.children[2] : (wrap && wrap.children[1]);
+      if(wrap && anchor) wrap.insertBefore(box, anchor);
       else if(wrap) wrap.appendChild(box);
       else body.appendChild(box);
       bind();
