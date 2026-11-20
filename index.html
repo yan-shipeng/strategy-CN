@@ -2842,19 +2842,6 @@ function renderTop(){
   setText('convertedKpi',convertedRate()+'%');
   setText('credKpi',state.credibility); setText('pressureKpi',state.pressure);
   try{ setText('scoreKpi', scoreBreakdown().total); }catch(_){ }
-  // v27：临界点进度
-  try{
-    const ids=Object.keys(state.people).filter(id=>id!=='pm');
-    const active=ids.filter(id=>state.people[id].status>=3).length;
-    const need=Math.ceil(ids.length/3);
-    const tipEl=el('tipKpi'), tipSub=el('tipKpiSub'), tipCard=el('tipKpiCard');
-    if(tipEl) tipEl.textContent = state.tippingPointReached ? '✓' : (Math.min(active,need)+'/'+need);
-    if(tipSub) tipSub.textContent = state.tippingPointReached ? '已越过' : '有限认同以上';
-    if(tipCard){
-      tipCard.style.borderColor = state.tippingPointReached ? 'rgba(30,160,120,.55)' : '';
-      tipCard.style.background = state.tippingPointReached ? 'rgba(30,160,120,.12)' : '';
-    }
-  }catch(_){}
   // v17: 勉强通道动态提示
   const role = ROLES[state.roleId] || ROLES.integrator;
   const cr = convertedRate();
