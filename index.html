@@ -1686,7 +1686,7 @@
           <div class="mech-card">
             <div class="mech-icon">🤝</div>
             <div class="mech-title">一起做事会长出私交</div>
-            <div class="mech-text">同一回合里被卷进同一件事的人，信任会累积。过线之后工作关系之外多一层私交；合作次数越多，这层私交越深，扩散加成从 ×1.6 一路涨到 ×2.1。<b>把同几个人反复放进同一个动作里，比每次换人更值钱。</b></div>
+            <div class="mech-text">同一个动作里被你<b>点名</b>的那几个人，信任会累积。过线之后工作关系之外多一层私交；合作次数越多，这层私交越深，扩散加成从 ×1.6 一路涨到 ×2.1。<b>把同几个人反复放进同一个动作里，比每次换人更值钱。</b>全体动作（通报、示范、背书、改制度）不产生任何私交——一起收到一封邮件不叫一起做事。</div>
           </div>
           <div class="mech-card">
             <div class="mech-icon">🔥</div>
@@ -2612,7 +2612,8 @@ function broadResistanceFactor(personId){
 }
 
 /* v26：一对人之间的信任与非正式关系
-   合作（同一回合里一起被推动）会让信任累积，过线后工作关系之外多一层私交 */
+   合作（被同一个动作点名、一起被推动）会让信任累积，过线后工作关系之外多一层私交。
+   v74：全体动作不再算「合作」——见 updateTrust 里的提前返回。 */
 const TRUST_INFORMAL = 40;
 function pairKey(a,b){ return [a,b].sort().join('|'); }
 function isInformalPair(a,b){ return !!(state.informal && state.informal.has(pairKey(a,b))); }
@@ -2623,8 +2624,14 @@ function updateTrust(){
   if(!state.informal) state.informal=new Set();
   if(!state.newInformal) state.newInformal=[];
   if(!state.coop) state.coop={};
-  const touched=[...state.touchedThisTurn].filter(id=>id!=='pm'&&state.people[id]);
   const direct=new Set(state.selectedTargets||[]);
+  /* v74：只有「点名指定了几个人」的动作才会长出私交。
+     原来全体动作（全员通报 / 亲身示范 / 总部背书 / 调整奖惩）会把全场 12 个人
+     一起塞进 touchedThisTurn，一次通报就给 66 对关系各加几分——不用花心思，人人自来熟。
+     一起被卷进同一件事才叫合作；一起收到一封邮件不叫。
+     全体动作仍然会「触及」所有人（那是防止自然回冷用的），但不再产生任何一对私交。 */
+  if(!direct.size) return;
+  const touched=[...state.touchedThisTurn].filter(id=>id!=='pm'&&state.people[id]);
   for(let i=0;i<touched.length;i++){
     for(let j=i+1;j<touched.length;j++){
       const a=touched[i], b=touched[j];
