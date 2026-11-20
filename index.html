@@ -5363,6 +5363,9 @@ function render(){
 }
 
 function reset(){
+  // v51：重开一局时把过场/祝贺的残留状态一并清掉，别把上一局的动画带进来
+  _cineBusy = false;
+  ['cine','cele'].forEach(id=>{ const n=document.getElementById(id); if(n) n.remove(); });
   const keepName = state && state.learnerName ? state.learnerName : '';
   state = initState();
   state.learnerName = keepName;
