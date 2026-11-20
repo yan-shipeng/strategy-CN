@@ -423,6 +423,7 @@
   .impact-table .up{color:var(--success);font-weight:700;white-space:nowrap}
   .impact-table .down{color:var(--danger);font-weight:700;white-space:nowrap}
   .impact-table .flat{color:var(--muted);white-space:nowrap}
+  .impact-table .band{font-weight:600;font-size:12px;white-space:nowrap;opacity:.92}
   .rel-list{margin:8px 0 0 18px;padding:0;font-size:13px;line-height:1.8}
   .edge.informal{stroke:#f2b45c;stroke-width:2.2;stroke-dasharray:2 4;opacity:.95}
   /* v36：网络三视图 */
@@ -619,7 +620,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v36</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v37</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -3817,21 +3818,23 @@ function showModal(){
     const active=x.people.filter(r=>!r.onlyDecay);
     const decayed=x.people.filter(r=>r.onlyDecay);
     const rows=active.map(r=>{
-      const cls = r.delta>0?'up':(r.delta<0?'down':'flat');
-      const sign = r.delta>0?'+':'';
+      const dc = deltaCell(r);
       const statusCell = (r.from===r.to)
         ? `${glyph(r.to)} ${STATUS_LABELS[r.to]}`
         : `${glyph(r.from)} ${STATUS_LABELS[r.from]} → ${glyph(r.to)} <b>${STATUS_LABELS[r.to]}</b>`;
+      const scoreCell = (r.revealed===false)
+        ? `<span class="muted">${r.scoreFrom} → ${r.scoreTo}</span>`
+        : `${r.scoreFrom} → ${r.scoreTo}`;
       return `<tr>
         <td>${r.name}</td>
         <td>${statusCell}</td>
-        <td>${r.scoreFrom} → ${r.scoreTo}</td>
-        <td class="${cls}">${sign}${r.delta}</td>
+        <td>${scoreCell}</td>
+        <td class="${dc.cls}">${dc.html}</td>
         <td class="why">${r.reasons.join(' · ')}</td>
       </tr>`;
     }).join('');
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
-      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，每跨过 25 / 45 / 65 / 85 就升一档。</div>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，每跨过 25 / 45 / 65 / 85 就升一档。没约谈过的人只告诉你"动了多少档"——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       (decayed.length?('<div class="small muted" style="margin-top:8px">另有 '+decayed.length+' 人本轮没被触及，自然衰减 '+
@@ -3976,6 +3979,23 @@ function toggleTarget(id){
   render();
 }
 
+/* v37：没约谈过的人，只说"动了多少档"，不给精确数字
+   原则：结果可以观察，动机需要对话。分数是公开的（决策页就在显示），
+   但"这一下到底推动了多少"只有坐下来谈过的人，你才量得准。 */
+function deltaBand(d){
+  if(d>=15) return {t:'明显推动', k:'up'};
+  if(d>=8)  return {t:'有推动',   k:'up'};
+  if(d>=3)  return {t:'轻微推动', k:'up'};
+  if(d>=1)  return {t:'几乎没动', k:'flat'};
+  if(d===0) return {t:'没动',     k:'flat'};
+  return {t:'反而退了', k:'down'};
+}
+function deltaCell(r){
+  if(r.revealed!==false) return {cls:(r.delta>0?'up':(r.delta<0?'down':'flat')), html:(r.delta>0?'+':'')+r.delta};
+  const b=deltaBand(r.delta);
+  return {cls:b.k+' band', html:b.t};
+}
+
 /* v26：把本回合每个人的得分/状态变化整理成表格数据 */
 function buildPeopleImpact(before, after){
   const rows=[];
@@ -3995,14 +4015,19 @@ function buildPeopleImpact(before, after){
     if(modes.action) reasons.push('动作直接作用');
     if(modes.decay) reasons.push('自然衰减');
     if(!reasons.length) reasons.push('动作直接作用');
+    const revealed=!!state.revealed[id];
     const prefEv=evs.find(e=>e.pref && Math.abs(e.pref-1)>0.01);
-    if(prefEv) reasons.push((prefEv.pref>1?'正中偏好':'逆其偏好')+'×'+prefEv.pref.toFixed(2));
+    // v37：谈过的人，你才"读懂"了他；没谈过，只能感觉出他反应不太一样
+    if(prefEv){
+      if(revealed) reasons.push((prefEv.pref>1?'正中偏好':'逆其偏好')+'×'+prefEv.pref.toFixed(2));
+      else if(Math.abs(prefEv.pref-1)>=0.15) reasons.push('他对这个动作的反应有点特别（说不上是偏好还是抵触）');
+    }
     const softEv=evs.find(e=>e.soft && e.soft>1.01);
     if(softEv) reasons.push('扩散加成×'+softEv.soft.toFixed(2));
     if(evs.some(e=>e.locked)) reasons.push('阈值锁（广覆盖打不穿最后一跳）');
     const onlyDecay = evs.length>0 && evs.every(e=>e.mode==='decay');
     rows.push({id, name:state.people[id].name, from:b.status, to:a.status,
-      scoreFrom:Math.round(b.score), scoreTo:Math.round(a.score), delta:dScore, reasons, onlyDecay});
+      scoreFrom:Math.round(b.score), scoreTo:Math.round(a.score), delta:dScore, reasons, onlyDecay, revealed});
   });
   // 被动作影响到的人排前面，纯自然衰减的沉到最后
   rows.sort((x,y)=>{
