@@ -654,7 +654,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v48</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v49</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1034,7 +1034,7 @@
             <strong>剩余资源越多，排名越高。</strong>
           </div>
           <p class="intro-lead" style="margin-bottom:0;font-size:14px">
-            每个人物有 3 个状态：初步理解 → 有限认同 → <strong style="color:#6ba84a">完全配合</strong>。<strong>65 分是分水岭</strong>：以下每回合会自己冷掉，以上不再掉分。
+            每个人物有 3 个状态：初步理解 → 有限认同 → <strong style="color:#6ba84a">完全配合</strong>。<strong>60 分是分水岭</strong>：以下每回合会自己冷掉，以上不再掉分。
             你需要把他们一步步推进。
           </p>
         </div>
@@ -1313,7 +1313,7 @@
           <div class="mech-card">
             <div class="mech-icon">📊</div>
             <div class="mech-title">说服度是分档的</div>
-            <div class="mech-text">每个人有 0-100 的「说服度」，分三档：初步理解 → 有限认同 → 完全配合。<b>65 分是分水岭：以下每回合会自己冷掉，以上不再掉分。</b>加 10 分给一个 78 分的人，他不会动；加 10 分给一个 58 分的人，他升档了。同一个动作，价值取决于你选的是谁。</div>
+            <div class="mech-text">每个人有 0-100 的「说服度」，分三档：初步理解 → 有限认同 → 完全配合。<b>60 分是分水岭：以下每回合会自己冷掉，以上不再掉分。</b>加 10 分给一个 78 分的人，他不会动；加 10 分给一个 58 分的人，他升档了。同一个动作，价值取决于你选的是谁。</div>
           </div>
           <div class="mech-card">
             <div class="mech-icon">🕸</div>
@@ -2094,14 +2094,15 @@ function updateStatus(p){
      以及永久提高广覆盖的渗透力。最后一跳仍然必须由学生自己打穿，
      否则"过线即通关"会把整局的意义抹掉。 */
   if(isStubborn){
+    // 硬骨头整体门槛比普通人高 5 分
     if(p.score>=90) p.status=4;
-    else if(p.score>=70) p.status=3;
+    else if(p.score>=65) p.status=3;
     else if(p.score>=50) p.status=2;
     else if(p.score>=25) p.status=1;
     else p.status=0;
   } else {
     if(p.score>=85) p.status=4;
-    else if(p.score>=65) p.status=3;
+    else if(p.score>=60) p.status=3;
     else if(p.score>=45) p.status=2;
     else if(p.score>=25) p.status=1;
     else p.status=0;
@@ -2170,12 +2171,26 @@ function stageFit(actionId, status){
   const v=t[status];
   return (typeof v==='number') ? v : 1;
 }
-/* 给界面用的一句话：这一下对他是不是对路 */
+/* 给界面用的话：不提分数，只说「他还没到哪一档」——学生要记的是人，不是乘数 */
+function stageTierOf(status){ return status>=4 ? 2 : (status>=3 ? 1 : 0); }
+function bestStageOf(actionId){
+  const t=STAGE_FIT[actionId]; if(!t) return null;
+  let best=null, bv=-1;
+  Object.keys(t).forEach(k=>{ const v=t[k]; if(v>bv){ bv=v; best=+k; } });
+  return best;
+}
 function stageFitTag(actionId, status){
   const v=stageFit(actionId,status);
-  if(v>=1.2) return {k:'good', v, t:'对路 ×'+v.toFixed(2)};
-  if(v<=0.8) return {k:'bad',  v, t:'不匹配 ×'+v.toFixed(2)};
-  return {k:'', v, t:''};
+  if(!STAGE_FIT[actionId]) return {k:'', v:1, t:'', tip:''};
+  if(v>=1.2) return {k:'good', v, t:'正当时', tip:'这是他现在最需要的动作'};
+  if(v>0.8)  return {k:'', v, t:'', tip:''};
+  const best=bestStageOf(actionId);
+  if(stageTierOf(best) > stageTierOf(status)){
+    const label=STATUS_LABELS[best];
+    return {k:'bad', v, t:'未到认同', tip:'他还没到「'+label+'」，这一步对他是空转'};
+  }
+  const label=STATUS_LABELS[status];
+  return {k:'bad', v, t:'已过这步', tip:'他已经在「'+label+'」，这个动作对他太浅了'};
 }
 
 function broadResistanceFactor(personId){
@@ -2258,7 +2273,7 @@ function softeningBonus(targetId){  if(!(state.softened[targetId]>0)) return 1.0
 function thresholdLock(personId, gainedAmount, viaDirectOrSpread){
   // 从 65 → 85 的最后跳必须来自定向或扩散
   const p=state.people[personId];
-  if(p.score>=65 && !viaDirectOrSpread){
+  if(p.score>=60 && !viaDirectOrSpread){
     // 广覆盖：在 65 以上只给 30% 权重
     return Math.round(gainedAmount * 0.30);
   }
@@ -2339,7 +2354,7 @@ function decayUntouched(){
     if(state.touchedThisTurn.has(id)) return;
     if(id==='pm') return; // 玩家自己不衰减
     // v26 平衡：只有「还没动起来」的人会自然回冷。
-    // v48：65 分以下都会自己冷——最冷的掉 2，其余掉 1；进了「有限认同」才站得住——
+    // v48：60 分以下都会自己冷——最冷的掉 2，其余掉 1；进了「有限认同」才站得住——
     // 这样前段最难、越往后越省力，符合变革扩散的 S 曲线；也让 60 个资源真的够用。
     if(p.status>=4) return;
     if(p.status>=3) return;
@@ -2372,9 +2387,9 @@ function affectTargets(ids, amount, story, spill=false, actionType){
     const p = state.people[id];
     const prefHint = describePrefHit(id, actionType);
     const fitNote=(()=>{
-      const v=stageFit(state.activeActionId, r.prev);
-      if(v>=1.2) return '——这一下正好补在他缺的地方（×'+v.toFixed(2)+'）';
-      if(v<=0.8) return '——但他还没到这一步，效果只给了 '+Math.round(v*100)+'%（×'+v.toFixed(2)+'）';
+      const tag=stageFitTag(state.activeActionId, r.prev);
+      if(tag.k==='good') return '——这一下正好补在他缺的地方';
+      if(tag.k==='bad')  return '——'+tag.tip.replace(/。$/,'')+'，大半是空转';
       return '';
     })();
     details.push(`${p.name}获得直接推动${prefHint}${fitNote}，当前状态为${statusText(p.status)}（${gainText(id, r.amount)}）。`);
@@ -2397,7 +2412,7 @@ function affectAll(amount, story, actionType){
     const r = applyGain(id, amount, actionType, 'broad');
     if(r.newlyConverted) newlyConverted.push(id);
   });
-  const det=['这是一个面向全组织的动作，铺得宽但力度薄：对最冷的人只有四折，越接近认同越有效，可一旦过了 65 分反而只剩三成——喊话的作用是个倒 U 型，两头都不灵。'];
+  const det=['这是一个面向全组织的动作，铺得宽但力度薄：对最冷的人只有四折，越接近认同越有效，可一旦过了 60 分反而只剩三成——喊话的作用是个倒 U 型，两头都不灵。'];
   handleConversions(newlyConverted, det, actionType);
   return {story, details:det};
 }
@@ -3149,7 +3164,7 @@ function renderLegend(){
     </div>`;
   }).join('')
   + `<div class="legend-item" style="grid-column:1/-1;margin-top:2px;opacity:.85">
-      <span style="font-size:11px;line-height:1.45">跨过 <b>65 分</b>进入「有限认同」就不再自然掉分；65 分以下每回合会自己冷掉，越冷掉得越快。</span>
+      <span style="font-size:11px;line-height:1.45">跨过 <b>60 分</b>进入「有限认同」就不再自然掉分；60 分以下每回合会自己冷掉，越冷掉得越快。</span>
     </div>`;
 
   let edgeItems='';
@@ -3271,7 +3286,7 @@ function buildActionCard(a, idx){
       ${state.targetHint?`<div class="sit-line warn" style="margin:-4px 0 10px;font-size:11.5px">${state.targetHint}</div>`:''}
       ${(()=>{ // v47：把 ❄ 的含义就地解释，别让学生猜
         const cold=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status<2);
-        return cold.length ? `<div class="small" style="margin:-2px 0 10px;font-size:11.5px;color:#8fb9d4">❄ 标记的人还在 65 分以下：这一轮不管他，每回合会自己往回掉；推过 65 分才站得住。</div>` : '';
+        return cold.length ? `<div class="small" style="margin:-2px 0 10px;font-size:11.5px;color:#8fb9d4">❄ 标记的人还在 60 分以下：这一轮不管他，每回合会自己往回掉；推过 60 分才站得住。</div>` : '';
       })()}
       <div class="targets">${(()=>{ 
         // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
@@ -3308,7 +3323,7 @@ function buildActionCard(a, idx){
         // Progress bar: score vs next threshold
         const stubborn = ['union','ops','engineer'];
         // v48：三档——初步理解(0-64) / 有限认同(65-84) / 完全配合(85+)
-        const thresholds = stubborn.includes(id) ? [70,90,100] : [65,85,100];
+        const thresholds = stubborn.includes(id) ? [65,90,100] : [60,85,100];
         const nextThresh = thresholds.find(t => p.score < t) || 100;
         const prevThresh = thresholds[thresholds.indexOf(nextThresh)-1] || 0;
         const barPct = nextThresh > prevThresh ? Math.round((p.score - prevThresh) / (nextThresh - prevThresh) * 100) : 100;
@@ -3317,7 +3332,7 @@ function buildActionCard(a, idx){
         const blocks = Math.round(barPct/20); // 0-5 filled blocks out of 5
         const barBlocks = '█'.repeat(blocks) + '░'.repeat(5-blocks);
         return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${disabledAttr} ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
-          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="65 分以下：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
+          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="60 分以下：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
@@ -3326,8 +3341,7 @@ function buildActionCard(a, idx){
               const act=ACTIONS[state.selectedAction];
               const tag=stageFitTag(act.id, p.status);
               if(!tag.t) return '';
-              const why=STAGE_FIT_LABEL[act.id]||'';
-              return `<span class="fit ${tag.k}" title="${tag.k==='bad'?'档位不匹配：他现在还没到这一步，效果打折':'档位对路：这是他现在最需要的'}${why?'（'+why+'）':''}">${tag.k==='good'?'▲':'▼'}${tag.v.toFixed(2)}</span>`;
+              return `<span class="fit ${tag.k}" title="${tag.tip}">${tag.t}</span>`;
             })()}
             ${(estMap&&estMap[id])?(()=>{
               // v32：没约谈过就推不准——预计值不给数字，只给一个问号
@@ -3792,7 +3806,7 @@ function debrief(){
   if(allTargets.length>=6){
     if(perRound>=4.5){
       out.push({tag:'火力分散', k:'warn',
-        t:`你平均每回合同时推动 ${perRound.toFixed(1)} 个人，整局碰过 ${uniq.size}/${total} 个人。广覆盖的力度是倒 U 型：对最冷的人只有四折，越接近认同越有效，过了 65 分反而只剩三成——铺得越宽，每个人收到的力度越不足以跨档。`});
+        t:`你平均每回合同时推动 ${perRound.toFixed(1)} 个人，整局碰过 ${uniq.size}/${total} 个人。广覆盖的力度是倒 U 型：对最冷的人只有四折，越接近认同越有效，过了 60 分反而只剩三成——铺得越宽，每个人收到的力度越不足以跨档。`});
     } else if(perRound<=2.4 && conv>=Math.ceil(total*0.5)){
       out.push({tag:'火力集中', k:'good',
         t:`你平均每回合只碰 ${perRound.toFixed(1)} 个人，把资源压在少数人身上打穿。这是对的：一个人真的被转化之后，他会替你推动他的关系网。`});
@@ -3855,7 +3869,7 @@ function debrief(){
   const usedInst = ['incentive','reorg','kpi'].filter(id=>H.some(h=>h.actionId===id));
   if(!usedInst.length && conv<Math.ceil(total*0.5)){
     out.push({tag:'没有固化', k:'warn',
-      t:`你整局没有动过固化类动作（KPI / 激励与奖惩 / 汇报关系）。人际说服能推到 65 分，但 65→85 这一段靠说是不动的——它需要改变「做与不做的后果」。代价是压力，但没有它，最后一跳永远差一口气。`});
+      t:`你整局没有动过固化类动作（KPI / 激励与奖惩 / 汇报关系）。人际说服能推到 60 分，但 60→85 这一段靠说是不动的——它需要改变「做与不做的后果」。代价是压力，但没有它，最后一跳永远差一口气。`});
   }
 
   // 3. 压力是否爆掉
@@ -4039,13 +4053,13 @@ function showModal(){
       </tr>`;
     }).join('');
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
-      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 65 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 60 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
         '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，一共掉了 '+Math.abs(decayed.reduce((s,r)=>s+r.delta,0))+' 分：</strong>'+
         decayed.map(r=>r.name).join('、')+'。'+
-        '<div style="margin-top:5px;color:var(--muted)">65 分以下的人会一直往回掉，越冷掉得越快；跨过 65 分进入「有限认同」就不再自然回冷。</div></div>'):'');
+        '<div style="margin-top:5px;color:var(--muted)">60 分以下的人会一直往回掉，越冷掉得越快；跨过 60 分进入「有限认同」就不再自然回冷。</div></div>'):'');
     body.appendChild(box);
   }
 
@@ -4250,8 +4264,8 @@ function buildPeopleImpact(before, after){
     // v48：档位匹配——同一把锤子砸在不同阶段的人身上，效果不一样
     const stageEv=evs.find(e=>e.stage && Math.abs(e.stage-1)>0.01);
     if(stageEv){
-      const v=stageEv.stage;
-      reasons.push(v>=1.2 ? ('档位对路 ×'+v.toFixed(2)) : ('档位不匹配 ×'+v.toFixed(2)));
+      const tag=stageFitTag(state.activeActionId, b.status);
+      if(tag.t) reasons.push(tag.k==='good' ? '正当时' : tag.tip.replace(/。$/,''));
     }
     if(modes.spread) reasons.push('网络扩散');
     if(modes.broad) reasons.push('广覆盖');
@@ -4352,8 +4366,8 @@ function diagnose(){
 
   // —— 0. 临门一脚：离转化线只差几分的人
   // v48：按显示的三档算——初步理解的内部 0/1/2 三槽都指向 65
-  const THR={0:65,1:65,2:65,3:85};
-  const THR_STUBBORN={0:70,1:70,2:70,3:90};
+  const THR={0:60,1:60,2:60,3:85};
+  const THR_STUBBORN={0:65,1:65,2:65,3:90};
   const near=ids.map(id=>{
     const p=state.people[id];
     if(p.status>=4) return null;
@@ -4527,8 +4541,7 @@ function runTurn(){
   }catch(_){}
   // v20: noEffect flag — action had zero effect (e.g. team-building at zero pressure); skip all scoring side-effects
   if(impact.noEffect){
-    // 无效动作：消耗资源但无实质效果，仅显示教学反馈
-    state.resources -= a.weeks;
+    // 无效动作：资源在上方已经扣过一次，这里不能再扣——否则一个动作吃两份资源
     state.nextAvailable[a.id] = state.round + a.cooldown + 1;
     state.usedActions.add(a.id);
     state.actionUseCount[a.id] = (state.actionUseCount[a.id]||0) + 1;
