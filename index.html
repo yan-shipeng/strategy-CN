@@ -709,7 +709,7 @@
     <div class="kpi"><div class="small">回合</div><div class="num" id="roundKpi">1</div></div>
     <div class="kpi"><div class="small">完全配合率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
-    <div class="kpi"><div class="small">积分 <span title="满分 100：成果 66（达标 30，每多 1 人 +6）+ 效率 8（剩余资源）+ 节奏 7（多快到线）+ 组织 15 + 里程碑 4，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
+    <div class="kpi"><div class="small">积分 <span title="满分 100：成果 66（达标 32，每多 1 人 +6）+ 效率 8（剩余资源）+ 节奏 7（多快到线）+ 组织 15 + 里程碑 4，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
     <div class="kpi"><div class="small">压力</div><div class="num" id="pressureKpi">0</div></div>
   </div>
 
@@ -1696,7 +1696,7 @@
           <div class="mech-card">
             <div class="mech-icon">🏛</div>
             <div class="mech-title">结构本身就是杠杆</div>
-            <div class="mech-text">改变汇报关系，等于改变信息流和谁听谁的。制度型动作（激励、KPI、汇报线）能打穿人际说服打不穿的最后一跳，代价是组织压力。<b>但压力到顶，就会反弹。</b></div>
+            <div class="mech-text">改变汇报关系，等于改变信息流和谁听谁的。制度型动作（奖惩、汇报线）能打穿人际说服打不穿的最后一跳，代价是组织压力。<b>但压力到顶，就会反弹。</b></div>
           </div>
         </div>
       </div>
@@ -1882,47 +1882,48 @@ const safeStorage = (function(){
    v13 数据：关键人物与利益偏好矩阵
    ========================================================= */
 /* 动作类型枚举，用于偏好矩阵键名 */
-// 类型：示范/政治/对话/沟通/赋能/验证/压力/制度（v65：偏好键必须与动作类型一一对应，不再有「叙事」这种游戏里不存在的类）
+// 类型：示范/政治/对话/沟通/培训/试点/规则（v73：随段名一起换词——原「赋能/验证/制度」与段名撞车，
+//       改成「培训/试点/规则」；偏好键必须与动作类型一一对应）
 const PEOPLE={
   ceo:{name:'总部CEO',role:'总部最高决策者',desc:'总部最高决策者，能提供公开背书，也决定这个项目的预算与时间表。',faction:'总部',score:18,status:0,x:40,y:30,ties:['pm','cfo'],hidden_ties:[],
     hidden_goal:'快速实现ROI，维持股价，避免重大失误',
-    prefs:{'验证':0.25,'政治':0.20,'对话':-0.15,'沟通':-0.05}},
+    prefs:{'试点':0.25,'政治':0.20,'对话':-0.15,'沟通':-0.05}},
   pm:{name:'你',role:'海外整合负责人',desc:'跨总部与当地组织协调推进，是整个变革的发起者。',score:100,status:4,x:140,y:75,ties:['ceo','region'],hidden_ties:[],
     hidden_goal:'在总部要求与当地合法性之间找到平衡',
     prefs:{}},
   cfo:{name:'总部CFO',role:'总部资源把关人',desc:'总部资源把关人，掌管预算与财务口径。',faction:'总部',score:12,status:0,x:40,y:120,ties:['ceo'],hidden_ties:['region'],
     hidden_goal:'控制成本，确保财务指标达成',
-    prefs:{'制度':0.25,'验证':0.15,'沟通':-0.20,'对话':-0.10}},
+    prefs:{'规则':0.25,'试点':0.15,'沟通':-0.20,'对话':-0.10}},
   region:{name:'当地区域总经理',role:'区域桥梁人物',desc:'连接总部与当地组织，直接管辖厂长和运营主管。',faction:'当地',score:16,status:0,x:240,y:30,ties:['pm','plant','ops'],hidden_ties:[],
     hidden_goal:'维持当地团队稳定，保护既得利益',
-    prefs:{'对话':0.25,'赋能':0.15,'压力':-0.15}},
+    prefs:{'对话':0.25,'培训':0.15,'规则':-0.15}},
   plant:{name:'当地厂长',role:'生产运营部主管',desc:'生产运营部主管，管现场排产与执行节奏。',faction:'当地',score:10,status:0,x:140,y:165,ties:['region','engineer','union'],hidden_ties:[],
     hidden_goal:'保护现场工艺和工人信任，避免生产中断',
-    prefs:{'赋能':0.25,'验证':0.20,'压力':-0.20,'制度':-0.10}},
+    prefs:{'培训':0.25,'试点':0.20,'规则':-0.20}},
   hr:{name:'当地HR总监',role:'人力行政部主管',desc:'人力行政部主管，管人才与流程，向运营主管汇报。',faction:'当地',score:14,status:0,x:340,y:120,ties:['ops'],hidden_ties:['engineer','union'],
     hidden_goal:'防止关键人才流失，维持组织稳定',
-    prefs:{'对话':0.20,'赋能':0.20,'沟通':0.15}},
+    prefs:{'对话':0.20,'培训':0.20,'沟通':0.15}},
   sales:{name:'当地销售主管',role:'销售客户部主管',desc:'销售客户部主管，管客户关系，向运营主管汇报。',faction:'当地',score:11,status:0,x:240,y:210,ties:['ops','customer'],hidden_ties:[],
     hidden_goal:'维持客户关系，保护销售团队独立性',
-    prefs:{'沟通':0.20,'对话':0.15,'压力':-0.20,'制度':-0.15}},
+    prefs:{'沟通':0.20,'对话':0.15,'规则':-0.20}},
   ops:{name:'当地运营主管',role:'运营管理部主管',desc:'运营管理部主管，直接向区域总经理汇报，统筹销售与HR。',faction:'当地',score:8,status:0,x:240,y:120,ties:['region','hr','sales'],hidden_ties:[],
     hidden_goal:'保护现有流程权力，维持运营自主权',
-    prefs:{'验证':0.25,'赋能':0.15,'制度':-0.15,'沟通':-0.10}},
+    prefs:{'试点':0.25,'培训':0.15,'规则':-0.15,'沟通':-0.10}},
   engineer:{name:'当地生产工程师',role:'生产运营部下属',desc:'生产运营部下属，负责生产工艺与现场技术。',faction:'当地',score:6,status:0,x:140,y:255,ties:['plant','union'],hidden_ties:[],
     hidden_goal:'保护自己的权力和职位，维持老团队利益',
-    prefs:{'压力':-0.25,'对话':0.20,'赋能':0.20}},
+    prefs:{'规则':-0.25,'对话':0.20,'培训':0.20}},
   union:{name:'当地工会主席',role:'生产运营部下属',desc:'生产运营部下属，代表基层工人，直接向厂长汇报。',faction:'当地',score:7,status:0,x:240,y:300,ties:['plant','engineer'],hidden_ties:['gov','hr'],
     hidden_goal:'防止裁员，保护薪酬和工作条件',
-    prefs:{'压力':-0.25,'赋能':0.25,'沟通':0.15}},
+    prefs:{'规则':-0.25,'培训':0.25,'沟通':0.15}},
   gov:{name:'当地骨干工人',role:'生产运营部下属',desc:'生产运营部下属，一线骨干工人。',faction:'当地',score:10,status:0,x:40,y:300,ties:['engineer'],hidden_ties:['union'],
     hidden_goal:'维护工人利益，确保工资和福利不下降，防止裁员',
-    prefs:{'赋能':0.25,'对话':0.20,'压力':-0.25}},
+    prefs:{'培训':0.25,'对话':0.20,'规则':-0.25}},
   customer:{name:'大客户销售',role:'销售客户部下属',desc:'销售客户部下属，对接大客户。',faction:'当地',score:12,status:0,x:340,y:210,ties:['sales','finance'],hidden_ties:['ceo'],
     hidden_goal:'维持客户满意度，确保订单稳定，保护销售团队的提成',
-    prefs:{'验证':0.25,'制度':0.15,'沟通':0.10}},
+    prefs:{'试点':0.25,'规则':0.15,'沟通':0.10}},
   finance:{name:'当地数据分析师',role:'销售客户部下属',desc:'销售客户部下属，负责数据、成本与风险分析。',faction:'当地',score:13,status:0,x:340,y:300,ties:['sales','customer'],hidden_ties:['cfo'],
     hidden_goal:'确保财务安全，跟随强势方',
-    prefs:{'制度':0.20,'政治':0.15,'沟通':-0.10}}
+    prefs:{'规则':0.20,'政治':0.15,'沟通':-0.10}}
 };
 
 /* 状态字形（双编码核心，v47 四档）：初步理解◯ → 有限认同◕ → 完全配合● */
@@ -2065,18 +2066,18 @@ const PRESSURE_RELIEF_ACTION = {
 };
 
 const ACTIONS=[
-  {id:'exemplify',label:'以身作则',weeks:2,cooldown:4,need:0,type:'示范',reqCred:2,disrupt:0,adkar:'DE',desc:'先用行动建立可信度，再推动别人。连用两次以上而无其他实质动作配合，会退化为“作秀”。',cooldownReason:'这个动作建立的信任需要时间沉淀，过于频繁会显得虚伪。信任是组织变革的基础，不能急功近利。',run(ids){
+  {id:'exemplify',label:'亲身示范',weeks:2,cooldown:4,need:0,type:'示范',reqCred:2,disrupt:0,adkar:'DE',desc:'先用行动建立可信度，再推动别人。连用两次以上而无其他实质动作配合，会退化为“作秀”。',cooldownReason:'这个动作建立的信任需要时间沉淀，过于频繁会显得虚伪。信任是组织变革的基础，不能急功近利。',run(ids){
     // 上一轮也是 exemplify——连用导致信号退化为"作秀"
     if(state.lastActionId === 'exemplify'){
       state.credibility = Math.max(0, state.credibility - 1);
-      const r = affectAll(3, '你再一次以身作则，但组织开始议论「除了摄影组有实际进展吗」。', '示范');
+      const r = affectAll(3, '你再一次亲自示范，但组织开始议论「除了摄影组有实际进展吗」。', '示范');
       r.details.unshift('⚠️ 连用示范但缺乏其他实质动作配合——信号退化为"作秀"。可信度 -1。');
       return r;
     }
     /* v71：全员动作 9 → 6。这是全场最划算的一键推人：2 个资源、12 个人同时 +9（广覆盖打折后仍有 3-4 分/人），
        冷却 4 回合，一局能按 6-7 次。机器人实测：只用它 + 随便点点，12 个人全转化——「挑对人、用对工具」
        这件事被一个不用挑人的动作抹掉了。降到 6 之后它回到本位：把所有人往前推一截，但推不过 85 分那条线。 */
-    return affectAll(6,'你以身作则，组织开始观察你的真实行动。','示范');
+    return affectAll(6,'你亲身示范，组织开始观察你的真实行动。','示范');
   }},
   {id:'ceo-endorse',label:'争取总部公开背书',weeks:2,cooldown:5,need:0,type:'政治',reqCred:2,disrupt:1,adkar:'DE',desc:'通过公开支持提升你的正当性。首次背书信号最强；反复求背书会消耗与CEO的政治资本。',cooldownReason:'总部的每次公开表态都会被组织内部反复解读。频繁的背书反而会削弱信号的可信度，让人觉得这是"作秀"而非真正的承诺。',run(ids){
     const useN = state.actionUseCount[this.id] || 1; // 本次包含在内
@@ -2162,8 +2163,8 @@ const ACTIONS=[
     r.details.unshift(`✅ 有料可讲：通报引用了 ${convCount} 个真实转化的例子，可信度没有掉。`);
     return r;
   }},
-  {id:'training',label:'上手培训',weeks:2,cooldown:4,need:3,min:1,type:'赋能',reqCred:5,disrupt:1,adkar:'KN',desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课（一次最多带三个）。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
-  {id:'internal-training',label:'内部培训',weeks:2,cooldown:3,need:4,min:4,type:'赋能',reqCred:5,disrupt:1,adkar:'AB',roleMode:'teacher',
+  {id:'training',label:'外部培训',weeks:2,cooldown:4,need:3,min:1,type:'培训',reqCred:5,disrupt:1,adkar:'KN',desc:'请外面的人来教，帮想做但不会做的人掌握实际技能：把人从「不想」推到「不会」，再推到「会」。小班效果最好——只带一个人时能贴身教，人一多就变成走过场的公开课（一次最多带三个）。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '培训'); }},
+  {id:'internal-training',label:'内部培训',weeks:2,cooldown:3,need:4,min:4,type:'培训',reqCred:5,disrupt:1,adkar:'AB',roleMode:'teacher',
    desc:'让一个已经转化的人去带三个还没动的人。外面请来的专家讲得再对，学员心里那句「你不懂我们这儿」消不掉；自己人讲，说服力来自关系，不来自内容。先点讲师（必须完全配合），再点三位学员。',
    cooldownReason:'内部讲师也要上自己的班，连续开课会拖垮他的本职。',
    run(ids){
@@ -2189,20 +2190,20 @@ const ACTIONS=[
        const mulUsed=Math.min(1.8, mul);
        if(mul>1.8+1e-9) tags.push('合计按 ×1.8 计');
        const before=q.status;
-       const r=applyGain(sid, Math.round(10*mulUsed), '赋能', 'direct');
+       const r=applyGain(sid, Math.round(10*mulUsed), '培训', 'direct');
        const up = (STATUS_LABELS[q.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）` : '';
        details.push(`${q.name} 听了 ${t.name} 的课，${gainText(sid, r.amount)}${up}${tags.length?'（'+tags.join('、')+'）':''}。`);
        const gained=seedTrust(tId,sid,14);
        if(gained>0) details.push(`🤝 ${t.name} ↔ ${q.name} 信任 +${gained}——一起备课、答疑，比任何动作都长得快。`);
      });
-     applyGain(tId, 4, '赋能', 'direct');
+     applyGain(tId, 4, '培训', 'direct');
      details.push(`${t.name} 讲完这一课，自己也更认这件事了（+4）：公开讲过的话，自己更得做到。`);
      state.pressure=Math.min(10, state.pressure+1);
      details.push('⏳ 占用生产时间，压力 +1。');
      return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
    }},
-  {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
-  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,minConverted:2,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「有限认同」就上台，会被当成捧杀，全组织都会质疑你的判断。至少 2 个人已经真的转过弯，你才有「案例」可讲。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
+  {id:'pilot',label:'小规模试点',weeks:3,cooldown:5,need:3,type:'试点',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'试点'); }},
+  {id:'honor',label:'公开表彰',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「有限认同」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
     const p=state.people[ids[0]];
     if(!p) return {story:'没有可表彰的对象。', details:[], noEffect:true};
 
@@ -2211,33 +2212,32 @@ const ACTIONS=[
       const factionCtx = p.faction==='当地' ? '在當地文化里，公开表彰毫无行动的人会被视为「走形式」，整个组织的信任感会集体下滑。' :
                          p.faction==='外部' ? '外部利益相关者对表彰的判断更严苛——没有成果支撑的认可会被解读为公关噱头。' :
                          '总部背景的人物对表彰的期望更高，表彰完全还没认同的人会被认为是「刷存在感」。';
-      const hitNames = [];
-      Object.entries(state.people).forEach(([id, q])=>{
-        if(id !== 'pm' && id !== ids[0] && q.status < 4 && q.status >= 1){
-          const old = q.score;
-          q.score = Math.max(0, q.score - 8);
-          if(q.score !== old){ updateStatus(q); hitNames.push(q.name); }
-        }
-      });
+      /* v73：表彰不再靠"底子"挡住，代价改成信用和压力。
+         原来这一下是全场 -8，一个动作能把整局掀翻——那不是代价，那是判死刑。
+         现在：可信度 -2、压力 +2、被表彰的人 -6，代价照样疼，但留得住后面的路。 */
+      p.score = Math.max(0, p.score - 6);
+      updateStatus(p);
+      state.credibility = Math.max(0, state.credibility - 2);
       state.pressure = Math.min(10, state.pressure + 2);
       return {story:`你公开表彰了${p.name}，但台下的人面面相觑——他们都知道${p.name}还没有任何实质性的变革行动。`,
         details:[
-          `❌ 表彰严重失当：${p.name}目前仍处于「${statusText(p.status)}」状态，尚未形成任何示范效应。压力 +2。`,
+          `❌ 表彰严重失当：${p.name}目前仍处于「${statusText(p.status)}」状态，尚未形成任何示范效应。可信度 -2、压力 +2，他本人 -6。`,
           `📚 管理学原理：${factionCtx}`,
-          hitNames.length ? `👥 全组织质疑：${hitNames.join('、')} 对你的判断力产生怀疑（分数 -8）。` : '',
-          `💡 建议：目标必须至少达到「有限认同」状态才能表彰，才有真正的榜样效应。`
+          `👥 台下的人不会当场反驳你，但「这个领导的判断不能信」这句话会传得比你快。`,
+          `💡 建议：目标至少到「有限认同」再上台，表彰才有榜样效应。`
         ].filter(Boolean),fail:true};
     }
 
     // 失败 B：火候未到——捧杀
     if(p.status <= 2){
       const old = p.score;
-      p.score = Math.max(0, p.score - 12);
+      p.score = Math.max(0, p.score - 8);
       if(p.score !== old) updateStatus(p);
+      state.credibility = Math.max(0, state.credibility - 1);
       state.pressure = Math.min(10, state.pressure + 1);
       return {story:`你公开表彰了${p.name}，但${p.name}还没有足够的成果——这次表彰让他/她感到被「捧杀」，同事也开始质疑你的判断。`,
         details:[
-          `❌ 表彰时机失当：${p.name}当前处于「${statusText(p.status)}」状态，尚未有足够的成果支撑公开认可。${p.name}感到被孤立（分数 -12），压力 +1。`,
+          `❌ 表彰时机失当：${p.name}当前处于「${statusText(p.status)}」状态，尚未有足够的成果支撑公开认可。他感到被孤立（-8），可信度 -1、压力 +1。`,
           `📚 管理学原理：过早的公开表彰会让被表彰者在同事中显得「被特殊对待」，反而引发同伴压力和孤立效应（Peer Isolation Effect）。`,
           `💡 建议：等${p.name}进入「有限认同」状态后再表彰。`
         ],fail:true};
@@ -2261,36 +2261,24 @@ const ACTIONS=[
     }
     return r;
   }},
-  {id:'kpi',label:'宣布KPI与时限',weeks:2,cooldown:5,need:0,type:'压力',reqCred:7,minConverted:3,disrupt:3,adkar:'RE',desc:'能制造紧迫感，但组织也会感到压力。若你的信誉还不够高（<8）且还没有几个真实成果，硬推KPI会被认为是"蛮干"而引发反弹。至少 3 个人真的动过，这个指标才有人信。',cooldownReason:'指标和时限是强有力的管理工具，但频繁改变会导致组织混乱。每次宣布都需要足够的时间让组织消化和适应。',run(ids){
+  {id:'incentive',label:'调整奖惩',weeks:3,cooldown:6,need:0,type:'规则',reqCred:8,disrupt:3,adkar:'RE',desc:'把奖惩口径改掉：做了的人拿到好处，不做的人开始有成本。这是后期的重手段——一纸文件推动全体，代价是组织压力明显上升。还没有真实成果垫底时改奖惩，照样推得动，只是会被读成"又要考核我们了"。',cooldownReason:'奖惩口径的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
-    // 可信度刚刚过阈——又没有实际转化支撑：反弹
-    if(state.credibility < 8 && convCount < 3){
+    /* v73：撤掉「至少 5 人完全配合」的硬门槛。
+       底子不再表现为"点不动"，而是"点了更贵"：没有成果垫底，同一纸文件会被读成又一次考核，
+       可信度掉 2、压力涨 2，效果只兑现一小半。动作永远可用，代价自己承担。 */
+    if(convCount < 3){
       state.credibility = Math.max(0, state.credibility - 2);
       state.pressure = Math.min(10, state.pressure + 2);
-      // 实干派与大量还没认同的人反感
-      const backlash = ['plant','hr','ops','sales','finance','union'];
-      const hit = [];
-      backlash.forEach(id=>{
-        const p = state.people[id];
-        if(p && p.status < 4){
-          const oldScore = p.score;
-          p.score = Math.max(0, p.score - 6);
-          if(p.score !== oldScore){ updateStatus(p); hit.push(p.name); }
-        }
-      });
-      return {
-        story:'你在全体会上宣布了硬性KPI与时限，但台下的议论是「你自己还没打通一个案例，凭什么压我们」。',
-        details:[
-          '⚠️ 信用未立而先推KPI：实干派怒火起来。可信度 -2，压力 +2。',
-          hit.length ? `👥 反弹：${hit.join('、')} 分数 -6（感到被“指标绱架”）。` : '👥 所有实干派已表态或完全配合，反弹较小。',
-          '💡 建议：先通过试点/培训达到 3 以上转化，或可信度提升到 8+ 再推硬性KPI。'
-        ]
-      };
+      const r = affectAll(5,'奖惩口径改了，但组织里还没有一个能拿出来说的例子——大家只当是又一次「上面又要考核了」。','规则');
+      r.details.unshift(
+        '⚠️ 没有成果垫底的制度：可信度 -2、压力 +2，效果只兑现了一半。',
+        '💡 制度是放大器，不是发动机：先让三四个人真的走通，同一纸文件的分量会完全不同。'
+      );
+      return r;
     }
-    return affectAll(8,'KPI和时限制造了紧迫感，但也增加了压力。','压力');
+    return affectAll(12,'奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','规则');
   }},
-  {id:'incentive',label:'调整激励与奖惩',weeks:3,cooldown:6,need:0,type:'制度',reqCred:8,minConverted:5,disrupt:3,adkar:'RE',desc:'通过制度激励能推动全体。这是后期的终极武器——当其他方法都失效时，制度改变能突破瓶颈。但代价是会大幅提升组织压力，而且得有底子：至少 4 个人已经真的转过弯，制度才推得动。',cooldownReason:'激励制度的改变涉及复杂的人事和财务流程。频繁改变会导致员工困惑，也难以评估每次改变的真实效果。',run(ids){ return affectAll(12,'激励与奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','制度'); }},
-  {id:'reorg',label:'调整汇报关系',weeks:2,cooldown:6,need:1,type:'制度',reqCred:6,disrupt:2,adkar:'RE',
+  {id:'reorg',label:'调整汇报关系',weeks:2,cooldown:6,need:1,type:'规则',reqCred:6,disrupt:2,adkar:'RE',
    desc:'把某个人的汇报线改到已经认同变革的上级名下。组织结构本身就是杠杆：换了汇报对象，信息流向、资源分配和压力传导都会跟着改道。',
    cooldownReason:'动组织结构是大事，一年内反复调整会让人觉得你在乱折腾，反而摧毁可信度。',
    run(ids){
@@ -2323,7 +2311,7 @@ const ACTIONS=[
      p.score=clamp(p.score+gain,0,100); updateStatus(p);
      state.touchedThisTurn.add(id); state.touchedThisTurn.add(best);
      try{
-       state.turnEvents.push({id, mode:'action', actionType:'制度', base:gain, pref:1, soft:1,
+       state.turnEvents.push({id, mode:'action', actionType:'规则', base:gain, pref:1, soft:1,
          amount:Math.round(p.score-scoreBefore), from:Math.round(scoreBefore), to:Math.round(p.score),
          prev:prevStatus, now:p.status, locked:false});
      }catch(_){}
@@ -2361,22 +2349,23 @@ const ROLES = {
 };
 let currentRoleId = 'integrator';
 
-/* v40：动作按 Kotter 八步压成四段重排——造势 / 动员 / 赋能 / 固化。
+/* v40：动作按 Kotter 八步压成四段重排——造势 / 验证 / 赋能 / 制度。
+   v73：段名和动作都按课上说法重排（原「动员」改为「验证」，原「固化」改为「制度」）。
    这不是四个抽屉，而是一条有先后的推进线；跳步是变革失败的头号死法。
    （en 字段只作内部对照，不渲染到界面。） */
 const ACTION_GROUPS = [
   { key:'unfreeze', label:'🔥 造势', en:'Urgency & Coalition',
     hint:'第 1–2 步：先解决「为什么非变不可」和「谁跟我一起」。这两步没做够就往下走，后面每一步都在还债',
-    ids:['interview','team-building','ceo-endorse'] },
-  { key:'mobilize', label:'📣 动员', en:'Vision & Communication',
-    hint:'第 3–4 步：把方向讲成一件具体、可信、能重复讲的事，而不是一句口号',
-    ids:['broadcast','exemplify'] },
+    ids:['interview','team-building','broadcast'] },
+  { key:'mobilize', label:'🧪 验证', en:'Validate & Demonstrate',
+    hint:'第 3–4 步：先在自己身上、在小范围里把这件事跑通一次——讲一百遍，不如让人看见一次',
+    ids:['exemplify','ceo-endorse','pilot'] },
   { key:'enable',   label:'🚀 赋能', en:'Empower & Quick Wins',
-    hint:'第 5–6 步：拆掉「不会做」和「做不成」的障碍，尽快做出一个能拿出手的成果',
-    ids:['pilot','training','internal-training','honor'] },
-  { key:'anchor',   label:'🔒 固化', en:'Consolidate & Anchor',
-    hint:'第 7–8 步：把新做法写进考核、激励和汇报关系，让它不再依赖你个人去推',
-    ids:['kpi','incentive','reorg'] }
+    hint:'第 5–6 步：拆掉「不会做」和「做不成」的障碍，把已经跑通的成果变成能复制的东西',
+    ids:['training','internal-training','honor'] },
+  { key:'anchor',   label:'🏛 制度', en:'Consolidate & Anchor',
+    hint:'第 7–8 步：把新做法写进奖惩和汇报关系，让它不再依赖你个人去推',
+    ids:['incentive','reorg'] }
 ];
 
 /* v66：ADKAR 只作为内部数据留着（结局复盘要判断「是不是只在治意愿」），
@@ -2522,15 +2511,10 @@ function updateStatus(p){
   }
 }
 function convertedCount(){ return Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length; }
-/* v68：后期动作的闸门从「信用值」换成「已经有几个人真的转过弯」。
-   信用值是每次成功 +1、起手 6，两三回合就到 8——用它当门槛，等于没有门槛。
-   「已经有 4 个人完全配合」这件事买不到，只能一回合一个动作攒出来。 */
-function unlockGate(a){
-  if(!a || !a.minConverted) return null;
-  const conv=convertedCount();
-  if(conv>=a.minConverted) return null;
-  return `需要已有 ${a.minConverted} 人完全配合（现在 ${conv} 人）`;
-}
+/* v73：取消「底子」硬门槛（原 v68 的 unlockGate）。
+   动作不再因为「还没攒够人」而点不动——代价改成执行时结算：可信度掉、压力涨、效果打折。
+   理由：门槛把学生挡在动作外面，他学不到"用早了会怎样"；代价能让他学到。
+   目前唯一保留的硬条件还是"内部培训要有讲师"——那是动作本身的定义，不是门槛。 */
 function convertedRate(){ const total = Object.keys(state.people).filter(id=>id!=='pm').length; return total>0 ? Math.round(convertedCount()/total*100) : 0; }
 /* v17.1：变革早期判定——原本依赖 phase()==='动员'，现改成数据粒度：
    完全配合者 < 3 人算作「早期」（原理与原 phase '动员' 条件一致）。*/
@@ -2616,18 +2600,6 @@ function stageFitTag(actionId, status){
   return {k:'bad', v, t:'时机偏晚', tip:'他已经在「'+label+'」了，这一步对他作用有限，效果可能会削弱'};
 }
 
-/* v72：离下一档还有多远。
-   结果页用它回答那个最容易被问住的问题：「明明涨了十几分，怎么没升档？」
-   分数是连续的说服度，档位是三道硬门槛（50 / 85，硬骨头 55 / 90）——
-   涨了 12 分但还差 15 分才过线，这一下就没有改变他在组织里的位置。 */
-function nextStepGap(id, score){
-  const stubborn=['union','ops','engineer'];
-  /* 界面上只露出两道线：50（有限认同）和 85（完全配合），硬骨头是 55 / 90。
-     内部还有 25 / 40 两个小台阶，但它们不改标签，学生看不见，也就不该出现在距离里。 */
-  const th=(stubborn.includes(id)?[55,90]:[50,85]).find(t=>score<t);
-  if(!th) return {gap:0, label:'完全配合', done:true};
-  return {gap:th-score, label:(th<=55?'有限认同':'完全配合'), done:false};
-}
 
 function broadResistanceFactor(personId){
   // 仅对「面向全体 / 面向观望者」的广覆盖动作生效
@@ -2708,7 +2680,7 @@ function softeningBonus(targetId){  if(!(state.softened[targetId]>0)) return 1.0
 
 /* v68：广覆盖的「50 分以上打三折」不再一刀切。
    制度和通报本来就是「对已经认同的人重新定规矩」，它们在决胜带该留一点力气；
-   喊话、示范、KPI 仍是三折——喊话推不动最后那一跳，这一课不能丢。 */
+   喊话、示范、奖惩仍是三折——喊话推不动最后那一跳，这一课不能丢。 */
 const BROAD_LOCK_RATE = { incentive:0.45, broadcast:0.50 };
 function broadLockRate(){
   const id=state.activeActionId;
@@ -3107,10 +3079,10 @@ function applyConsequences(action, impact){
   }
 
   /* v16：多路径平衡 - 追踪策略倾向 */
-  if(action.type === '压力' || action.type === '对抗' || action.type === '制度'){
+  if(action.type === '压力' || action.type === '对抗' || action.type === '规则'){
     state.aggressiveIndex++;
   }
-  if(action.type === '对话' || action.type === '赋能' || action.type === '沟通'){
+  if(action.type === '对话' || action.type === '培训' || action.type === '沟通'){
     state.conservativeIndex++;
   }
   return notes;
@@ -3735,9 +3707,7 @@ function buildActionCard(a, idx){
     // 只有冷却中或资源不足才真正禁用
     // v39：内部培训需要一位完全配合的讲师
     const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-    // v68：后期动作要先有底子（已经有几个人完全配合），这个门槛不能靠信用值凑出来
-    const gate=unlockGate(a);
-    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher||!!gate;
+    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher;
     const isDisabled=isHardDisabled; // credBad 仅作为视觉警告，不禁用卡片
     if(isHardDisabled) card.classList.add('disabled');
     else if(credBad) card.classList.add('cred-override'); // 新增：可信度不足但可强行
@@ -3769,8 +3739,8 @@ function buildActionCard(a, idx){
         let prefMark='';
         if(knowsSecret(id)){
           const mul=preferenceMultiplier(id, a.type);
-          if(mul>=1.15) prefMark=`<span style="color:var(--success);font-weight:700" title="他吃这一套：同类动作对他更有效">▲${a.type}</span>`;
-          else if(mul<=0.85) prefMark=`<span style="color:var(--danger);font-weight:700" title="他反感这一套：同类动作对他效果打折">▼${a.type}</span>`;
+          if(mul>=1.15) prefMark=`<span style="color:var(--success);font-weight:700" title="他吃「${a.type}」这一套：同类动作对他更有效">▲${a.type}</span>`;
+          else if(mul<=0.85) prefMark=`<span style="color:var(--danger);font-weight:700" title="他反感「${a.type}」这一套：同类动作对他效果打折">▼${a.type}</span>`;
         }
         /* v72：连「⚠️ 这个人现在不能表彰」也撤掉了——它是同一个判断的另一半。
            误用表彰仍然有代价，但代价由执行后的结果页来教，不在点之前先告诉你答案。 */
@@ -3817,12 +3787,11 @@ function buildActionCard(a, idx){
     if(wait>0) reasonChips.push('<span class="chip bad reason-chip">还需等待'+wait+'轮</span>');
     if(state.resources<a.weeks) reasonChips.push('<span class="chip bad reason-chip">资源不足（需 '+a.weeks+'）</span>');
     if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有完全配合的人可以当讲师</span>');
-    if(gate) reasonChips.push('<span class="chip bad reason-chip">'+gate+'</span>');
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,gate||'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
-          ⛔ ${gate?'还差底子':(noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足'))}
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
+          ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
         ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加压力">
@@ -3837,7 +3806,7 @@ function buildActionCard(a, idx){
         // v20: 渐进式信息展示 - 计算成功率估计
     const successHint = (() => {
       // v45：已经不可用时别再打"可执行"的绿标，两个徽章互相打脸
-      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,gate||'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
+      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
       if(credBad) return { label: '⚠️ 强行', cls: 'warn', tip: '可信度不足，强行执行将增加压力' };
       if(a.disrupt >= 3 && isEarlyChange()) return { label: '⚡ 高风险', cls: 'bad', tip: '早期使用高扰动动作会引发组织反弹' };
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
@@ -3851,7 +3820,6 @@ function buildActionCard(a, idx){
       <div style="min-width:0;flex:1">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <strong>${a.label}</strong>
-          <span class="chip" style="font-size:11px">${a.type}</span>
           ${headerBadge}
           ${successHint.label==='⚡ 高风险'?`<span class="chip ${successHint.cls}" style="font-size:11px" title="${successHint.tip}">${successHint.label}</span>`:''}
         </div>
@@ -3893,7 +3861,7 @@ function buildActionCard(a, idx){
       /* v70：整张卡都算选中。
          原来点「查看详细参数」「ⓘ 说明」只展开、不选中，学生以为要「先点开看看、再点才选上」，
          白点两下。现在卡片上任何一处（除了人名）点下去都等于选它，说明区只是顺手摊开。 */
-      if(isHardDisabled){ whyDisabled(a, wait, noTeacher, gate); return; }
+      if(isHardDisabled){ whyDisabled(a, wait, noTeacher); return; }
       const isDesc = !!e.target.closest('.desc-toggle');
       if(isDesc){
         if(!state.descOpen) state.descOpen=new Set();
@@ -3912,7 +3880,7 @@ function buildActionCard(a, idx){
     card.addEventListener('keydown',(e)=>{
       if(e.key==='Enter'||e.key===' '){
         e.preventDefault();
-        if(isHardDisabled) whyDisabled(a, wait, noTeacher, gate); else chooseAction(idx);
+        if(isHardDisabled) whyDisabled(a, wait, noTeacher); else chooseAction(idx);
       }
     });
     return card;
@@ -4017,7 +3985,7 @@ function endingNarratives(type){
 
   if(type==='win-deep'){
     return {
-      cls:'win', title:'超额渗透 · 变革固化',
+      cls:'win', title:'超额渗透 · 变革落地',
       story:`你在第 ${state.round-1} 回合、用掉 ${weeksUsed} 份资源，把完全配合率推到 ${finalRate}%，远超过 50% 的达标线。${finalCred>=6?`可信度还有 ${finalCred}，压力 ${state.pressure}`:`可信度剩 ${finalCred}、压力 ${state.pressure}`}——这一局不只是"达标"，是把新流程推到了大多数人身上。${finalRate>=90?'接近全员的状态下，旧体系已经很难再翻回来。':'但要注意：剩下的那几个人，往往不是没被推过，而是被推过太多次。'}${overreach}`,
       teach:'▶ 文化层：渗透率推到这么高，靠的是"每个人都被说服"，还是"不配合的成本太高"？这两种高转化率，三个月后的稳定性完全不同。\n▶ 制度层：你有没有把这一轮推出来的行为，写进考核、汇报线和资源分配？没有制度承载的高渗透，换个人接手就会退。\n▶ 个人层：最后那几个没转化的人，你是放弃了他们，还是留下了"下次再说"的空间？',
       realWorld:'▶ <strong>美的·库卡（2016-）</strong>：不追求名义上的全面接管，而是用业务节奏一点点把协同做实，渗透率高但保留了对方的管理自主。\n▶ <strong>丹纳赫 DBS（1980s-）</strong>：把精益工具推到每一个工厂、每一条产线，靠的是几十年不间断的内部培训和"人人会用"，而不是一次运动。\n▶ <strong>反面：某快消集团数字化（2019）</strong>：KPI 压出 95% 的系统使用率，两年后回访发现一线用回了 Excel——渗透率是假的，习惯没变。'
@@ -4035,7 +4003,7 @@ function endingNarratives(type){
     return {
       cls:'win', title:'提前成功 · 变革生根',
       story:`仅用 ${weeksUsed} 份资源、${state.round-1} 个回合，你就把完全配合率拉到 ${finalRate}%。会议室外的走廊上，工厂总经理主动跟区域GM讨论起下一步标准化方案——这是真正的"自驱动"信号。当总部CEO拿着你的复盘材料走进董事会时，他第一次没有带紧迫感，而是带着一份"可复制的整合方法论"。`,
-      teach:'▶ 文化层：在无法直接命令的文化边界上，示范者是如何取代「导入模板」成为合法性来源的？\n▶ 制度层：你在哪一回合用小范围试点/培训替代了硬 KPI？制度与叙事的时序，是否早期胜利的关键？\n▶ 个人层：示范者的扩散效应在哪一回合开始指数化？桥梁人物（区域GM/HR）的个人信誉是否被充分投资？',
+      teach:'▶ 文化层：在无法直接命令的文化边界上，示范者是如何取代「导入模板」成为合法性来源的？\n▶ 制度层：你在哪一回合用小规模试点/培训替代了硬压？制度与叙事的时序，是否早期胜利的关键？\n▶ 个人层：示范者的扩散效应在哪一回合开始指数化？桥梁人物（区域GM/HR）的个人信誉是否被充分投资？',
       realWorld:'▶ <strong>美的·库卡（2016）</strong>：保留原团队、避免大规模派驻，用业绩和文化耐心实现相对成功整合。\n▶ <strong>吉利·沃尔沃（2010-2020）</strong>：「两个品牌·一个集团」的隔禄系设计，十年后沃尔沃盈利翻盘、吉利也反哺了新能源转型。\n▶ <strong>宁德时代·德国工厂（2019-2024）</strong>：以局部本地化管理➕总部技术赋能的方式实现 ESG 与合规平衡。'
     };
   }
@@ -4071,7 +4039,7 @@ function endingNarratives(type){
     const ids=Object.keys(state.people).filter(id=>id!=='pm');
     const active=ids.filter(id=>state.people[id].status>=3).length;
     return {
-      cls:'mid', title:'阶段达标 · 但未固化',
+      cls:'mid', title:'阶段达标 · 但没进制度',
       story:`时间走完。${active}/${ids.length} 的人已经进入「有限认同」以上——他们开始用新流程干活，会上的表态也不再是敷衍。但真正"内化"的只有 ${finalRate}%。这是一种非常真实的状态：<b>行为变了，认同还没跟上</b>。三个月后如果总部撤掉你这个角色，这批人里有多少会退回原样？答案取决于你有没有动过制度——汇报关系、激励与奖惩、谁能决定什么。`,
       teach:'▶ 文化层：行为的改变可以靠推动，认同的改变只能靠时间和一致性。你的转化者里，谁是"因为理解"而不是"因为你在盯着"？\n▶ 制度层：你有没有把新的行为写进考核、汇报线和资源分配？没有制度承载的变革，人一走就散。\n▶ 个人层：你几乎把资源都用在了"让人动起来"，剩下多少留给了"让动起来的人留下来"？',
       realWorld:'▶ <strong>联想·IBM PC（2005）</strong>：前三年业务整合达标，但文化融合花了近十年——阶段目标与深度认同从来不是同一件事。\n▶ <strong>海尔·GE 家电（2016-）</strong>：先保留人、保留流程，用两三年才逐步引入人单合一，避免"改得太快、认同没跟上"。\n▶ <strong>反面：TCL·阿尔卡特（2004）</strong>：组织表面上接受了新流程，但关键岗位认同缺失，整合红利在两年内被内耗吃掉。'
@@ -4274,16 +4242,16 @@ function debrief(){
   if(H.length>=4){
     if(fAn>=0 && (fUn<0 || fAn<fUn)){
       out.push({tag:'顺序反了', k:'warn',
-        t:`你在第 ${fAn+1} 回合就动了固化类动作（KPI／激励／汇报关系），而造势${fUn<0?'整局一次都没做':'到第 '+(fUn+1)+' 回合才第一次出现'}。前两步是紧迫感和联盟——没做够就动制度，同一张 KPI 在员工眼里不是「改革」，是「新官上任」。顺序一错，后面每一步都在还债。`});
+        t:`你在第 ${fAn+1} 回合就动了制度类动作（调整奖惩／调整汇报关系），而造势${fUn<0?'整局一次都没做':'到第 '+(fUn+1)+' 回合才第一次出现'}。前两步是紧迫感和联盟——没做够就动制度，同一纸奖惩在员工眼里不是「改革」，是「新官上任」。顺序一错，后面每一步都在还债。`});
     } else if(segN.unfreeze>0 && segN.mobilize>0 && segN.enable===0 && segN.anchor===0){
       out.push({tag:'只造势不落地', k:'warn',
-        t:`力气全花在前两段（造势 ${segN.unfreeze} 次、动员 ${segN.mobilize} 次），赋能和固化一次没碰。紧迫感讲得再好，组织看不到一件做成的事也不会信——第 6 步「创造速赢」不是锦上添花，它是把口头承诺变成可验证证据的唯一办法。`});
+        t:`力气全花在前两段（造势 ${segN.unfreeze} 次、验证 ${segN.mobilize} 次），赋能和制度一次没碰。紧迫感讲得再好，组织看不到一件做成的事也不会信——第 6 步「创造速赢」不是锦上添花，它是把口头承诺变成可验证证据的唯一办法。`});
     } else if(segN.enable===0){
       out.push({tag:'没有速赢', k:'warn',
         t:`整局没有一次赋能类动作（试点／培训／内部培训／表彰）。这类动作负责把「我信你」变成「我看见了」——缺一个能拿出手的成果，观望的人会一直观望到时间用完。`});
     } else if(_touched.length>=3 && _missed.length===0){
       out.push({tag:'四段走齐', k:'good',
-        t:`四段你都走过了：造势 ${segN.unfreeze}、动员 ${segN.mobilize}、赋能 ${segN.enable}、固化 ${segN.anchor}。这条线不是流程表，是承重顺序——造势攒下的信用，用来付赋能和固化的账。`});
+        t:`四段你都走过了：造势 ${segN.unfreeze}、验证 ${segN.mobilize}、赋能 ${segN.enable}、制度 ${segN.anchor}。这条线不是流程表，是承重顺序——造势攒下的信用，用来付赋能和制度的账。`});
     } else if(_touched.length<=2 && _missed.length>=2){
       out.push({tag:'只走了半程', k:'tip',
         t:`你只走了「${_touched.map(f=>f.name).join('」和「')}」，没碰「${_missed.map(f=>f.name).join('」和「')}」。这是变革做一半最常见的形态：前半程靠个人魅力推得动，后半程要靠机制接住——接不住，人一走就回原样。`});
@@ -4295,7 +4263,7 @@ function debrief(){
   H.forEach(h=>{ const a=ACTIONS.find(x=>x.id===h.actionId); if(a&&a.adkar) _akUse[a.adkar]=(_akUse[a.adkar]||0)+1; });
   if(H.length>=5 && !_akUse.KN && !_akUse.AB){
     out.push({tag:'只治意愿', k:'warn',
-      t:`整局的动作全落在「让他想」上——造势、动员、表彰，一次没碰「让他会」。很多被当成「抵触」的表现，其实是「不会做又不好意思说」——培训、试点补的正是这一块，而它们最容易被跳过，因为看起来不像「一把手该亲自干的事」。`});
+      t:`整局的动作全落在「让他想」上——造势、验证、表彰，一次没碰「让他会」。很多被当成「抵触」的表现，其实是「不会做又不好意思说」——培训、试点补的正是这一块，而它们最容易被跳过，因为看起来不像「一把手该亲自干的事」。`});
   }
 
   // 2c. 工具用错位（v48）：同一把锤子砸在不同阶段的人身上，效果能差一倍
@@ -4309,16 +4277,16 @@ function debrief(){
   }
 
   // 3. 是否用过制度杠杆
-  const usedInst = ['incentive','reorg','kpi'].filter(id=>H.some(h=>h.actionId===id));
+  const usedInst = ['incentive','reorg'].filter(id=>H.some(h=>h.actionId===id));
   if(!usedInst.length && conv<Math.ceil(total*0.5)){
-    out.push({tag:'没有固化', k:'warn',
-      t:`你整局没有动过固化类动作（KPI / 激励与奖惩 / 汇报关系）。人际说服能推到 50 分，但 50→85 这一段靠说是不动的——它需要改变「做与不做的后果」。代价是压力，但没有它，最后一跳永远差一口气。`});
+    out.push({tag:'没有动制度', k:'warn',
+      t:`你整局没有动过制度类动作（调整奖惩 / 调整汇报关系）。人际说服能推到 50 分，但 50→85 这一段靠说是不动的——它需要改变「做与不做的后果」。代价是压力，但没有它，最后一跳永远差一口气。`});
   }
 
   // 3. 压力是否爆掉
   if(state.endingType==='fail-rebound' && state.pressure>=7){
     out.push({tag:'压力失控', k:'warn',
-      t:`终局压力 ${state.pressure}/10。施压动作（KPI、制度调整）确实能快速抬分，但它们同时抬高组织反弹的概率；反弹一旦触发，再施压就是崩盘。缓解压力不产出转化，它买的是后面几回合的行动空间。`});
+      t:`终局压力 ${state.pressure}/10。施压动作（调整奖惩这类制度动作）确实能快速抬分，但它们同时抬高组织反弹的概率；反弹一旦触发，再施压就是崩盘。缓解压力不产出转化，它买的是后面几回合的行动空间。`});
   }
 
   // 4. 网络扩散有没有真的被用上
@@ -4416,7 +4384,7 @@ function renderEndingScreen(){
         `<div class="${cls(sc.parts.org)}"><b>${sc.parts.org}</b><span>组织分 · (可信度 ${state.credibility} − 压力 ${state.pressure}) × ${SCORE_RULES.orgWeight}（满分 ${SCORE_RULES.orgWeight*10}）</span></div>`+
         `<div class="${cls(sc.parts.milestone)}"><b>${sc.parts.milestone}</b><span>里程碑分 · ${sc.ms} 个关键节点 × ${SCORE_RULES.perMilestone}（满分 ${SCORE_RULES.milestoneCap}）</span></div>`+
       '</div>'+
-      '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 66（达标即 30，每多推 1 人 +6）＋ 效率 8（剩余资源）＋ 节奏 7（多快到达标线，基准 12 回合）＋ 组织 15 ＋ 里程碑 4。分数不是排名，是把几件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少资源</b>（效率）、<b>多快到线</b>（节奏）、<b>留下的是什么组织</b>（组织分）。过线之后每多走一回合，所有动作的效果都会打折（每回合 ×0.92，最低 ×0.55）——所以继续推分数还能再高一点，但边际收益掉得很快：多推一个人要花的动作越来越多。用高压换来的转化会在组织分里被扣回去，所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
+      '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 66（达标即 32，每多推 1 人 +6）＋ 效率 8（剩余资源）＋ 节奏 7（多快到达标线，基准 12 回合）＋ 组织 15 ＋ 里程碑 4。分数不是排名，是把几件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少资源</b>（效率）、<b>多快到线</b>（节奏）、<b>留下的是什么组织</b>（组织分）。过线之后每多走一回合，所有动作的效果都会打折（每回合 ×0.92，最低 ×0.55）——所以继续推分数还能再高一点，但边际收益掉得很快：多推一个人要花的动作越来越多。用高压换来的转化会在组织分里被扣回去，所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
     wrap.appendChild(sb);
   }catch(_){}
 
@@ -4517,14 +4485,9 @@ function showModal(){
         ? `${glyph(r.to)} ${STATUS_LABELS[r.to]}`
         : `${glyph(r.from)} ${STATUS_LABELS[r.from]} → ${glyph(r.to)} <b>${STATUS_LABELS[r.to]}</b>`;
       // v46：没约谈过的人，不显示说服度——结果可以观察（变化列），刻度得谈过才知道
-      // v72：谈过的人，除了分数，还给出「离下一档还差几分」——这一下到底有没有改变他的位置
       const scoreCell = (r.revealed===false)
         ? `<span class="locked-score" title="没约谈过他：你知道他这轮动了，但不知道他站在哪一格。谈一次就解锁。">🔒 约谈解锁</span>`
-        : `${r.scoreFrom} → ${r.scoreTo}`+
-          (()=>{ const g=nextStepGap(r.id, r.scoreTo);
-            return g.done
-              ? `<div class="small muted" style="font-size:11px;line-height:1.35;margin-top:2px">已经在最后一档</div>`
-              : `<div class="small muted" style="font-size:11px;line-height:1.35;margin-top:2px">距「${g.label}」还差 ${g.gap} 分</div>`; })();
+        : `${r.scoreFrom} → ${r.scoreTo}`;
       return `<tr>
         <td>${r.name}</td>
         <td>${statusCell}</td>
@@ -4540,13 +4503,12 @@ function showModal(){
       '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 50 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
-      /* v72：学生最容易在这里困惑——「明明涨了十几分，怎么什么都没发生」。
-         分数和档位是两套刻度：分数是连续的说服度，档位是三道硬门槛。 */
+      /* v73：错配时只讲一件事——分数是涨了，但这一手不是他现在最需要的。
+         不再解释门槛、不再算"还差几分"，那是规则复述，学生要的是判断。 */
       (active.some(r=>r.stageBad)?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.07);border-left:3px solid #e0a050;border-radius:6px">'+
-        '<strong style="color:#e0a050">分数涨了，但档位没动——这两件事不是一回事。</strong>'+
-        '<div style="margin-top:5px;color:var(--muted);line-height:1.6">「变化」是这一下给他加了多少说服度；「状态」才是他真正走到了哪一步：跨过 50 才叫「有限认同」，跨过 85 才叫「完全配合」。'+
-        '同一个动作砸在不对的阶段上，分数照样会涨，但离那条线可能还差十几分——看上去在动，其实位置没变。'+
-        '换一个对他这一步更对路的动作，同样一份资源能把他推过线。</div></div>'):'')+
+        '<strong style="color:#e0a050">分数有涨，但这不是最匹配的动作。</strong>'+
+        '<div style="margin-top:5px;color:var(--muted);line-height:1.6">这一轮他们的分数确实上去了；只是对这几个人现在这一步来说，这不是最该用的做法。'+
+        '同样一份资源，换个动作能推得更远——看「为什么」那一列，标着「时机偏早」或「时机偏晚」的，就是这一轮用错了地方的人。</div></div>'):'')+
       (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
         '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，平均每人掉了 '+_decayAvg+' 分：</strong>'+
         decayed.map(r=>r.name).join('、')+'。'+
@@ -4603,7 +4565,9 @@ function showModal(){
     const conv = convertedCount(), total = passTotal();
     const now = scoreBreakdown();
     const need = Math.ceil(total * 0.5);
-    const capPeople = Math.min(total, need + Math.floor((SCORE_RULES.outcomeMax - SCORE_RULES.passBase) / SCORE_RULES.perExtra));
+    /* v73：用 ceil——封顶分可能落在半个人上（32 + 6×6 = 68 > 66），
+       floor 会把它算成 11 人，学生按这个数去推，永远差一分。 */
+    const capPeople = Math.min(total, need + Math.ceil((SCORE_RULES.outcomeMax - SCORE_RULES.passBase) / SCORE_RULES.perExtra));
     pc.innerHTML =
       `<div class="pc-title">🎯 你已经跨过 50% 达标线（${conv}/${total} 人完全配合）</div>`+
       '<div class="pc-sub">这一局到这儿就能交了。<b>两条路都算成绩，但账不一样，先看清楚再点：</b></div>'+
@@ -4819,9 +4783,8 @@ function chooseAction(idx, opts){
 
 /* v67：不可用的动作被点到时，把卡在哪一步说出来。
    以前是直接 return，学生只会觉得"这张卡点不动"，却不知道为什么。 */
-function whyDisabled(a, wait, noTeacher, gate){
+function whyDisabled(a, wait, noTeacher){
   const why=[];
-  if(gate) why.push(gate);
   if(noTeacher) why.push('还没有完全配合的人可以当讲师');
   if(wait>0) why.push(`冷却中，还要等 ${wait} 回合`);
   if(state.resources<a.weeks) why.push(`资源不够：这个动作要 ${a.weeks}，你只剩 ${state.resources}`);
@@ -5039,7 +5002,7 @@ function diagnose(){
   // —— 1. 阈值锁：卡在「有限认同」的人
   if(stuck.length>=2){
     out.push({k:'tip', tag:'阈值锁', w:60,
-      t:`有 ${stuck.length} 个人卡在「有限认同」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 上手培训）打穿，广覆盖只剩 30% 力度。`});
+      t:`有 ${stuck.length} 个人卡在「有限认同」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小规模试点 / 公开表彰 / 外部培训）打穿，广覆盖只剩 30% 力度。`});
   }
 
   // —— 2. 火力分散：近三回合碰了太多人
@@ -5089,7 +5052,7 @@ function diagnose(){
   // —— 7. 可信度
   if(state.credibility<=4){
     out.push({k:'warn', tag:'可信度', w:88,
-      t:`可信度只有 ${state.credibility}。低于 5 时动作力度打折、失败惩罚翻倍。先用「以身作则」「小范围试点」把信誉做回来——没有信誉的推动只是在消耗你自己。`});
+      t:`可信度只有 ${state.credibility}。低于 5 时动作力度打折、失败惩罚翻倍。先用「亲身示范」「小规模试点」把信誉做回来——没有信誉的推动只是在消耗你自己。`});
   }
 
   // —— 8. 资源告急
@@ -5331,15 +5294,17 @@ function revealAfter(fn, newlyConverted){
    旧公式 40 + 5×(人数−6) 封顶 55，9 个人就撞顶：第 10、11、12 个人一分不加，
    「继续推进」在分数上等于没兑现。而且 7 人收工就能拿 81 分 S——刚好过线和推到底
    在分数上分不出来，学生学到的是「过线就收工」。
-   新公式 30 + 6×(人数−6) 封顶 66：
-     6 人（刚好达标）30 分 · 及格档
-     9 人 48 分 · 10 人 54 · 11 人 60 · 12 人 66 · 满分
+   新公式 32 + 6×(人数−6) 封顶 66：
+     6 人（刚好达标）32 分 · 及格档
+     9 人 50 分 · 10 人 56 · 11 人 62 · 12 人 66 · 满分
    同时把两笔「不用动脑就能拿满」的分压下去：
      组织分权重 2 → 1.5（满分 20 → 15）
      里程碑封顶 10 → 4
    白送分从 30 降到 19，总分重新由「你把人推到了多远」主导。 */
 const SCORE_RULES = {
-  outcomeMax:66, passBase:30, perExtra:6,
+  /* v73：passBase 30 → 32。刚好达标（6 人）应该落在「及格 B」上，
+     30 的时候只有 50 分，卡在 C——和开场说的「过了 50% 就算达标」自相矛盾。 */
+  outcomeMax:66, passBase:32, perExtra:6,
   efficiencyMax:8,
   pacingMax:7, pacingPar:12, pacingPerRound:0.5,
   postRate:0.92, postFloor:0.55,
@@ -5408,9 +5373,6 @@ function runTurn(){
   const credOverride = !credOk && state.credibility >= 1; // 可信度至少为 1 才能强行
   if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<a.weeks) return;
   if(!credOk && !credOverride) return; // 完全无可信度时不允许
-  // v68：后期动作的「底子」门槛是硬门槛，不能靠强行执行绕过去
-  const gate=unlockGate(a);
-  if(gate){ cheatToast(`⛔ 「${a.label}」还推不动 —— ${gate}`); return; }
 
   // v51：先放节拍，再算账——过场结束才揭结果
   playActionCinematic(a, state.selectedTargets);
@@ -5442,7 +5404,7 @@ function runTurn(){
     const extraPressure = Math.min(3, credGap); // 差距每 1 点增加 1 压力，最多 +3
     state.pressure = Math.min(10, state.pressure + extraPressure);
     credOverridePenalty.push(`⚠️ 强行执行（可信度 ${state.credibility}/${a.reqCred}）：组织感知到你并没有足够的信用基础就强行推进。压力 +${extraPressure}（现 ${state.pressure}）。`);
-    credOverridePenalty.push(`💡 建议：先通过「以身作则」、「小范围试点」等动作提升可信度至 ${a.reqCred} 再执行此动作，效果会明显更好。`);
+    credOverridePenalty.push(`💡 建议：先通过「亲身示范」、「小规模试点」等动作提升可信度至 ${a.reqCred} 再执行此动作，效果会明显更好。`);
   }
 
   state.activeActionId = a.id;   // v48：供 applyGain 判断档位匹配
@@ -5585,7 +5547,7 @@ function runTurn(){
 
   if(checkEnding()){ revealAfter(()=>{ renderEndingScreen(); showScreen('ending'); render(); }, newlyConverted); return; }
 
-  // v17.7：记录本轮执行的动作 id，供下一轮「以身作则连用」检测使用
+  // v17.7：记录本轮执行的动作 id，供下一轮「亲身示范连用」检测使用
   state.lastActionId = a.id;
 
   state.round++;
