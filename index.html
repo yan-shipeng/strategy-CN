@@ -392,7 +392,10 @@
       /* 在网络视图模式下隐藏列表面板 */
       #screen-network.network-view .mobile-list-panel{display:none !important}
       /* 默认隐藏连线，点击节点后才高亮 */
-      #screen-network.network-view .svg-wrapper .edge:not(.hot):not(.spread){opacity:0.2}
+      #screen-network.network-view .svg-wrapper .edge:not(.hot):not(.spread){opacity:0.3}
+      /* v36：手机端私交必须看得见，不能被上面那条压到 0.2 */
+      #screen-network.network-view .svg-wrapper .edge.informal{opacity:.9}
+      #screen-network.network-view .svg-wrapper .edge.hidden-edge{opacity:.5}
       .mobile-list-panel{display:none;margin-top:0}
     }
   
@@ -421,7 +424,14 @@
   .impact-table .down{color:var(--danger);font-weight:700;white-space:nowrap}
   .impact-table .flat{color:var(--muted);white-space:nowrap}
   .rel-list{margin:8px 0 0 18px;padding:0;font-size:13px;line-height:1.8}
-  .edge.informal{stroke:#e0a03a;stroke-width:2.2;stroke-dasharray:2 4;opacity:.95}
+  .edge.informal{stroke:#f2b45c;stroke-width:2.2;stroke-dasharray:2 4;opacity:.95}
+  /* v36：网络三视图 */
+  .netview-bar{display:flex;align-items:center;gap:6px;margin:12px 0 2px;flex-wrap:wrap}
+  .nv-btn{appearance:none;-webkit-appearance:none;border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;line-height:1.1}
+  .nv-btn.active{background:rgba(13,139,150,.18);border-color:rgba(13,139,150,.55);color:#3ecfdc}
+  .nv-note{font-size:11.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .node.dim{opacity:.28}
 
   /* v27：教练点评 */
   .coach-box{border-left:3px solid var(--primary);background:rgba(15,118,110,.06)}
@@ -609,7 +619,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v35</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v36</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1278,7 +1288,7 @@
           <div class="mech-card">
             <div class="mech-icon">🤝</div>
             <div class="mech-title">一起做事会长出私交</div>
-            <div class="mech-text">同一回合里被卷进同一件事的人，信任会累积。过线之后工作关系之外多一层私交，他们互相说服的效率从 ×1.4 提到 ×1.85。<b>把两个人放进同一个动作里，比分别推动更省资源。</b></div>
+            <div class="mech-text">同一回合里被卷进同一件事的人，信任会累积。过线之后工作关系之外多一层私交；合作次数越多，这层私交越深，扩散加成从 ×1.6 一路涨到 ×2.1。<b>把同几个人反复放进同一个动作里，比每次换人更值钱。</b></div>
           </div>
           <div class="mech-card">
             <div class="mech-icon">🔥</div>
@@ -1309,8 +1319,14 @@
       <div class="layout">
         <div class="panel section">
           <h2>社会网络</h2>
-          <div class="small muted">点击节点查看信息，拖拽节点重新排列。连线表示人物间的相互影响；绿色虚线表示已转化者正在向邻居扩散影响；橙色点线表示一起做事之后建立起来的非正式关系（私交），这类关系里说服更省力。</div>
-          <div class="svg-wrapper" style="margin-top:12px">
+          <div class="small muted">点击节点查看信息，拖拽节点重新排列。正式关系是组织图上的汇报与协作；非正式关系是一起做事长出来的私交，合作越多线越粗，扩散时越省力。</div>
+          <div class="netview-bar" id="netViewBar" role="tablist" aria-label="网络视图">
+            <button class="nv-btn" data-view="all" role="tab" aria-selected="true">全部网络</button>
+            <button class="nv-btn" data-view="formal" role="tab" aria-selected="false">正式网络</button>
+            <button class="nv-btn" data-view="informal" role="tab" aria-selected="false">非正式网络</button>
+            <span class="nv-note" id="netViewNote"></span>
+          </div>
+          <div class="svg-wrapper" style="margin-top:10px">
             <svg id="networkSvg"></svg>
           </div>
           <div class="legend" id="legendBox"></div>
@@ -1987,6 +2003,8 @@ function initState(){
     // v26：合作累积的信任 + 非正式关系 + 本回合逐人事件
     trust:{},                 // {'a|b': 0-100}
     informal:new Set(),       // 已经跨过阈值、变成非正式关系的对
+    coop:{},                  // {'a|b': n} 合作次数，决定信任累积速度
+    netView:'all',            // 网络视图：all / formal / informal
     newInformal:[],           // 本回合新建立的非正式关系
     turnEvents:[],            // 本回合每个人的得分变化事件
     // v27：临界点
@@ -2092,6 +2110,7 @@ function updateTrust(){
   if(!state.trust) state.trust={};
   if(!state.informal) state.informal=new Set();
   if(!state.newInformal) state.newInformal=[];
+  if(!state.coop) state.coop={};
   const touched=[...state.touchedThisTurn].filter(id=>id!=='pm'&&state.people[id]);
   const direct=new Set(state.selectedTargets||[]);
   for(let i=0;i<touched.length;i++){
@@ -2099,11 +2118,16 @@ function updateTrust(){
       const a=touched[i], b=touched[j];
       const pa=state.people[a], pb=state.people[b];
       const linked=(pa.ties||[]).includes(b)||(pb.ties||[]).includes(a);
-      if(!linked) continue;   // 只在既有的工作关系上累积信任
       let step=4;
       if(direct.has(a)&&direct.has(b)) step=18;        // 一起被卷进同一件事：合作最深
       else if(direct.has(a)||direct.has(b)) step=10;   // 一方直接、一方被带动
+      // v36：组织图上没有直接关系的人，一起做事也会熟起来，只是慢一些
+      if(!linked) step=Math.round(step*0.45);
       const k=pairKey(a,b);
+      // v36：合作过越多次，越容易再深一层
+      const coop=state.coop[k]||0;
+      step += Math.min(6, coop*2);
+      state.coop[k]=coop+1;
       const v=clamp((state.trust[k]||0)+step,0,100);
       state.trust[k]=v;
       if(v>=TRUST_INFORMAL && !state.informal.has(k)){
@@ -2137,7 +2161,7 @@ function seedTrust(a,b,step){
 function softeningBonus(targetId){  if(!(state.softened[targetId]>0)) return 1.0;
   // 扩散加成：私交最灵，其次桥梁节点，最后普通关系
   const origin = state.softenedOrigin[targetId];
-  if(origin && isInformalPair(origin,targetId)) return 1.85;
+  if(origin && isInformalPair(origin,targetId)) return informalMul(origin,targetId,1.60,0.50);  // 1.60 → 2.10
   if(origin && isBridge(origin)) return 1.60;
   return 1.40;
 }
@@ -2166,6 +2190,8 @@ function applyGain(personId, rawAmount, actionType, mode){
   let softMul = 1;
   if(mode!=='broad'){ softMul = softeningBonus(personId); amount = amount * softMul; }
   else if(state.softened[personId]>0) amount = amount * (1.0 + 0.15);  // 广覆盖也享受一点软化
+  // v36：非正式关系越多，社会传染越猛（只作用于扩散，不作用于直接推动）
+  if(mode==='spread'){ const nb=networkBoost(); softMul *= nb; amount = amount * nb; }
   // 阈值锁（针对广覆盖）
   const viaDirectOrSpread = (mode==='direct' || mode==='spread');
   const preLock = Math.round(amount);
@@ -2290,6 +2316,18 @@ function affectNonAdopters(amount, story, actionType){
    - 传染强度 = 基础 × 桥梁系数 × 对方偏好 × 私交系数
    - 只在 converter 已转化（status=4）时触发；每跳衰减（一度 100%，二度 45%）
    - 对 stubborn 角色（工会主席/运营主管/工程师）传染力减半——他们不信"别人说的" */
+/* v36：私交不是开关，是深度。信任 40 刚过线，100 是过命的交情 */
+function informalMul(a,b,base0,span){
+  if(!isInformalPair(a,b)) return 1;
+  const tr=Math.max(0, trustOf(a,b)-40)/60;   // 0..1
+  return base0 + span*tr;
+}
+/* v36：全网的非正式关系越多，扩散越省力（复利，封顶 +25%） */
+function networkBoost(){
+  const n=(state.informal||new Set()).size;
+  return 1 + Math.min(0.20, n*0.025);
+}
+
 function contagionStrength(converterId, neighborId, hop){
   const c=state.people[converterId], q=state.people[neighborId];
   if(!c||!q) return 0;
@@ -2297,7 +2335,7 @@ function contagionStrength(converterId, neighborId, hop){
   if(q.status>=4) return 0;
   let base = 7;
   if(isBridge(converterId)) base *= 1.55;            // 桥梁人物：一个人带动一片
-  if(isInformalPair(converterId,neighborId)) base *= 1.30;  // 有私交，话更可信
+  base *= informalMul(converterId,neighborId,1.25,0.30);   // 有私交：×1.25 → ×1.55
   if(['union','ops','engineer'].includes(neighborId)) base *= 0.55; // 硬骨头：只认自己的判断
   if(hop===2) base *= 0.45;
   return Math.max(1, Math.round(base));
@@ -2308,6 +2346,7 @@ function contagionStrength(converterId, neighborId, hop){
    v27：从"只是软化"升级为"真的传过去"——转化会实际推动邻居的分数 */
 function handleConversions(newlyConverted, details, originActionType){
   const alreadySpread = new Set();
+  const secondWave = [];   // v36：提到顶部，原来声明在下面，一度扩散里 push 会撞 TDZ
   // 一度
   newlyConverted.forEach(id=>{
     if(alreadySpread.has(id)) return;
@@ -2345,7 +2384,6 @@ function handleConversions(newlyConverted, details, originActionType){
     }
   });
   // 二度：对在 newlyConverted 中且其邻居也刚被软化为新转化的，做 30% 二跳扩散
-  const secondWave = [];
   newlyConverted.forEach(id=>{
     const p = state.people[id];
     if(state.softened[id]>0){
@@ -2638,12 +2676,12 @@ function renderDetail(id, boxId){
   // v26：合作累积出来的非正式关系
   const informalPartners=Object.keys(state.people)
     .filter(x=>x!==id && isInformalPair(id,x))
-    .map(x=>({name:state.people[x].name, v:trustOf(id,x)}))
+    .map(x=>({id:x, name:state.people[x].name, v:trustOf(id,x)}))
     .sort((a,b)=>b.v-a.v);
   const informalSection = informalPartners.length ? `<div class="small" style="margin-top:10px;padding:8px;background:rgba(224,160,58,.1);border-radius:8px;border-left:3px solid #e0a03a">
       <strong style="color:#e0a03a">🤝 非正式关系（合作建立）：</strong>
-      ${informalPartners.map(o=>`${o.name}（信任 ${o.v}）`).join('、')}
-      <div style="margin-top:4px;color:var(--muted)">他们互相说服时扩散加成 ×1.85，比普通关系更灵。</div>
+      ${informalPartners.map(o=>`${o.name}（信任 ${o.v} · 扩散 ×${informalMul(id,o.id,1.60,0.50).toFixed(2)}）`).join('、')}
+      <div style="margin-top:4px;color:var(--muted)">信任越深、扩散越猛；再一起做事，这条线还会变粗。</div>
     </div>` : '';
   const factionColor = p.faction==='总部'?'#0d8b96':p.faction==='当地'?'#2d8659':p.faction==='外部'?'#d97706':'#666';
   const factionBg = p.faction==='总部'?'rgba(13,139,150,.1)':p.faction==='当地'?'rgba(45,134,89,.1)':p.faction==='外部'?'rgba(217,119,6,.1)':'#f5f5f5';
@@ -2685,7 +2723,7 @@ function renderDetail(id, boxId){
 /* =========================================================
    网络图：增量重绘（v13）
    ========================================================= */
-function drawNetwork(svgId){
+function drawNetwork(svgId, forceView){
   const svg = el(svgId);
   if(!svg) return;
   svg.innerHTML='';
@@ -2700,59 +2738,66 @@ function drawNetwork(svgId){
   const g = document.createElementNS('http://www.w3.org/2000/svg','g');
   g.id = 'networkGroup-' + svgId;
 
-  // 边
+  // 边 —— v36：三视图（全部 / 正式 / 非正式）
+  const view = forceView || 'all';
+  const NS='http://www.w3.org/2000/svg';
   const drawn = new Set();
-  Object.entries(state.people).forEach(([id,p])=>{
-    // 绘制明显连接
-    p.ties.forEach(t=>{
-      const q=state.people[t];
-      if(!q) return;
-      const key=[id,t].sort().join('-');
-      if(drawn.has(key)) return;
-      drawn.add(key);
-      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-      const hot=state.selectedTargets.includes(id)||state.selectedTargets.includes(t)||state.focusedNode===id||state.focusedNode===t;
-      const spread = (p.status===4 && state.softened[t]) || (q.status===4 && state.softened[id]);
-      line.setAttribute('x1',p.x);
-      line.setAttribute('y1',p.y);
-      line.setAttribute('x2',q.x);
-      line.setAttribute('y2',q.y);
-      line.setAttribute('data-edge',key);
-      line.setAttribute('class','edge'+(hot?' hot':'')+(spread?' spread':'')+(isInformalPair(id,t)?' informal':''));
-      g.appendChild(line);
-    });
-    // 绘制隐藏连接（只有访谈后才显示）
-    if(p.hidden_ties && state.revealed[id]) {
-      p.hidden_ties.forEach(t=>{
-        const q=state.people[t];
-        if(!q) return;
-        const key=[id,t].sort().join('-');
-        if(drawn.has(key)) return;
-        drawn.add(key);
-        const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-        const hot=state.selectedTargets.includes(id)||state.selectedTargets.includes(t)||state.focusedNode===id||state.focusedNode===t;
-        const spread = (p.status===4 && state.softened[t]) || (q.status===4 && state.softened[id]);
-        line.setAttribute('x1',p.x);
-        line.setAttribute('y1',p.y);
-        line.setAttribute('x2',q.x);
-        line.setAttribute('y2',q.y);
-        line.setAttribute('data-edge',key);
-        line.setAttribute('class','edge hidden-edge'+(hot?' hot':'')+(spread?' spread':'')+(isInformalPair(id,t)?' informal':''));
-        line.setAttribute('stroke-dasharray','5,5');
-        line.setAttribute('opacity','0.5');
-        g.appendChild(line);
-      });
+  const informalNodes = new Set();
+  function edgeLine(a,b,kind,trust){
+    const p=state.people[a], q=state.people[b];
+    if(!p||!q) return;
+    const key=[a,b].sort().join('-');
+    if(drawn.has(key)) return;
+    drawn.add(key);
+    if(kind!=='formal'){ informalNodes.add(a); informalNodes.add(b); }
+    const line=document.createElementNS(NS,'line');
+    const hot=state.selectedTargets.includes(a)||state.selectedTargets.includes(b)||state.focusedNode===a||state.focusedNode===b;
+    const spread=(p.status===4&&state.softened[b])||(q.status===4&&state.softened[a]);
+    line.setAttribute('x1',p.x); line.setAttribute('y1',p.y);
+    line.setAttribute('x2',q.x); line.setAttribute('y2',q.y);
+    line.setAttribute('data-edge',key);
+    if(kind==='informal'){
+      const d=Math.min(1, Math.max(0,(trust-40)/60));      // 40→0, 100→1
+      line.setAttribute('class','edge informal'+(hot?' hot':'')+(spread?' spread':''));
+      line.style.strokeWidth=(2.0+2.2*d).toFixed(2)+'px';   // 用 style，presentation attribute 会被 CSS 压掉
+      line.style.opacity=(0.70+0.28*d).toFixed(2);
+    } else if(kind==='hidden'){
+      line.setAttribute('class','edge hidden-edge'+(hot?' hot':'')+(spread?' spread':''));
+      line.setAttribute('stroke-dasharray','5,5');
+      line.style.opacity='0.55';
+    } else {
+      line.setAttribute('class','edge'+(hot?' hot':'')+(spread?' spread':''));
     }
-  });
+    g.appendChild(line);
+  }
+
+  // 私交先画：同一对人既在组织图上、又已成私交时，显示私交（更粗）
+  if(view!=='formal'){
+    [...(state.informal||[])].forEach(k=>{
+      const parts=k.split('|');
+      edgeLine(parts[0],parts[1],'informal',trustOf(parts[0],parts[1]));
+    });
+    Object.entries(state.people).forEach(([id,p])=>{
+      if(!(p.hidden_ties && state.revealed[id])) return;
+      p.hidden_ties.forEach(t=>edgeLine(id,t,'hidden'));
+    });
+  }
+  // 组织图上的正式关系
+  if(view!=='informal'){
+    Object.entries(state.people).forEach(([id,p])=>{
+      (p.ties||[]).forEach(t=>edgeLine(id,t,'formal'));
+    });
+  }
 
   // 节点
   Object.entries(state.people).forEach(([id,p])=>{
     const nodeG=document.createElementNS('http://www.w3.org/2000/svg','g');
     const isFocused=state.focusedNode===id||state.selectedTargets.includes(id);
     const isFaded=state.selectedAction!==null && state.selectedTargets.length===0 && !isFocused;
+    const isDim = view==='informal' && id!=='pm' && !informalNodes.has(id);
     const isInfluenced=!!state.softened[id];
     const factionClass = p.faction==='总部'?'faction-hq':p.faction==='当地'?'faction-local':p.faction==='外部'?'faction-external':'';
-    nodeG.setAttribute('class',`node s${p.status} ${factionClass} ${isFocused?'selected':''} ${isFaded?'faded':''} ${isInfluenced?'influenced':''}`);
+    nodeG.setAttribute('class',`node s${p.status} ${factionClass} ${isFocused?'selected':''} ${isFaded?'faded':''} ${isInfluenced?'influenced':''} ${isDim?'dim':''}`);
     nodeG.setAttribute('data-id',id);
     nodeG.setAttribute('tabindex','0');
     nodeG.setAttribute('role','button');
@@ -2976,7 +3021,8 @@ function updateNodePosition(svgId, personId){
 
 function renderLegend(){
   const box=el('legendBox'); if(!box) return;
-  box.innerHTML = STATUS_LABELS.map((label,i)=>`
+  const view=state.netView||'all';
+  const statusItems = STATUS_LABELS.map((label,i)=>`
     <div class="legend-item">
       <svg class="legend-svg" viewBox="-12 -12 24 24" aria-hidden="true">
         <g class="node s${i}">
@@ -2986,11 +3032,35 @@ function renderLegend(){
       </svg>
       <span>${label}</span>
     </div>
-  `).join('') + `
-    <div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="var(--success)" stroke-width="2.4" stroke-dasharray="4 3"/></svg><span>已转化者向邻居扩散</span></div>
-    <div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#e0a03a" stroke-width="2.2" stroke-dasharray="2 4"/></svg><span>非正式关系（合作中建立）</span></div>
-    <div class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(61,138,58,.4)"></span>扩散影响圈（本轮推动效果放大）</div>
-  `;
+  `).join('');
+
+  let edgeItems='';
+  if(view!=='informal'){
+    edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#7f93a3" stroke-width="1.6"/></svg><span>正式汇报 / 协作关系</span></div>`;
+  }
+  if(view!=='formal'){
+    edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#e0a03a" stroke-width="1.4" stroke-dasharray="2 4"/></svg><span>私交（刚建立）</span></div>`;
+    edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#e0a03a" stroke-width="3.4" stroke-dasharray="2 4"/></svg><span>私交（越粗越深，扩散越省力）</span></div>`;
+    edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="var(--success)" stroke-width="2.4" stroke-dasharray="4 3"/></svg><span>已转化者向邻居扩散</span></div>`;
+    edgeItems += `<div class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(61,138,58,.4)"></span>扩散影响圈（本轮推动效果放大）</div>`;
+  }
+  box.innerHTML = statusItems + edgeItems;
+}
+
+/* v36：网络视图切换 */
+function renderNetView(){
+  const bar=el('netViewBar'); if(!bar) return;
+  const view=state.netView||'all';
+  bar.querySelectorAll('.nv-btn').forEach(b=>{
+    const on=b.dataset.view===view;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-selected', on?'true':'false');
+  });
+  const note=el('netViewNote');
+  if(note){
+    const n=(state.informal||new Set()).size;
+    note.textContent = n ? `私交 ${n} 对 · 扩散 ×${networkBoost().toFixed(2)}` : '还没有私交';
+  }
 }
 
 /* =========================================================
@@ -3606,7 +3676,7 @@ function debrief(){
   // 5. 私交有没有建立
   if((state.informal||new Set()).size===0){
     out.push({tag:'无私交积累', k:'tip',
-      t:`整局没有建立任何非正式关系。同一回合里一起被卷进同一件事的人，信任会累积；过线之后他们互相说服的加成从 ×1.4 提到 ×1.85。把两个人放进同一个动作里，比分别推动他们更划算。`});
+      t:`整局没有建立任何非正式关系。同一回合里一起被卷进同一件事的人，信任会累积；过线之后他们互相说服的加成从 ×1.6 起，合作越多涨得越高。把同几个人反复放进同一个动作里，比每次换人更划算。`});
   } else {
     out.push({tag:'私交资产', k:'good',
       t:`你建立了 ${state.informal.size} 对非正式关系。这些关系是复利资产：它们不会随回合衰减，后面的每一次扩散都会经过它们放大。`});
@@ -3773,7 +3843,7 @@ function showModal(){
   if(x.relations && x.relations.length){
     const box=document.createElement('div'); box.className='log-item';
     box.innerHTML='<strong>🤝 新建立的非正式关系</strong>'+
-      '<div class="small muted" style="margin-top:6px">这些人一起被卷进了同一件事，信任累积过了线——工作关系之外多了一层私交。之后他们互相说服会更容易，扩散加成从 ×1.4 提到 ×1.85。</div>'+
+      '<div class="small muted" style="margin-top:6px">这些人一起被卷进了同一件事，信任累积过了线——工作关系之外多了一层私交。之后他们互相说服会更容易；再一起做事，这层私交还会变深。</div>'+
       '<ul class="rel-list">'+x.relations.map(o=>`<li>${state.people[o.a].name} ↔ ${state.people[o.b].name}（信任 ${o.v}）</li>`).join('')+'</ul>';
     body.appendChild(box);
   }
@@ -4093,7 +4163,7 @@ function diagnose(){
     const spread=(last.people||[]).filter(r=>r.reasons.includes('网络扩散') && r.delta>0).length;
     if(rel>0){
       out.push({k:'good', tag:'机制用对了', w:30,
-        t:`这一步让 ${rel} 对搭档的信任过了线，变成非正式关系。之后他们互相说服的扩散加成从 ×1.4 提到 ×1.85——这是复利，越早建立越值钱。`});
+        t:`这一步让 ${rel} 对搭档的信任过了线，变成非正式关系。之后他们互相说服的扩散加成从 ×1.6 起——这是复利，越早建立、越常合作，越值钱。`});
     } else if(spread>=2){
       out.push({k:'good', tag:'机制用对了', w:28,
         t:`这一步有 ${spread} 个人是被网络扩散推起来的，不是你直接说服的。这就是杠杆：你花一份资源，网络替你干了 ${spread} 份活。`});
@@ -4756,7 +4826,7 @@ function renderMobileListPanel(){
    全局渲染
    ========================================================= */
 function render(){
-  renderTop(); renderActions(); updateRunButton(); drawNetwork('networkSvg'); drawNetwork('networkSvg2'); renderLegend();
+  renderTop(); renderActions(); updateRunButton(); drawNetwork('networkSvg', state.netView||'all'); drawNetwork('networkSvg2','all'); renderLegend(); renderNetView();
   if(!state.focusedNode && Object.keys(state.people).length>0) state.focusedNode='pm';
   renderDetail(state.focusedNode,'detailBox'); renderDetail(state.focusedNode,'detailBox2');
   renderPeopleQuickList();
@@ -4819,6 +4889,15 @@ function updateRoleUI(){
    事件绑定
    ========================================================= */
 document.querySelectorAll('#tabsBar [data-screen]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.screen)));
+/* v36：网络三视图切换 */
+document.querySelectorAll('#netViewBar .nv-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    state.netView = btn.dataset.view || 'all';
+    drawNetwork('networkSvg', state.netView);
+    renderLegend();
+    renderNetView();
+  });
+});
 
 /* v17：三段式流程 — 姓名 → 介绍 → 模拟 */
 (function bindIntakeFlow(){
