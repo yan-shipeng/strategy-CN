@@ -176,6 +176,9 @@
     .side-effects ul{margin:0;padding-left:18px;font-size:13px}
     .side-effects li{margin:2px 0}
     .side-effects .se-pos{color:var(--success)}
+    /* v75：成果单独一行，紧跟在故事下面；副作用框只留代价 */
+    .gain-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:12.5px;font-weight:600;color:var(--success)}
+    .gain-line .gl-dot{color:var(--muted);font-weight:400;opacity:.6}
     .side-effects .se-neg{color:var(--danger)}
     /* v15：结局仪表板 */
     .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;max-width:720px}
@@ -4454,7 +4457,10 @@ function showModal(){
 
   const lead=document.createElement('div'); lead.className='log-item';
   const labelSuffix = x.actionLabel ? `：<span class="small" style="color:var(--primary);font-weight:600">${x.actionLabel}</span>` : '';
-  lead.innerHTML=`<strong>结果反馈${labelSuffix}</strong><div class="small muted" style="margin-top:6px">${x.story}</div>`;
+  const gainLine = (x.gains && x.gains.length)
+    ? `<div class="gain-line">${x.gains.map(g=>`<span>✅ ${g}</span>`).join('<span class="gl-dot">·</span>')}</div>`
+    : '';
+  lead.innerHTML=`<strong>结果反馈${labelSuffix}</strong>${gainLine}<div class="small muted" style="margin-top:6px">${x.story}</div>`;
   body.appendChild(lead);
 
   /* v29：预判 vs 实际
@@ -4538,7 +4544,6 @@ function showModal(){
     if(tips.length){
       const box=document.createElement('div'); box.className='log-item coach-box';
       box.innerHTML='<strong>💡 提示</strong>'+
-        '<div class="small muted" style="margin:4px 0 8px">不替你选动作，只说明为什么卡住。</div>'+
         '<ul class="coach-list">'+tips.map(t=>
           `<li class="coach-${t.k}"><span class="coach-tag">${t.tag}</span><span>${t.t}</span></li>`
         ).join('')+'</ul>';
@@ -4602,13 +4607,22 @@ function showModal(){
       if(p2) p2.addEventListener('click', pushBeyondPass);
     }, 0);
   }
-  setTimeout(()=>{ if(nextBtn) nextBtn.focus({preventScroll:true}); const card = modal.querySelector('.modal-card'); if(card) card.scrollTop = 0; }, 30);
+  /* v75：手机上结果页默认停在最下面——#impactBody 是独立滚动容器，
+     上一轮滑到底的 scrollTop 会留下来，新一轮内容一进来就还在底部。
+     这里把所有可能的滚动容器都归零，并且在 focus 之后、布局完成之后再各归一次。 */
+  const resetModalScroll = ()=>{
+    const card = modal.querySelector('.modal-card');
+    if(card) card.scrollTop = 0;
+    const ib = el('impactBody');
+    if(ib) ib.scrollTop = 0;
+  };
+  setTimeout(()=>{ if(nextBtn) nextBtn.focus({preventScroll:true}); resetModalScroll(); }, 30);
+  setTimeout(resetModalScroll, 180);
 
   modal.classList.add('show'); modal.setAttribute('aria-hidden','false');
   modal.setAttribute('role','dialog');
   modal.setAttribute('aria-modal','true');
-  const card = modal.querySelector('.modal-card');
-  if(card) card.scrollTop = 0;
+  resetModalScroll();
   try{ updateFlowBar(); }catch(_){}
 }
 function closeModal(){
@@ -5532,11 +5546,16 @@ function runTurn(){
   const sideEffects = [];
   const dCred = after.cred - before.cred;
   const dPress = after.pressure - before.pressure;
-  if(dCred > 0) sideEffects.push({ kind:'pos', text:`可信度 +${dCred}（现 ${after.cred}）` });
+  /* v75：成果和代价分家。
+     原来「可信度 +1」「新增完全配合 +2 人」也塞在「副作用与代价」里——学生第一眼看到的是
+     一条好消息挂在"代价"标题下面，语义就拧了。现在正向变化单独成一行，挂在结果反馈下面；
+     这个框只讲这一轮付出了什么。 */
+  const gains = [];
+  if(dCred > 0) gains.push(`可信度 +${dCred}`);
   else if(dCred < 0) sideEffects.push({ kind:'neg', text:`可信度 ${dCred}（现 ${after.cred}）` });
   if(dPress > 0) sideEffects.push({ kind:'neg', text:`压力 +${dPress}（现 ${after.pressure}）` });
-  else if(dPress < 0) sideEffects.push({ kind:'pos', text:`压力 ${dPress}（现 ${after.pressure}）` });
-  if(deltaConverted > 0) sideEffects.push({ kind:'pos', text:`新增完全配合 +${deltaConverted} 人（累计 ${Object.entries(after.people).filter(([id,x])=>id!=='pm' && x.status===4).length}）` });
+  else if(dPress < 0) gains.push(`压力 -${Math.abs(dPress)}`);
+  if(deltaConverted > 0) gains.push(`新增完全配合 +${deltaConverted} 人（累计 ${Object.entries(after.people).filter(([id,x])=>id!=='pm' && x.status===4).length}）`);
   sideEffects.push({ kind:'neutral', text:`消耗 ${a.weeks} 资源，剩余 ${state.resources} / ${TOTAL_RESOURCES} 资源` });
   if(_postMul < 1) sideEffects.push({ kind:'neg', text:`过线疲劳：本回合每个动作效果 ${postPassMulText(_postMul)}（第 ${state.passFatigue} 个深推回合，最低 ${postPassMulText(SCORE_RULES.postFloor)}）` });
   sideEffects.push({ kind:'neutral', text:`本动作覆盖 ${touched} 人，冷却 ${a.cooldown} 回合` });
@@ -5546,7 +5565,7 @@ function runTurn(){
   const peopleImpact = buildPeopleImpact(before, after);
   const newRelations = (state.newInformal||[]).slice();
 
-  state.lastImpact = { story: impact.story, details: [...impact.details, ...consequences], sideEffects,
+  state.lastImpact = { story: impact.story, details: [...impact.details, ...consequences], sideEffects, gains,
     actionLabel: a.label, people: peopleImpact, relations: newRelations,
     prediction: predictionText, // v29：把学生自己写的预判带进结果页，逼他对照
     convertedBefore: Object.values(before.people).filter(x=>x.status===4).length,
