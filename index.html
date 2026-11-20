@@ -108,8 +108,8 @@
     /* 状态颜色：填充表示状态。形状由 glyph 文本（○ ◔ ◑ ◕ ●）+ 边框样式共同编码 */
     .node.s0 circle.bg{fill:rgba(255,255,255,.08);stroke:var(--s0);stroke-width:2.5;stroke-dasharray:3 3}
     .node.s0 text.glyph{fill:var(--s0)}
-    .node.s1 circle.bg{fill:rgba(255,255,255,.08);stroke:var(--s0);stroke-width:2.5;stroke-dasharray:3 3}
-    .node.s1 text.glyph{fill:var(--s0)}
+    .node.s1 circle.bg,.node.s2 circle.bg{fill:rgba(255,255,255,.08);stroke:var(--s0);stroke-width:2.5;stroke-dasharray:3 3}
+    .node.s1 text.glyph,.node.s2 text.glyph{fill:var(--s0)}
     .node.s2 circle.bg{fill:var(--s2-light);stroke:var(--s2);stroke-width:3}
     .node.s2 text.glyph{fill:var(--s2)}
     .node.s3 circle.bg{fill:var(--s3-light);stroke:var(--s3);stroke-width:3.5}
@@ -137,7 +137,7 @@
     .detail{margin-top:14px;padding:18px;border-radius:16px;background:rgba(13,139,150,.06);border:1px solid rgba(13,139,150,.2);min-height:160px;transition:all var(--transition)}
     .status{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;gap:6px}
     .status.s0{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
-    .status.s1{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
+    .status.s1,.status.s2{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
     .status.s2{background:var(--s2-light);color:var(--s2)}
     .status.s3{background:var(--s3-light);color:var(--s3)}
     .status.s4{background:var(--s4);color:#fff}
@@ -428,6 +428,10 @@
   .decay-tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.2px}
   .decay-tag.cold{color:#ff8a9a;background:rgba(224,80,104,.12);border:1px solid rgba(224,80,104,.35)}
   .cold-mark{font-size:11px;line-height:1;color:#9fd4f0;margin-left:3px;cursor:help;vertical-align:1px}
+  /* v48：档位匹配标记 */
+  .fit{font-size:10px;font-weight:700;padding:1px 5px;border-radius:999px;white-space:nowrap;letter-spacing:-.2px;cursor:help}
+  .fit.good{color:#5ab84a;background:rgba(90,184,74,.12);border:1px solid rgba(90,184,74,.3)}
+  .fit.bad{color:#e05068;background:rgba(224,80,104,.1);border:1px solid rgba(224,80,104,.3)}
   .decay-tag.warm{color:#5ab84a;background:rgba(90,184,74,.1);border:1px solid rgba(90,184,74,.3)}
   .locked-score{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;
     color:var(--muted);background:rgba(255,255,255,.05);border:1px dashed var(--border);cursor:help;
@@ -650,7 +654,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v47</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v48</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -668,7 +672,7 @@
     <div class="kpi"><div class="small">完全配合率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
     <div class="kpi"><div class="small">激进压力</div><div class="num" id="pressureKpi">0</div></div>
-    <div class="kpi" id="tipKpiCard"><div class="small">临界点 <span title="初步参与及以上的人占到 1/3，观望的心理成本就会变高">ⓘ</span></div><div class="num" id="tipKpi">0/4</div><div class="small" id="tipKpiSub" style="margin-top:2px">初步参与以上</div></div>
+    <div class="kpi" id="tipKpiCard"><div class="small">临界点 <span title="有限认同及以上的人占到 1/3，观望的心理成本就会变高">ⓘ</span></div><div class="num" id="tipKpi">0/4</div><div class="small" id="tipKpiSub" style="margin-top:2px">有限认同以上</div></div>
   </div>
 
   <div class="tabs" id="tabsBar" style="display:none">
@@ -1030,7 +1034,7 @@
             <strong>剩余资源越多，排名越高。</strong>
           </div>
           <p class="intro-lead" style="margin-bottom:0;font-size:14px">
-            每个人物有 4 个状态：未动 → 初步理解 → 初步参与 → <strong style="color:#6ba84a">完全配合</strong>。<strong>45 分是分水岭</strong>：以下每回合会自己冷掉，以上不再掉分。
+            每个人物有 3 个状态：初步理解 → 有限认同 → <strong style="color:#6ba84a">完全配合</strong>。<strong>65 分是分水岭</strong>：以下每回合会自己冷掉，以上不再掉分。
             你需要把他们一步步推进。
           </p>
         </div>
@@ -1309,7 +1313,7 @@
           <div class="mech-card">
             <div class="mech-icon">📊</div>
             <div class="mech-title">说服度是分档的</div>
-            <div class="mech-text">每个人有 0-100 的「说服度」，分四档：未动 → 初步理解 → 初步参与 → 完全配合。<b>45 分是分水岭：以下每回合会自己冷掉，以上不再掉分。</b>加 10 分给一个 78 分的人，他不会动；加 10 分给一个 58 分的人，他升档了。同一个动作，价值取决于你选的是谁。</div>
+            <div class="mech-text">每个人有 0-100 的「说服度」，分三档：初步理解 → 有限认同 → 完全配合。<b>65 分是分水岭：以下每回合会自己冷掉，以上不再掉分。</b>加 10 分给一个 78 分的人，他不会动；加 10 分给一个 58 分的人，他升档了。同一个动作，价值取决于你选的是谁。</div>
           </div>
           <div class="mech-card">
             <div class="mech-icon">🕸</div>
@@ -1324,7 +1328,7 @@
           <div class="mech-card">
             <div class="mech-icon">🔥</div>
             <div class="mech-title">临界点之后会自加速</div>
-            <div class="mech-text">「初步参与」以上的人一旦超过全员的 1/3，观望的心理成本突然变高——继续不动意味着站在少数人那边。<b>临界点之前你推石头，之后石头自己滚。</b></div>
+            <div class="mech-text">「有限认同」以上的人一旦超过全员的 1/3，观望的心理成本突然变高——继续不动意味着站在少数人那边。<b>临界点之前你推石头，之后石头自己滚。</b></div>
           </div>
           <div class="mech-card">
             <div class="mech-icon">🏛</div>
@@ -1550,7 +1554,7 @@ const PEOPLE={
     prefs:{'制度':0.20,'政治':0.15,'叙事':-0.10}}
 };
 
-/* 状态字形（双编码核心，v47 四档）：未动○ → 初步理解◑ → 初步参与◕ → 完全配合● */
+/* 状态字形（双编码核心，v47 四档）：初步理解◯ → 有限认同◕ → 完全配合● */
 const AVATARS={
   ceo:'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCAB4AHgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD6pooopAFFFFMAooqtqOpWWkWU19qF1BaWkC75Z53CIg9STwKQFmivn7xb+2V4O0W7e10LTb7XthwZ1YW8LH/ZLAsfrtFZOnftr6Y8qjU/Bl/bxH/lpa3iTHHfgqv86YH0vRXNeA/iJ4d+JGjf2t4dvhcwq3lyxuuyWF/7rqeQf0PYmulpAFFFFMAooooAKKKKACiiigAooooACa+Hfj58RtW+LfxDfwzoCXt7pWnym2trO2yRdTKSHmIHUZyAT0UZ4ya+3LybyLSaUDOyNmx9ATXyD+yrpkc8fiLXXhzcSSx2yPjOFIZ2AP125+grKtU9nByNqFL2s1A4G4+APxFjsllTRIXLDmBLyNnUehBbH5GrNl+zb8QTAsuzS7dnAJiluwWX64BGfxr6y9jSgHsCfoK8/wCu1PI9b+zqXdnx95fxD+AXiAQ22qvpcl6iSiS1bzLe625wpDDDbSxGCOM+4z9m/Bf4kr8UvAlprzxJDeq7W15En3UmTGcexBVgO2cdq8N/amsjN4E0+5WFma31FcuF/wBWrRuDn0BIX8cVvfsTMx8E6+CxK/2mDj38pcn+Vd9Co6kOZnl4qiqVRxWx9HUUUVsc4UUUUAFFFFACUUUUALRSUUAVtTulstOurpoWmWGF5DGvVwFJ2j3OMV8u+AvCsd98PI9IR9Zs0fVLqVotNmEBk+cBBJKRlUClTnjIHfgV9VsAQQRkd68O8CRf2bP4j0JiS+maq8XPXYUXYfxVRXLi21FNHbgUpTafYzvAtrdaXaf6SfEULS3ccP2TU9VS88oZblWAyM45U/wkEVT8eeEFv722xbazrHneVC1q2vmzhjT7pcIB82MAt3+YYzzjrJdQtIrrEtjLFZWsgeK5hiJjMoDq2Qg4AzjJHJPtViPVPtF4kUunTR2rqpjnni2/vSWwpVuRwAQfU4ODivP52pc1j1fZpx5GzltU8OQWXwz8QaAYNUe3j0+d0W/mFwUOxmCRv1YKVBGemR9BL+ynZXHhjQ5dDlijkS/hGsLcqMHcxERTGTlRtGDgZIbjGDXWa1fLpmj3186qy29vJKVY4BwpOCatfBbQVsdLvdSE/wBojuHW2t5QoVXiiyC6DsrSNKR6gA5PWunCSk2zjzCEYxXc9JopKK9E8kKKKKAFopKKACiiigAooooAK898a239j+KbfWHCpZalAljNJjASdGJiLH/aDumT3CDuK9CrnfHviXwz4Z8N3l14quLRNPaJlaCfDG54/wBWqHlyfQCs6kFOLizSlUdOamuhxF9Fq8Cb7K6STYFURG2Usx6Eli6j3xxRbW2qyw7rq/EbOh/di2QMjHochmHHWsHwnD4lg0aOBr62lurVmtrm21AO7QyLyAsqncQVZCNwJ54OKvW954h1DVRYWf2O+uoWHm22no3lx+nnzyZEY77VUuewryfZy5uVbnve2goqb0RX8a+JtOsHs9Mu1kmt5rqFtRMQ3fZbRW8yR39tqcjqF3N0HPtdncW95aQ3FpLFNbyorxSRMGR0IyCpHBBHTFfMvxl121+H+m3Phy0uYbvxVrULf2lcwJsjsLWQ5aKNeoaTHLElmA3H+ACj8Bvj1Z+CrUeFvFUsiaSpL2N2kbP9lyfmjcDJ8vJyCAdvI6Yx62Hw7hTueJisQqtS59XUVT0nWNO16wi1DSr62vrSUZSe3kDo34irlaGAUUUUAFFFFABRRRQAVleJvFWieDdLfVNe1KDT7RSF8yU/eY9FUDlmPoATWrXyL+1b4ll1T4iWWhLIfs2kWiuY88edL8xb67PLH4n1qox5nYTdja8f/tWajfebZ+CbL7BDyP7QvUDTN7pF91Pq2T7CvCk1DUPGHiC1vda1C4vbq7nije5u5S/loXAbk9AFySRgDHHFZ8qiSZI25TaWK9jyMZr1j4BeEtE17V9d1bxLAs2i6Lp3nTKxIG8uGHTr8sT8d8471vKKgm0QndnouueJLnxRrj+I7BJLLSSTBPYWwMNzqNvGxGXkJBjkwGKhQDtO0tzlfQ/E3xD8L/Dv4YQ+INCSzksp4lXSre3G1LmVwSo4/FmJ5ADZ5rzTwppcmueL7Ea6072erahNcXNgzDyTuhkn2kYztDjBGcHac8V5N8XvGFn4v8aX0uj5j0S3mdbSJGPlu5wJJ1XopkKg8dQAepNebgeaq5Sbur/gdeJtFRj2Rx2ratd6pqd1qmq3TXF1eymaad/4pD1+g7AdgAKqRnzJzIAwUJtBIxk5z/hSzMArCVQyHAGOpPp9adCHWNRIcvjk166XQ4jb8LeMNf8ABV/9v8PapcafMxy4jOY5fZ0Pyt+Iz7ivor4d/tUaXqbRaf42gi0i5YhF1CHJtZD/ALQOWj/VfcV8uSN5a7uvYAdz6U1IsHe+Gf19PYVM6akNSsfo9b3EN1Ck9vLHNFIoZJI2DKwPQgjgipK+Z/2TPGk6X2peDLmYtbGI39ijHiMhgsqL6A7lbHru9a+mK5JR5XY0TuFFFFIYUUUUAB6V8E/FzVDrHxY8TXe7cPt00Sn/AGYysQ/9Ar72r4C+I3g/XPBfjS8stdi/fztLcR3C58u5V5C29D368jqDwa1o7ky2OY63X0j/AK17X8LYvs3w/NouQ+uas88/+3a2ioFU+xmcfgGFeKj/AI+/rH/7NXtXwrlE3haC4ZgIbdXt1Y/w/vXkkP8A31J/47WGaVfZ4dtbvQ2wkOeqrkPxV8R3GjWllBp9z5N5dGYOyn5lhaJo3I9CQ5XPua8eZliQscKqj8AK1/FevN4m1+61PJ8lj5duD/DCvC/nyx/3q58ymaQP5UjxLym0DDH+91/L86vL8O6FBRe71JxNT2lRtbEsaNI3myDB/gU/wj/GphUPnSH7tvJ+JUf1p0Tu5ZWTYRj+LPWu5HOJ/rLjHaMZ/wCBH/6386lqK25jMn99i364H6AV6F8JPhPqXxO1oLiS30a2cfbLwDGB18tD3c/+Ojk9gVdJXYHo37LHw8mn1KbxxepJHb26va2IzjzXYYkf3UD5R7k+lfTdVNK0uy0TTbbTdOt47a0tY1ihiQYCKBgCrdcc5czuapWCiiipGFFFFIArA8aeBtD8faO2l65aCaLlo5V+WWBv7yN2P6HuDW/RTTtqgPi74jfs+eKvA9417YwPrejKrf6TbJmWIZBHmRjkd+VyPpVW51VNB+EOl2lqxSfVEaI4PIDOzSt+XH/Aq+265Hxf8J/B3jgI2s6NE80alY54WMUiAnJwVI7+uaitFVnDn2TuXTnyc1uqsfBEn75zCvCL9/H/AKD/AJ7UqwbVCrI4UcADHH6V9Uah+yF4ccn+y/EWq2adds6Rz8/X5SazV/Y+Xf8AN4zbZ7aeM/8Aoyu5VY9TDlZ81+SO7yH/AIFUkFs8kiw28Uks0hwsaAs7n0A6k19WaR+yX4VtHD6prGr6jj+BCkCn8gT+ten+Fvh34U8FrjQdDs7KQjBmC7pW+rtlv1pOtFbBys+b/hX+zLrWux2t/wCL1l0bTgqt9k6XU3sf+eY+vzew619S6Lomm+HdMg0vSbOGysrddscMS4VR/U+pPJq9RXPKbluWlYKKKKgYUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB/9k=',
   cfo:'data:image/jpeg;base64,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',
@@ -1571,18 +1575,18 @@ const REPORTS_TO={ceo:null,pm:'ceo',cfo:'ceo',region:'pm',plant:'region',ops:'re
   hr:'ops',sales:'ops',engineer:'plant',union:'plant',gov:'engineer',customer:'sales',finance:'sales'};
 Object.keys(REPORTS_TO).forEach(id=>{ if(PEOPLE[id]) PEOPLE[id].reportsTo=REPORTS_TO[id]; });
 
-/* v47：显示上四档——「未动」把原来的「意识觉醒」并进来了。
-   内部仍保留 5 个数值槽（0/1 都显示「未动」），因为「越冷掉得越快」本身就是教学点：
-   前段会自己滑走，跨过 45 分才站得住。
-   每一档都必须有一个可观察的后果，STATUS_INFO 里那句就是给学生看的话。 */
-const GLYPHS=['◯','◯','◑','◕','●'];
-const STATUS_LABELS=['未动','未动','初步理解','初步参与','完全配合'];
-const STATUS_CUTOFFS=[0,0,45,65,85];
+/* v48：显示上三档——初步理解（0-64）/ 有限认同（65-84）/ 完全配合（85+）。
+   内部仍保留 5 个数值槽（0/1/2 都显示「初步理解」），因为档内是渐进的：
+   越接近认同，喊话越管用、掉得越慢。这条渐变本身是教学点，不必拆成三个档名。
+   掉分线随档位一起移到 65：进了「有限认同」才站得住。 */
+const GLYPHS=['◯','◯','◯','◕','●'];
+const STATUS_LABELS=['初步理解','初步理解','初步理解','有限认同','完全配合'];
+const STATUS_CUTOFFS=[0,0,0,65,85];
 const STATUS_INFO=[
-  {min:0,  decay:-2, what:'还没在听。对他喊话打四折，每回合自己冷掉 2 分。', how:'只有点名谈得动。'},
-  {min:25, decay:-1, what:'听说了，但没往心里去。喊话打七折，每回合冷掉 1 分。', how:'广播能推一点，但推不住，一停就退。'},
-  {min:45, decay:0,  what:'认同为什么要做，但还没动手。从这一档起不再掉分。', how:'喊话全额有效——全员通报、表彰现在最划算。'},
-  {min:65, decay:0,  what:'开始做了，但只是照做。喊话只给三成，必须点名谈。', how:'差最后一跳，靠广播永远差一口气。'},
+  {min:0,  decay:-2, what:'还没认同。对他喊话打四折，每回合自己冷掉 2 分。', how:'只有点名谈得动。'},
+  {min:25, decay:-1, what:'听说了，但没被说服。喊话打七折，每回合冷掉 1 分。', how:'广播能推一点，但推不住，一停就退。'},
+  {min:45, decay:-1, what:'有点动心，但还没点头。喊话全额有效，可每回合仍会冷掉 1 分。', how:'这是做通报、表彰最划算的时候，但别指望它自己往前走。'},
+  {min:65, decay:0,  what:'认同了，但只做被要求的部分。从这一档起不再掉分。', how:'给他工具和制度，别再说服。'},
   {min:85, decay:0,  what:'会替你去说服别人，能当内部讲师。', how:'该让他带人了。'}
 ];
 function statusInfo(s){ return STATUS_INFO[s] || STATUS_INFO[0]; }
@@ -1617,7 +1621,7 @@ function tRangeText(a){
 /* 动作定义（v13 新增 baseAmount 用于文档化，效果仍在 run 内计算） */
 /* v16：新增「缓压」动作 */
 /* v17：缓压动作
-   主要目的是主动降压力；当压力=0 时顺带带动未动者
+   主要目的是主动降压力；当压力=0 时顺带带动还没认同的人
    type='沟通' 经同义词可命中 '对话' 偏好（区域GM+25%、HR+20%、销售+15%） */
 const PRESSURE_RELIEF_ACTION = {
   id:'team-building',
@@ -1655,7 +1659,7 @@ const PRESSURE_RELIEF_ACTION = {
       const before=p.status;
       const r=applyGain(id, per, '沟通', 'direct');
       const prefHint=describePrefHit(id,'沟通');
-      const delta = p.status>before ? `（${STATUS_LABELS[before]}→${statusText(p.status)}）` : '';
+      const delta = (STATUS_LABELS[p.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${statusText(p.status)}）` : '';
       details.push(`${p.name}在放松的场合里放下了戒备${prefHint}，${gainText(id, r.amount)}${delta}。`);
     });
     if(n>=4) details.push('👥 一桌坐了 '+n+' 个人，话题只能停在表面——人多热闹，但每个人都只分到几分钟。');
@@ -1795,7 +1799,7 @@ const ACTIONS=[
        if(weak){ mul*=0.6; tags.push('讲师自己刚过线 ×0.6'); }
        const before=q.status;
        const r=applyGain(sid, Math.round(10*mul), '赋能', 'direct');
-       const up = q.status>before ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）` : '';
+       const up = (STATUS_LABELS[q.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）` : '';
        details.push(`${q.name} 听了 ${t.name} 的课，${gainText(sid, r.amount)}${up}${tags.length?'（'+tags.join('、')+'）':''}。`);
        const gained=seedTrust(tId,sid,14);
        if(gained>0) details.push(`🤝 ${t.name} ↔ ${q.name} 信任 +${gained}——一起备课、答疑，比任何动作都长得快。`);
@@ -1807,7 +1811,7 @@ const ACTIONS=[
      return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
    }},
   {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
-  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「初步参与」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
+  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「有限认同」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
     const p=state.people[ids[0]];
     if(!p) return {story:'没有可表彰的对象。', details:[], noEffect:true};
 
@@ -1815,7 +1819,7 @@ const ACTIONS=[
     if(p.status === 0){
       const factionCtx = p.faction==='当地' ? '在當地文化里，公开表彰毫无行动的人会被视为「走形式」，整个组织的信任感会集体下滑。' :
                          p.faction==='外部' ? '外部利益相关者对表彰的判断更严苛——没有成果支撑的认可会被解读为公关噱头。' :
-                         '总部背景的人物对表彰的期望更高，表彰完全未动者会被认为是「刷存在感」。';
+                         '总部背景的人物对表彰的期望更高，表彰完全还没认同的人会被认为是「刷存在感」。';
       const hitNames = [];
       Object.entries(state.people).forEach(([id, q])=>{
         if(id !== 'pm' && id !== ids[0] && q.status < 4 && q.status >= 1){
@@ -1830,7 +1834,7 @@ const ACTIONS=[
           `❌ 表彰严重失当：${p.name}目前仍处于「${statusText(p.status)}」状态，尚未形成任何示范效应。激进压力 +2。`,
           `📚 管理学原理：${factionCtx}`,
           hitNames.length ? `👥 全组织质疑：${hitNames.join('、')} 对你的判断力产生怀疑（分数 -8）。` : '',
-          `💡 建议：目标必须至少达到「初步参与」状态才能表彰，才有真正的榜样效应。`
+          `💡 建议：目标必须至少达到「有限认同」状态才能表彰，才有真正的榜样效应。`
         ].filter(Boolean),fail:true};
     }
 
@@ -1844,7 +1848,7 @@ const ACTIONS=[
         details:[
           `❌ 表彰时机失当：${p.name}当前处于「${statusText(p.status)}」状态，尚未有足够的成果支撑公开认可。${p.name}感到被孤立（分数 -12），激进压力 +1。`,
           `📚 管理学原理：过早的公开表彰会让被表彰者在同事中显得「被特殊对待」，反而引发同伴压力和孤立效应（Peer Isolation Effect）。`,
-          `💡 建议：等${p.name}进入「初步参与」状态后再表彰。`
+          `💡 建议：等${p.name}进入「有限认同」状态后再表彰。`
         ],fail:true};
     }
 
@@ -1857,7 +1861,7 @@ const ACTIONS=[
       if(!q || q.status>=4 || t===ids[0]) return;
       const before=q.status;
       const rr=applyGain(t, 6, '叙事', 'spread');
-      heard.push(`${q.name}${q.status>before?'（'+STATUS_LABELS[before]+'→'+STATUS_LABELS[q.status]+'）':''}`);
+      heard.push(`${q.name}${(STATUS_LABELS[q.status]!==STATUS_LABELS[before])?'（'+STATUS_LABELS[before]+'→'+STATUS_LABELS[q.status]+'）':''}`);
     });
     if(heard.length){
       r.details.push(`🗣 故事传开了：${heard.join('、')} 听说了${p.name}的事，各 +6。`);
@@ -1872,7 +1876,7 @@ const ACTIONS=[
     if(state.credibility < 8 && convCount < 3){
       state.credibility = Math.max(0, state.credibility - 2);
       state.pressure = Math.min(10, state.pressure + 2);
-      // 实干派与大量未动者反感
+      // 实干派与大量还没认同的人反感
       const backlash = ['plant','hr','ops','sales','finance','union'];
       const hit = [];
       backlash.forEach(id=>{
@@ -2037,6 +2041,8 @@ function initState(){
     actionUseCount:{},        // v17.7：动作累积使用次数 {actionId: count}
     interviewCount:{},        // v17.7：对每个对象的访谈次数 {personId: count}
     lastActionId:null,        // v17.7：上一轮的动作 id（用于检测连用同类）
+    activeActionId:null,      // v48：本回合正在执行的动作
+    fitHit:0, fitMiss:0,      // v48：档位匹配对/错的累计次数
     history:[],
     currentPrediction:'',     // 本轮输入的预判文本
     milestones:{},            // {round: ['首次转化',...]}
@@ -2084,7 +2090,7 @@ function updateStatus(p){
   if(p.status>=4) return;
   const stubborn = ['union','ops','engineer'];
   const isStubborn = stubborn.includes(p.id);
-  /* 临界点不改门槛——它只做两件事：一次性把已经"初步参与"的人往前推一把，
+  /* 临界点不改门槛——它只做两件事：一次性把已经"有限认同"的人往前推一把，
      以及永久提高广覆盖的渗透力。最后一跳仍然必须由学生自己打穿，
      否则"过线即通关"会把整局的意义抹掉。 */
   if(isStubborn){
@@ -2132,6 +2138,44 @@ function preferenceMultiplier(personId, actionType){
   }
   if(typeof modifier !== 'number') return 1.0;
   return 1.0 + modifier;  // 例如 -0.25 → 0.75
+}
+
+/* =========================================================
+   v48：档位匹配
+   每一档缺的东西不一样，动作补对了加成、补错了打折。
+   只作用于定向动作（direct）——广覆盖另有一套阻力逻辑。
+   键是内部 5 个数值槽：0/1/2 都属于「初步理解」，3 是「有限认同」，4 是「完全配合」。
+   ========================================================= */
+const STAGE_FIT={
+  interview:          {0:1.00, 1:1.00, 2:1.00, 3:0.80, 4:0.60},
+  'team-building':    {0:1.00, 1:1.00, 2:1.05, 3:1.05, 4:0.95},
+  training:           {0:0.65, 1:0.65, 2:0.75, 3:1.35, 4:0.70},
+  'internal-training':{0:0.55, 1:0.55, 2:0.65, 3:1.30, 4:1.00},
+  pilot:              {0:0.90, 1:0.90, 2:1.00, 3:1.30, 4:0.80},
+  honor:              {0:0.60, 1:0.60, 2:0.75, 3:1.25, 4:1.35},
+  reorg:              {0:0.95, 1:0.95, 2:1.00, 3:1.10, 4:1.00}
+};
+const STAGE_FIT_LABEL={
+  interview:          '对他这个阶段，约谈是最对路的工具',
+  'team-building':    '社交场合对他一直有用',
+  training:           '他现在最缺的是怎么上手，不是为什么',
+  'internal-training':'他刚认同，最需要有人带一遍',
+  pilot:              '他要的是低风险试一次',
+  honor:              '他已经在做，缺的是被看见',
+  reorg:              '换掉他头上的人，对他一直有效'
+};
+function stageFit(actionId, status){
+  const t=STAGE_FIT[actionId];
+  if(!t) return 1;
+  const v=t[status];
+  return (typeof v==='number') ? v : 1;
+}
+/* 给界面用的一句话：这一下对他是不是对路 */
+function stageFitTag(actionId, status){
+  const v=stageFit(actionId,status);
+  if(v>=1.2) return {k:'good', v, t:'对路 ×'+v.toFixed(2)};
+  if(v<=0.8) return {k:'bad',  v, t:'不匹配 ×'+v.toFixed(2)};
+  return {k:'', v, t:''};
 }
 
 function broadResistanceFactor(personId){
@@ -2231,6 +2275,15 @@ function applyGain(personId, rawAmount, actionType, mode){
   amount = amount * prefMul;
   // 广覆盖阻力
   if(mode==='broad') amount = amount * broadResistanceFactor(personId);
+  // v48：定向动作看档位匹配——同一把锤子，砸在不同阶段的人身上效果不同
+  let stageMul = 1;
+  if(mode==='direct' && state.activeActionId){
+    stageMul = stageFit(state.activeActionId, p.status);
+    amount = amount * stageMul;
+    // v48：累计"工具用对/用错"的次数，供复盘诊断
+    if(stageMul>=1.2) state.fitHit=(state.fitHit||0)+1;
+    else if(stageMul<=0.8) state.fitMiss=(state.fitMiss||0)+1;
+  }
   // 扩散软化加成（对直接/扩散均生效）
   let softMul = 1;
   if(mode!=='broad'){ softMul = softeningBonus(personId); amount = amount * softMul; }
@@ -2249,7 +2302,7 @@ function applyGain(personId, rawAmount, actionType, mode){
   // v26：把这一笔变化记下来，供结果页逐人展示
   try{
     state.turnEvents.push({id:personId, mode, actionType:actionType||'', base:baseAmount,
-      pref:prefMul, soft:softMul, amount:Math.round(p.score-scoreBefore),
+      pref:prefMul, soft:softMul, stage:stageMul, amount:Math.round(p.score-scoreBefore),
       from:Math.round(scoreBefore), to:Math.round(p.score),
       prev, now:p.status, locked: Math.round(amount) < preLock});
   }catch(_){}
@@ -2286,11 +2339,11 @@ function decayUntouched(){
     if(state.touchedThisTurn.has(id)) return;
     if(id==='pm') return; // 玩家自己不衰减
     // v26 平衡：只有「还没动起来」的人会自然回冷。
-    // 未动 -2（继续沉默），刚觉醒 -1（注意力会散），走到初步理解（status>=2）就不再自己退回去——
+    // v48：65 分以下都会自己冷——最冷的掉 2，其余掉 1；进了「有限认同」才站得住——
     // 这样前段最难、越往后越省力，符合变革扩散的 S 曲线；也让 60 个资源真的够用。
     if(p.status>=4) return;
-    if(p.status>=2) return;
-    const decay = p.status===1 ? 1 : 2;
+    if(p.status>=3) return;
+    const decay = p.status===0 ? 2 : 1;
     const prev=p.status;
     let newScore = p.score - decay;
     const scoreBeforeDecay = p.score;
@@ -2300,7 +2353,7 @@ function decayUntouched(){
         amount:Math.round(p.score-scoreBeforeDecay), from:Math.round(scoreBeforeDecay), to:Math.round(p.score),
         prev, now:p.status, locked:false});
     }catch(_){}
-    // v47：只有「显示档位」真的变了才提示——内部 0/1 两槽都叫未动，不必惊动学生
+    // v47：只有「显示档位」真的变了才提示——内部 0/1/2 三槽都叫「初步理解」，不必惊动学生
     if(prev!==p.status && STATUS_LABELS[prev]!==STATUS_LABELS[p.status]){
       state.lastDecayChanges = state.lastDecayChanges || [];
       state.lastDecayChanges.push(`${p.name}：${STATUS_LABELS[prev]} → ${STATUS_LABELS[p.status]}`);
@@ -2318,7 +2371,13 @@ function affectTargets(ids, amount, story, spill=false, actionType){
     const r = applyGain(id, amount, actionType, 'direct');
     const p = state.people[id];
     const prefHint = describePrefHit(id, actionType);
-    details.push(`${p.name}获得直接推动${prefHint}，当前状态为${statusText(p.status)}（${gainText(id, r.amount)}）。`);
+    const fitNote=(()=>{
+      const v=stageFit(state.activeActionId, r.prev);
+      if(v>=1.2) return '——这一下正好补在他缺的地方（×'+v.toFixed(2)+'）';
+      if(v<=0.8) return '——但他还没到这一步，效果只给了 '+Math.round(v*100)+'%（×'+v.toFixed(2)+'）';
+      return '';
+    })();
+    details.push(`${p.name}获得直接推动${prefHint}${fitNote}，当前状态为${statusText(p.status)}（${gainText(id, r.amount)}）。`);
     if(r.newlyConverted) newlyConverted.push(id);
     if(spill){
       p.ties.forEach(t=>{
@@ -2338,7 +2397,7 @@ function affectAll(amount, story, actionType){
     const r = applyGain(id, amount, actionType, 'broad');
     if(r.newlyConverted) newlyConverted.push(id);
   });
-  const det=['这是一个面向全组织的动作，覆盖面广但对未动者效果只有 40%，且难以打穿「参与→转化」的最后一跳。'];
+  const det=['这是一个面向全组织的动作，铺得宽但力度薄：对最冷的人只有四折，越接近认同越有效，可一旦过了 65 分反而只剩三成——喊话的作用是个倒 U 型，两头都不灵。'];
   handleConversions(newlyConverted, det, actionType);
   return {story, details:det};
 }
@@ -2608,7 +2667,7 @@ function renderTop(){
     const need=Math.ceil(ids.length/3);
     const tipEl=el('tipKpi'), tipSub=el('tipKpiSub'), tipCard=el('tipKpiCard');
     if(tipEl) tipEl.textContent = state.tippingPointReached ? '✓' : (Math.min(active,need)+'/'+need);
-    if(tipSub) tipSub.textContent = state.tippingPointReached ? '已越过' : '初步参与以上';
+    if(tipSub) tipSub.textContent = state.tippingPointReached ? '已越过' : '有限认同以上';
     if(tipCard){
       tipCard.style.borderColor = state.tippingPointReached ? 'rgba(30,160,120,.55)' : '';
       tipCard.style.background = state.tippingPointReached ? 'rgba(30,160,120,.12)' : '';
@@ -3073,7 +3132,7 @@ function renderLegend(){
   const box=el('legendBox'); if(!box) return;
   const view=state.netView||'all';
   // v47：四档，并把「会不会掉分」直接写在图例上——这是学生最容易漏掉的一条
-  const statusItems = [0,2,3,4].map(i=>{
+  const statusItems = [0,3,4].map(i=>{
     const inf=statusInfo(i);
     const mark = inf.decay<0
       ? '<span style="color:#e05068;font-weight:700">会掉分</span>'
@@ -3090,7 +3149,7 @@ function renderLegend(){
     </div>`;
   }).join('')
   + `<div class="legend-item" style="grid-column:1/-1;margin-top:2px;opacity:.85">
-      <span style="font-size:11px;line-height:1.45">跨过 <b>45 分</b>进入「初步理解」就不再自然掉分；45 分以下每回合会自己冷掉，越冷掉得越快。</span>
+      <span style="font-size:11px;line-height:1.45">跨过 <b>65 分</b>进入「有限认同」就不再自然掉分；65 分以下每回合会自己冷掉，越冷掉得越快。</span>
     </div>`;
 
   let edgeItems='';
@@ -3212,7 +3271,7 @@ function buildActionCard(a, idx){
       ${state.targetHint?`<div class="sit-line warn" style="margin:-4px 0 10px;font-size:11.5px">${state.targetHint}</div>`:''}
       ${(()=>{ // v47：把 ❄ 的含义就地解释，别让学生猜
         const cold=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status<2);
-        return cold.length ? `<div class="small" style="margin:-2px 0 10px;font-size:11.5px;color:#8fb9d4">❄ 标记的人还在 45 分以下：这一轮不管他，每回合会自己往回掉；推过 45 分才站得住。</div>` : '';
+        return cold.length ? `<div class="small" style="margin:-2px 0 10px;font-size:11.5px;color:#8fb9d4">❄ 标记的人还在 65 分以下：这一轮不管他，每回合会自己往回掉；推过 65 分才站得住。</div>` : '';
       })()}
       <div class="targets">${(()=>{ 
         // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
@@ -3248,8 +3307,8 @@ function buildActionCard(a, idx){
         const riskStyle = (recogRisk||roleDim) ? `style="opacity:${roleDim?0.45:0.55};${recogRisk?'border-color:var(--danger)':''}"` : '';
         // Progress bar: score vs next threshold
         const stubborn = ['union','ops','engineer'];
-        // v47：四档——未动(0-44) / 初步理解(45-64) / 初步参与(65-84) / 完全配合(85+)
-        const thresholds = stubborn.includes(id) ? [50,70,90,100] : [45,65,85,100];
+        // v48：三档——初步理解(0-64) / 有限认同(65-84) / 完全配合(85+)
+        const thresholds = stubborn.includes(id) ? [70,90,100] : [65,85,100];
         const nextThresh = thresholds.find(t => p.score < t) || 100;
         const prevThresh = thresholds[thresholds.indexOf(nextThresh)-1] || 0;
         const barPct = nextThresh > prevThresh ? Math.round((p.score - prevThresh) / (nextThresh - prevThresh) * 100) : 100;
@@ -3258,10 +3317,18 @@ function buildActionCard(a, idx){
         const blocks = Math.round(barPct/20); // 0-5 filled blocks out of 5
         const barBlocks = '█'.repeat(blocks) + '░'.repeat(5-blocks);
         return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${disabledAttr} ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
-          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="45 分以下：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
+          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="65 分以下：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
+            ${(()=>{ // v48：这一下对他是不是对路——档位匹配度直接标出来
+              if(state.selectedAction===null) return '';
+              const act=ACTIONS[state.selectedAction];
+              const tag=stageFitTag(act.id, p.status);
+              if(!tag.t) return '';
+              const why=STAGE_FIT_LABEL[act.id]||'';
+              return `<span class="fit ${tag.k}" title="${tag.k==='bad'?'档位不匹配：他现在还没到这一步，效果打折':'档位对路：这是他现在最需要的'}${why?'（'+why+'）':''}">${tag.k==='good'?'▲':'▼'}${tag.v.toFixed(2)}</span>`;
+            })()}
             ${(estMap&&estMap[id])?(()=>{
               // v32：没约谈过就推不准——预计值不给数字，只给一个问号
               if(!knowsSecret(id)) return `<span style="color:var(--muted);font-weight:700" title="没约谈过：你不知道他会怎么反应">预计 ?</span>`;
@@ -3384,6 +3451,7 @@ function simulateAction(a, targets){
   Object.keys(state.people).forEach(id=>{ const p=state.people[id]; before[id]={s:p.score,st:p.status}; });
   let out=null;
   try{
+    state.activeActionId = a.id;
     const r=a.run((targets||[]).slice());
     const rows=[];
     Object.keys(state.people).forEach(id=>{
@@ -3450,7 +3518,7 @@ function renderDecisionPreview(a, targetIds){
         // v32：没约谈过的人，预估不出数字
         if(!knowsSecret(r.id)) return `<span class="dp-item dp-neutral" title="没约谈过，推不准">${r.name} ?</span>`;
         const cls=r.delta>0?'dp-pos':(r.delta<0?'dp-neg':'dp-neutral');
-        const up=(r.to!==r.from)?`（${STATUS_LABELS[r.from]}→${STATUS_LABELS[r.to]}）`:'';
+        const up=(STATUS_LABELS[r.to]!==STATUS_LABELS[r.from])?`（${STATUS_LABELS[r.from]}→${STATUS_LABELS[r.to]}）`:'';
         return `<span class="dp-item ${cls}">${r.name} ${r.delta>0?'+':''}${r.delta}${up}</span>`;
       }).join('');
     }
@@ -3547,7 +3615,7 @@ function endingNarratives(type){
     const active=ids.filter(id=>state.people[id].status>=3).length;
     return {
       cls:'mid', title:'阶段达标 · 但未固化',
-      story:`时间走完。${active}/${ids.length} 的人已经进入「初步参与」以上——他们开始用新流程干活，会上的表态也不再是敷衍。但真正"内化"的只有 ${finalRate}%。这是一种非常真实的状态：<b>行为变了，认同还没跟上</b>。三个月后如果总部撤掉你这个角色，这批人里有多少会退回原样？答案取决于你有没有动过制度——汇报关系、激励与奖惩、谁能决定什么。`,
+      story:`时间走完。${active}/${ids.length} 的人已经进入「有限认同」以上——他们开始用新流程干活，会上的表态也不再是敷衍。但真正"内化"的只有 ${finalRate}%。这是一种非常真实的状态：<b>行为变了，认同还没跟上</b>。三个月后如果总部撤掉你这个角色，这批人里有多少会退回原样？答案取决于你有没有动过制度——汇报关系、激励与奖惩、谁能决定什么。`,
       teach:'▶ 文化层：行为的改变可以靠推动，认同的改变只能靠时间和一致性。你的转化者里，谁是"因为理解"而不是"因为你在盯着"？\n▶ 制度层：你有没有把新的行为写进考核、汇报线和资源分配？没有制度承载的变革，人一走就散。\n▶ 个人层：你几乎把资源都用在了"让人动起来"，剩下多少留给了"让动起来的人留下来"？',
       realWorld:'▶ <strong>联想·IBM PC（2005）</strong>：前三年业务整合达标，但文化融合花了近十年——阶段目标与深度认同从来不是同一件事。\n▶ <strong>海尔·GE 家电（2016-）</strong>：先保留人、保留流程，用两三年才逐步引入人单合一，避免"改得太快、认同没跟上"。\n▶ <strong>反面：TCL·阿尔卡特（2004）</strong>：组织表面上接受了新流程，但关键岗位认同缺失，整合红利在两年内被内耗吃掉。'
     };
@@ -3724,7 +3792,7 @@ function debrief(){
   if(allTargets.length>=6){
     if(perRound>=4.5){
       out.push({tag:'火力分散', k:'warn',
-        t:`你平均每回合同时推动 ${perRound.toFixed(1)} 个人，整局碰过 ${uniq.size}/${total} 个人。广覆盖动作对「未动」的人只有 40% 力度，对 65 分以上的人被阈值锁压到 30%——铺得越宽，每个人收到的力度越不足以跨档。`});
+        t:`你平均每回合同时推动 ${perRound.toFixed(1)} 个人，整局碰过 ${uniq.size}/${total} 个人。广覆盖的力度是倒 U 型：对最冷的人只有四折，越接近认同越有效，过了 65 分反而只剩三成——铺得越宽，每个人收到的力度越不足以跨档。`});
     } else if(perRound<=2.4 && conv>=Math.ceil(total*0.5)){
       out.push({tag:'火力集中', k:'good',
         t:`你平均每回合只碰 ${perRound.toFixed(1)} 个人，把资源压在少数人身上打穿。这是对的：一个人真的被转化之后，他会替你推动他的关系网。`});
@@ -3773,6 +3841,16 @@ function debrief(){
       t:`整局的动作全落在认知、意愿、巩固上，知识（K）和能力（A）一次没碰。很多被当成「抵触」的表现，其实是「不会做又不好意思说」——培训、试点补的正是这一块，而它们最容易被跳过，因为看起来不像「一把手该亲自干的事」。`});
   }
 
+  // 2c. 工具用错位（v48）：同一把锤子砸在不同阶段的人身上，效果能差一倍
+  const _fitMiss=state.fitMiss||0, _fitHit=state.fitHit||0;
+  if(_fitMiss>=3 && _fitMiss>_fitHit){
+    out.push({tag:'工具用错位', k:'warn',
+      t:`你有 ${_fitMiss} 次把动作用在了还没到那一步的人身上，效果只给了六到八折（用对 ${_fitHit} 次）。最典型的两头：对还没认同的人做培训——他还不想学，教了也不会用；对已经完全配合的人反复约谈——他已经在做了，你还在摸他的顾虑。同一档位换一个动作，效果能差一倍。`});
+  } else if(_fitHit>=5 && _fitHit>=3*Math.max(1,_fitMiss)){
+    out.push({tag:'工具对路', k:'good',
+      t:`你有 ${_fitHit} 次把动作用在了对的人身上：对还没认同的人先谈，对刚认同的人给工具，对已经配合的人给荣誉。这局最值钱的不是动作本身，是时机——同一套动作换个顺序打，结果会完全不同。`});
+  }
+
   // 3. 是否用过制度杠杆
   const usedInst = ['incentive','reorg','kpi'].filter(id=>H.some(h=>h.actionId===id));
   if(!usedInst.length && conv<Math.ceil(total*0.5)){
@@ -3814,10 +3892,10 @@ function debrief(){
   const _tipped = state.tippingPointReached || (_ids2.length>0 && _active/_ids2.length >= 1/3);
   if(_tipped){
     out.push({tag:'越过临界点', k:'good',
-      t:`第 ${state.tippingPointRound} 回合你越过了临界点——「初步参与」以上的人超过 1/3。此后观望的心理成本变高，广覆盖对未动者的渗透从 40% 提到 58%。真实变革里这个点一旦过了，事情就开始自己往前走；过不了，你永远在推石头。`});
+      t:`第 ${state.tippingPointRound} 回合你越过了临界点——「有限认同」以上的人超过 1/3。此后观望的心理成本变高，广覆盖对还没认同的人的渗透从 40% 提到 58%。真实变革里这个点一旦过了，事情就开始自己往前走；过不了，你永远在推石头。`});
   } else {
     out.push({tag:'没过临界点', k:'tip',
-      t:`终局「初步参与」以上只有 ${_active}/${_ids2.length} 人，始终没到 1/3 的临界点。在临界点之前，每一步都要你亲自推；过了之后，观望者会因为"多数人都在做"而自己走过来。所以早期该做的不是广覆盖，而是尽快把 1/3 的人推到"初步参与"。`});
+      t:`终局「有限认同」以上只有 ${_active}/${_ids2.length} 人，始终没到 1/3 的临界点。在临界点之前，每一步都要你亲自推；过了之后，观望者会因为"多数人都在做"而自己走过来。所以早期该做的不是广覆盖，而是尽快把 1/3 的人推到"有限认同"。`});
   }
 
   // 7. 可信度管理
@@ -3944,7 +4022,8 @@ function showModal(){
     const decayed=x.people.filter(r=>r.onlyDecay);
     const rows=active.map(r=>{
       const dc = deltaCell(r);
-      const statusCell = (r.from===r.to)
+      // v48：内部 0/1/2 都是「初步理解」，标签没变就别写成"初步理解 → 初步理解"
+      const statusCell = (STATUS_LABELS[r.from]===STATUS_LABELS[r.to])
         ? `${glyph(r.to)} ${STATUS_LABELS[r.to]}`
         : `${glyph(r.from)} ${STATUS_LABELS[r.from]} → ${glyph(r.to)} <b>${STATUS_LABELS[r.to]}</b>`;
       // v46：没约谈过的人，不显示说服度——结果可以观察（变化列），刻度得谈过才知道
@@ -3960,13 +4039,13 @@ function showModal(){
       </tr>`;
     }).join('');
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
-      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分四档，跨过 45 / 65 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 65 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
         '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，一共掉了 '+Math.abs(decayed.reduce((s,r)=>s+r.delta,0))+' 分：</strong>'+
         decayed.map(r=>r.name).join('、')+'。'+
-        '<div style="margin-top:5px;color:var(--muted)">45 分以下的人会一直往回掉，越冷掉得越快；跨过 45 分进入「初步理解」就不再自然回冷。</div></div>'):'');
+        '<div style="margin-top:5px;color:var(--muted)">65 分以下的人会一直往回掉，越冷掉得越快；跨过 65 分进入「有限认同」就不再自然回冷。</div></div>'):'');
     body.appendChild(box);
   }
 
@@ -4168,6 +4247,12 @@ function buildPeopleImpact(before, after){
     evs.forEach(e=>{ modes[e.mode]=(modes[e.mode]||0)+1; });
     const reasons=[];
     if(modes.direct) reasons.push('直接推动');
+    // v48：档位匹配——同一把锤子砸在不同阶段的人身上，效果不一样
+    const stageEv=evs.find(e=>e.stage && Math.abs(e.stage-1)>0.01);
+    if(stageEv){
+      const v=stageEv.stage;
+      reasons.push(v>=1.2 ? ('档位对路 ×'+v.toFixed(2)) : ('档位不匹配 ×'+v.toFixed(2)));
+    }
     if(modes.spread) reasons.push('网络扩散');
     if(modes.broad) reasons.push('广覆盖');
     if(modes.action) reasons.push('动作直接作用');
@@ -4178,7 +4263,8 @@ function buildPeopleImpact(before, after){
     // v37：谈过的人，你才"读懂"了他；没谈过，只能感觉出他反应不太一样
     if(prefEv){
       if(revealed) reasons.push((prefEv.pref>1?'正中偏好':'逆其偏好')+'×'+prefEv.pref.toFixed(2));
-      else if(Math.abs(prefEv.pref-1)>=0.15) reasons.push('他对这个动作的反应有点特别（说不上是偏好还是抵触）');
+      // v48：档位已经给出了明确解释，就别再补一句"说不上为什么"——两个原因会互相打架
+      else if(!stageEv && Math.abs(prefEv.pref-1)>=0.15) reasons.push('他对这个动作的反应有点特别（说不上是偏好还是抵触）');
     }
     const softEv=evs.find(e=>e.soft && e.soft>1.01);
     if(softEv) reasons.push('扩散加成×'+softEv.soft.toFixed(2));
@@ -4197,8 +4283,8 @@ function buildPeopleImpact(before, after){
 
 /* =========================================================
    v27：临界点（tipping point）
-   「初步参与及以上」的人一旦占到 1/3，观望者的心理成本就变了：
-   继续不动意味着站在少数人那边。此后广覆盖对未动者的力度从 40% 提到 58%。
+   「有限认同及以上」的人一旦占到 1/3，观望者的心理成本就变了：
+   继续不动意味着站在少数人那边。此后广覆盖对还没认同的人的力度从 40% 提到 58%。
    这是一次性事件，也是整局最有教学价值的一刻。
    ========================================================= */
 function checkTippingPoint(){
@@ -4217,10 +4303,10 @@ function checkTippingPoint(){
     const p=state.people[id];
     if(p.status>=4) return;
     const before=p.status;
-    // 已经走到"初步参与"的人，规范一变就顺势过线；还没动的人只是被提醒了一下
+    // 已经走到"有限认同"的人，规范一变就顺势过线；还没动的人只是被提醒了一下
     // 用 spread 而不是 broad：这一刻要绕开"65 以上广覆盖只剩 30%"的阈值锁——它本来就是被这一下打破的
     applyGain(id, before===3 ? 10 : 6, '', 'spread');   // 不挂任何偏好：这是规范效应，不是某个动作
-    if(p.status>before){
+    if(STATUS_LABELS[p.status]!==STATUS_LABELS[before]){
       const note=`${p.name}（${STATUS_LABELS[before]}→${STATUS_LABELS[p.status]}）`;
       if(p.status===4) flipped.push(note); else pushed.push(note);
     }
@@ -4237,7 +4323,7 @@ function checkTippingPoint(){
   const extra = (flipped.length?`当场跨过转化线的有 ${flipped.length} 人：${flipped.join('、')}。`:'')+
     (pushed.length?`另有 ${pushed.length} 人往上走了一档：${pushed.join('、')}。`:'')+
     ' 此后广覆盖动作对还没动的人的渗透力从 40% 提到 58%——但最后一跳仍然要你亲自去打穿。';
-  return `🔥 临界点被触发（第 ${state.round} 回合）：组织里已经有 ${active}/${ids.length} 人进入「初步参与」以上，超过 1/3。规范变了——继续不动开始有社交成本。你的可信度 +1（现 ${state.credibility}），此后广覆盖动作对未动者的力度从 40% 提到 58%。${extra}`;
+  return `🔥 临界点被触发（第 ${state.round} 回合）：组织里已经有 ${active}/${ids.length} 人进入「有限认同」以上，超过 1/3。规范变了——继续不动开始有社交成本。你的可信度 +1（现 ${state.credibility}），此后广覆盖动作对还没认同的人的力度从 40% 提到 58%。${extra}`;
 }
 
 function snapshotPeople(){
@@ -4265,9 +4351,9 @@ function diagnose(){
   const silent=ids.filter(id=>state.people[id].status===0);
 
   // —— 0. 临门一脚：离转化线只差几分的人
-  // v47：按显示的四档算——未动的内部 0/1 两槽都指向 45
-  const THR={0:45,1:45,2:65,3:85};
-  const THR_STUBBORN={0:50,1:50,2:70,3:90};
+  // v48：按显示的三档算——初步理解的内部 0/1/2 三槽都指向 65
+  const THR={0:65,1:65,2:65,3:85};
+  const THR_STUBBORN={0:70,1:70,2:70,3:90};
   const near=ids.map(id=>{
     const p=state.people[id];
     if(p.status>=4) return null;
@@ -4280,10 +4366,10 @@ function diagnose(){
       t:`${near.length} 个人离下一档只差 1-8 分：${near.slice(0,4).map(x=>x.name+'（差 '+x.gap+'）').join('、')}${near.length>4?' 等':''}。这个位置最亏——你已经付了 90% 的成本，却没拿到那一档。下一轮把定向动作压到他们身上，比开新战场划算得多。`});
   }
 
-  // —— 1. 阈值锁：卡在「初步参与」的人
+  // —— 1. 阈值锁：卡在「有限认同」的人
   if(stuck.length>=2){
     out.push({k:'tip', tag:'阈值锁', w:60,
-      t:`有 ${stuck.length} 个人卡在「初步参与」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 上手培训）打穿，广覆盖只剩 30% 力度。`});
+      t:`有 ${stuck.length} 个人卡在「有限认同」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 上手培训）打穿，广覆盖只剩 30% 力度。`});
   }
 
   // —— 2. 火力分散：近三回合碰了太多人
@@ -4368,7 +4454,7 @@ function situationLine(){
   if(state.credibility<=3) return {k:'warn', t:`可信度 ${state.credibility}/10，动作力度被打折。`};
   if(state.resources<=10) return {k:'warn', t:`只剩 ${state.resources} 份资源，还差 ${need-conv} 人。`};
   const stuck=ids.filter(id=>state.people[id].status===3).length;
-  if(stuck>=3) return {k:'tip', t:`${stuck} 人卡在「初步参与」，需要定向动作打穿最后一跳。`};
+  if(stuck>=3) return {k:'tip', t:`${stuck} 人卡在「有限认同」，需要定向动作打穿最后一跳。`};
   return null;
 }
 
@@ -4429,10 +4515,11 @@ function runTurn(){
     credOverridePenalty.push(`💡 建议：先通过「以身作则」、「小范围试点」等动作提升可信度至 ${a.reqCred} 再执行此动作，效果会明显更好。`);
   }
 
+  state.activeActionId = a.id;   // v48：供 applyGain 判断档位匹配
   const impact = a.run(state.selectedTargets);
 
   /* v27：临界点（tipping point）
-     组织里"初步参与及以上"的人一旦超过 1/3，规范就变了——观望者的心理成本突然变高。
+     组织里"有限认同及以上"的人一旦超过 1/3，规范就变了——观望者的心理成本突然变高。
      这是真实变革里最关键、也最容易被忽略的一件事：不是线性累积，而是过线之后自加速。 */
   try{
     const tp = checkTippingPoint();
@@ -4482,7 +4569,7 @@ function runTurn(){
 
   const movers = [];
   Object.keys(after.people).forEach(id=>{
-    if(after.people[id].status !== before.people[id].status){
+    if(STATUS_LABELS[after.people[id].status] !== STATUS_LABELS[before.people[id].status]){
       movers.push(`${state.people[id].name}：${STATUS_LABELS[before.people[id].status]} → ${STATUS_LABELS[after.people[id].status]}`);
     }
   });
