@@ -670,7 +670,7 @@
     <div class="kpi"><div class="small">回合</div><div class="num" id="roundKpi">1</div></div>
     <div class="kpi"><div class="small">完全配合率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
-    <div class="kpi"><div class="small">积分 <span title="满分 100：成果 55（达标 40，每多 1 人 +5）+ 效率 15 + 组织 20 + 里程碑 10，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
+    <div class="kpi"><div class="small">积分 <span title="满分 100：成果 55（达标 40，每多 1 人 +5）+ 效率 8（剩余资源）+ 节奏 7（多快到线）+ 组织 20 + 里程碑 10，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
     <div class="kpi"><div class="small">压力</div><div class="num" id="pressureKpi">0</div></div>
   </div>
 
@@ -1283,7 +1283,7 @@
             <strong>✅ 胜利条件</strong><br>
             在 60 个资源内让 ≥50% 的关键人物进入「完全配合」状态。<br>
             <strong>过了 50% 就达标了——但你可以选择收工，也可以继续往深里推。</strong><br>
-            推得越深成果分越高，但回合数（节奏分）和多烧的资源都会往下走——时间也算分。
+            推得越深成果分还能再高一点，但过线之后每个动作都会打折——多推一个人越来越费劲，边际收益掉得很快。
           </div>
           <p class="intro-lead" style="margin-bottom:0;font-size:14px">
             每个人物有 3 个状态：初步理解 → 有限认同 → <strong style="color:#6ba84a">完全配合</strong>。<strong>50 分是分水岭</strong>：以下每回合会自己冷掉，以上不再掉分。
@@ -2301,7 +2301,9 @@ function initState(){
        passFatigueRound  防止同一回合重复计数 */
     passReached:false,
     passRound:null,
+    passRounds:0,
     passConv:0,
+    passScore:0,
     passChoice:null,
     passFatigue:0,
     passFatigueRound:null,
@@ -2582,6 +2584,9 @@ function applyGain(personId, rawAmount, actionType, mode){
   let softMul = 1;
   if(mode!=='broad'){ softMul = softeningBonus(personId); amount = amount * softMul; }
   else if(state.softened[personId]>0) amount = amount * (1.0 + 0.15);  // 广覆盖也享受一点软化
+  // v59：过线之后，同一套动作越来越轻——深推的边际收益就是从这里开始掉的
+  const postMul = postPassMul();
+  if(postMul < 1) amount = amount * postMul;
   // v36：非正式关系越多，社会传染越猛（只作用于扩散，不作用于直接推动）
   if(mode==='spread'){ const nb=networkBoost(); softMul *= nb; amount = amount * nb; }
   // 阈值锁（针对广覆盖）
@@ -2596,7 +2601,7 @@ function applyGain(personId, rawAmount, actionType, mode){
   // v26：把这一笔变化记下来，供结果页逐人展示
   try{
     state.turnEvents.push({id:personId, mode, actionType:actionType||'', base:baseAmount,
-      pref:prefMul, soft:softMul, stage:stageMul, amount:Math.round(p.score-scoreBefore),
+      pref:prefMul, soft:softMul, stage:stageMul, post:postMul, amount:Math.round(p.score-scoreBefore),
       from:Math.round(scoreBefore), to:Math.round(p.score),
       prev, now:p.status, locked: Math.round(amount) < preLock});
   }catch(_){}
@@ -2969,10 +2974,10 @@ function renderTop(){
         : `已达标 · 待你决定收工或继续`;
       sub.style.color = 'var(--success)';
     } else if(state.resources >= 8){
-      sub.textContent = `目标 ≥50%；资源、回合都算分`;
+      sub.textContent = `目标 ≥50%；省资源、快到线，都算分`;
       sub.style.color = '';
     } else {
-      sub.textContent = `目标 ≥50%；资源、回合都算分`;
+      sub.textContent = `目标 ≥50%；省资源、快到线，都算分`;
       sub.style.color = 'var(--warn, #d48806)';
     }
   }
@@ -3858,7 +3863,13 @@ function endingNarratives(type){
   const overreach = (()=>{
     if(!state.passReached || state.passChoice!=='push') return '';
     const gain = convertedCount() - (state.passConv||0);
-    return `\n\n<b>这一局真正的考题在这里：</b>你在第 ${state.passRound} 回合就已经跨过 50%（当时 ${state.passConv}/${passTotal()} 人）。你没有收手，又推了 ${state.passFatigue||0} 个回合——多转化 ${gain>=0?'+':''}${gain} 人，节奏分从 ${pacingScore(state.passRound)} 掉到 ${pacingScore(roundsUsed())}，资源也又多烧了一截。这笔账值不值，只看一件事：多换来的那几个人，是不是真的站稳了。`;
+    const now = scoreBreakdown().total;
+    const dScore = now - (state.passScore||0);
+    const per = gain>0 ? (Math.round(dScore/gain*10)/10) : 0;
+    const tail = gain>0
+      ? `平均下来，多推一个人只值 ${per} 分，而前面那 ${state.passConv} 个人值 ${SCORE_RULES.passBase} 分——这就是边际收益递减的样子。`
+      : `这一段一个人都没多推出来——动作越打越轻，边际收益已经掉到零了。`;
+    return `\n\n<b>这一局真正的考题在这里：</b>你在第 ${state.passRound} 回合就已经跨过 50%（当时 ${state.passConv}/${passTotal()} 人、${state.passScore||0} 分）。你没有收手，又推了 ${state.passFatigue||0} 个回合——多转化 ${gain>=0?'+':''}${gain} 人，总分从 ${state.passScore||0} 变成 ${now}（${dScore>=0?'+':''}${dScore}）。${tail}越往后，同一个动作越轻，最后那几个人往往不是被说服的，是被磨下来的。`;
   })();
   const earlyStop = (state.passReached && state.passChoice==='stop')
     ? `\n\n你在第 ${state.passRound} 回合刚过线时就收了手。这个判断本身值得记下来：知道什么时候停，和知道怎么推，是两种不同的能力。`
@@ -4214,7 +4225,7 @@ function debrief(){
   const top = out.filter(x=>x.k==='warn')[0];
   const challenge = !top ? {
     tag:'下一局的目标', k:'good',
-    t:`这一局没有明显失误。下一局的挑战是效率：你用了 ${Math.max(1,state.round-1)} 回合、剩下 ${state.resources} 份资源完成 ${conv}/${total} 人的转化——试试用更少的资源和更短的战线做到同样的结果：剩余资源进效率分，回合数进节奏分，两边都省，总分才高。`
+    t:`这一局没有明显失误。下一局的挑战是效率：你用了 ${Math.max(1,state.round-1)} 回合、剩下 ${state.resources} 份资源完成 ${conv}/${total} 人的转化——试试用更少的资源、更短的战线过线：剩余资源进效率分，过线速度进节奏分，两边都省，总分才高。`
   } : null;
   return {items: out.slice(0,5), oneThing: top || null, challenge};
 }
@@ -4253,7 +4264,7 @@ function renderEndingScreen(){
       '</div>'+
       (state.passReached
         ? (state.passChoice==='push'
-            ? `<div class="pass-tag push">🎯 第 ${state.passRound} 回合过线，之后选择<b>继续推进</b> ${state.passFatigue} 回合——节奏分${pacingScore(state.passRound)===sc.parts.pacing?`仍是 ${sc.parts.pacing}/${SCORE_RULES.pacingMax}（还没超基准回合）`:`从 ${pacingScore(state.passRound)} 掉到 ${sc.parts.pacing}（${SCORE_RULES.pacingMax} 分制）`}</div>`
+            ? `<div class="pass-tag push">🎯 第 ${state.passRound} 回合过线（节奏分定格 ${sc.parts.pacing}/${SCORE_RULES.pacingMax}），之后选择<b>继续推进</b> ${state.passFatigue} 回合——深推阶段动作效果一路降到 ${postPassMulText(postPassMul())}</div>`
             : (state.passChoice==='stop'
                 ? `<div class="pass-tag stop">🎯 第 ${state.passRound} 回合过线，选择<b>收工结算</b>——知道什么时候停</div>`
                 : `<div class="pass-tag stop">🎯 第 ${state.passRound} 回合过线（资源刚好用尽，没来得及做选择）</div>`))
@@ -4261,11 +4272,11 @@ function renderEndingScreen(){
       '<div class="score-parts">'+
         `<div class="${cls(sc.parts.outcome)}"><b>${sc.parts.outcome}</b><span>成果分 · 完全配合 ${sc.conv} 人（达标线 ${sc.need} 人，每多 1 人 +${SCORE_RULES.perExtra}）</span></div>`+
         `<div class="${cls(sc.parts.efficiency)}"><b>${sc.parts.efficiency}</b><span>效率分 · 剩余 ${Math.max(0,state.resources)}/${TOTAL_RESOURCES} 资源（满分 ${SCORE_RULES.efficiencyMax}）</span></div>`+
-        `<div class="${cls(sc.parts.pacing)}"><b>${sc.parts.pacing}</b><span>节奏分 · 用了 ${sc.rounds} 回合（基准 ${SCORE_RULES.pacingPar} 回合，每多 2 回合 −1，满分 ${SCORE_RULES.pacingMax}）</span></div>`+
+        `<div class="${cls(sc.parts.pacing)}"><b>${sc.parts.pacing}</b><span>节奏分 · ${state.passReached?`第 ${state.passRound} 回合到达标线（定格，基准 ${SCORE_RULES.pacingPar} 回合，满分 ${SCORE_RULES.pacingMax}）`:`用了 ${sc.rounds} 回合（基准 ${SCORE_RULES.pacingPar} 回合，每多 2 回合 −1，满分 ${SCORE_RULES.pacingMax}）`}</span></div>`+
         `<div class="${cls(sc.parts.org)}"><b>${sc.parts.org}</b><span>组织分 · (可信度 ${state.credibility} − 压力 ${state.pressure}) × ${SCORE_RULES.orgWeight}（满分 ${SCORE_RULES.orgWeight*10}）</span></div>`+
         `<div class="${cls(sc.parts.milestone)}"><b>${sc.parts.milestone}</b><span>里程碑分 · ${sc.ms} 个关键节点 × ${SCORE_RULES.perMilestone}（满分 ${SCORE_RULES.milestoneCap}）</span></div>`+
       '</div>'+
-      '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 55（达标即 40，每多推 1 人 +5）＋ 效率 8（剩余资源）＋ 节奏 7（用了多少回合，基准 12）＋ 组织 20 ＋ 里程碑 10。分数不是排名，是把几件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少资源</b>（效率）、<b>花了多少时间</b>（节奏）、<b>留下的是什么组织</b>（组织分）。资源和时间不能互换——重手段烧钱快、回合少，软功夫省钱、但拖得久。用高压换来的转化会在组织分里被扣回去，所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
+      '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 55（达标即 40，每多推 1 人 +5）＋ 效率 8（剩余资源）＋ 节奏 7（多快到达标线，基准 12 回合）＋ 组织 20 ＋ 里程碑 10。分数不是排名，是把几件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少资源</b>（效率）、<b>多快到线</b>（节奏）、<b>留下的是什么组织</b>（组织分）。过线之后每多走一回合，所有动作的效果都会打折（每回合 ×0.9，最低 ×0.5）——所以继续推分数还能再高一点，但边际收益掉得很快：多推一个人要花的动作越来越多。用高压换来的转化会在组织分里被扣回去，所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
     wrap.appendChild(sb);
   }catch(_){}
 
@@ -4449,9 +4460,10 @@ function showModal(){
         `（成果 ${now.parts.outcome} ＋ 效率 ${now.parts.efficiency} ＋ 节奏 ${now.parts.pacing} ＋ 组织 ${now.parts.org} ＋ 里程碑 ${now.parts.milestone}）。`+
         '剩下的资源、信誉、压力都还留得住。</li>'+
         `<li><b class="pc-warn">🔧 继续</b>：成果分每多 1 人 +${SCORE_RULES.perExtra}，封顶 ${SCORE_RULES.outcomeMax} 分（${capPeople} 人封顶，你现在 ${conv} 人，还能再加 ${Math.max(0, capPeople - conv)} 人）。`+
-        `但节奏分现在是 <b>${now.parts.pacing}/${SCORE_RULES.pacingMax}</b>，基准 ${SCORE_RULES.pacingPar} 回合——你已经打了 ${now.rounds} 个回合，`+
-        '往后<b>每多 2 回合扣 1 分</b>，扣到 0 为止。</li>'+
-        '<li>再往下一轮就再烧一份资源，效率分跟着掉；压力也继续累积，'+
+        `<b>但过线之后每个动作开始打折</b>：第 1 个深推回合效果 ${postPassMulText(SCORE_RULES.postRate)}，之后每回合再乘一次，最低 ${postPassMulText(SCORE_RULES.postFloor)}——`+
+        '越往后推一个人越费动作，那 +5 分会越来越贵。</li>'+
+        `<li>节奏分已经<b>定格在 ${now.parts.pacing}/${SCORE_RULES.pacingMax}</b>（你在第 ${state.passRound} 回合过的线），之后不再扣——过线之后考的不是速度，是余量。`+
+        '每多走一轮还要再烧一份资源，效率分跟着掉；压力继续累积，'+
         '<b>一旦超线，已经拿到的达标会直接变成反弹</b>，一分都不算。</li>'+
       '</ul>'+
       '<div class="pc-note">没有标准答案。唯一的判断依据是：这个组织还剩多少余量。</div>'+
@@ -4498,7 +4510,7 @@ function goNextRound(){
     state.passFatigueRound = state.round;
     state.passFatigue = (state.passFatigue||0) + 1;
     if(state.passFatigue===1){
-      cheatToast(`⏳ 继续推进第 1 回合。节奏分基准是 ${SCORE_RULES.pacingPar} 回合，之后每多 2 回合 -1 分——推得越久，这一段越贵。`);
+      cheatToast(`⏳ 继续推进第 1 回合：动作效果 ${postPassMulText(postPassMul())}。之后每回合再乘 ${postPassMulText(SCORE_RULES.postRate)}，最低 ${postPassMulText(SCORE_RULES.postFloor)}——推得越深，一个人越贵。`);
     }
   }
   showScreen('network');
@@ -4523,12 +4535,14 @@ function checkEnding(){
   /* v57：过 50% 不再强制结算。
      达标只是一个「可以收工」的信号，不是终点。要不要继续往深里推，是学生自己的判断——
      这一版把「什么时候停」变成一道真问题。继续推有收益（成果分每多 1 人 +5），
-     也有代价（v58 起：每多走一回合节奏分就往下掉，资源也照常烧）。 */
+     也有代价（v58：节奏分只算到过线；v59：过线后每个动作效果逐回合打折）。 */
   if(cr >= 50){
     if(!state.passReached){
       state.passReached = true;
       state.passRound = state.round;
+      state.passRounds = Math.max(1, state.round - 1);   // 节奏分定格在这里
       state.passConv = convertedCount();
+      try{ state.passScore = scoreBreakdown().total; }catch(_){ state.passScore = 0; }
     }
     // 全员转化：已经没有更多可推的人，直接收场
     const _ids = Object.keys(state.people).filter(id=>id!=='pm');
@@ -4595,7 +4609,7 @@ function pushBeyondPass(){
   closeModal();
   updatePassBanner();
   render();
-  cheatToast(`🔧 继续推进。节奏分从现在开始计息：基准 ${SCORE_RULES.pacingPar} 回合，之后每多 2 回合 -1 分（现 ${pacingScore(roundsUsed())} / ${SCORE_RULES.pacingMax}）。压力超线，达标会变成反弹。`);
+  cheatToast(`🔧 继续推进。节奏分定格在 ${pacingScore(state.passRounds||roundsUsed())}/${SCORE_RULES.pacingMax}，但过线后每个动作开始打折：第 1 回合 ${postPassMulText(SCORE_RULES.postRate)}，之后逐回合递减，最低 ${postPassMulText(SCORE_RULES.postFloor)}。压力超线，达标会变成反弹。`);
 }
 
 function updatePassBanner(){
@@ -4607,10 +4621,11 @@ function updatePassBanner(){
   const stopBtn = el('passStopBtn'), pushBtn = el('passPushBtn');
   const pushing = state.passChoice === 'push';
   const sc = scoreBreakdown();
+  const mul = postPassMul();
   if(t) t.textContent = pushing ? `🔧 继续推进中 · 已达 ${conv}/${total}` : `🎯 已过 50% 达标线 · ${conv}/${total}`;
   if(s) s.textContent = pushing
-    ? `第 ${state.passRound} 回合过的线，之后又走了 ${state.passFatigue} 回合（到现在一共 ${roundsUsed()} 个回合）。节奏分 ${sc.parts.pacing}/${SCORE_RULES.pacingMax}，每多 2 回合 -1；按现在结算约 ${sc.total} 分。压力超线，达标会变成反弹；资源耗尽，按实际渗透率结算。`
-    : `这一局已经可以交了：按现在结算约 ${sc.total} 分。继续推的话，成果分每多 1 人 +${SCORE_RULES.perExtra}（封顶 ${SCORE_RULES.outcomeMax}），但节奏分基准是 ${SCORE_RULES.pacingPar} 回合，之后每多 2 回合 -1 分，多烧的资源也从效率分里扣。`;
+    ? `第 ${state.passRound} 回合过的线，之后又走了 ${state.passFatigue} 回合。本回合动作效果 ${postPassMulText(mul)}（最低 ${postPassMulText(SCORE_RULES.postFloor)}）；节奏分定格 ${sc.parts.pacing}/${SCORE_RULES.pacingMax}；按现在结算约 ${sc.total} 分。压力超线会变成反弹，资源耗尽按实际渗透率结算。`
+    : `这一局已经可以交了：按现在结算约 ${sc.total} 分。继续推的话，成果分每多 1 人 +${SCORE_RULES.perExtra}（封顶 ${SCORE_RULES.outcomeMax}），但过线后每个动作逐回合打折（最低 ${postPassMulText(SCORE_RULES.postFloor)}），推一个人会越来越费动作；节奏分不再变。`;
   if(stopBtn){
     stopBtn.textContent = pushing ? '✅ 就此收手 · 按现状结算' : '✅ 收工 · 按达标结算';
     stopBtn.style.display = '';
@@ -5098,12 +5113,16 @@ function revealAfter(fn, newlyConverted){
    这个代价形同虚设）。改成把「回合数」直接算进总分——原来的效率分 15 拆成两件事：
      效率 8 —— 你烧掉了多少资源（成本）
      节奏 7 —— 你花了多少回合（时间）。基准 12 回合，之后每多 2 回合扣 1 分。
-   两者不可互换：重手段烧资源快、回合少；软功夫省资源、但拖得久。这一版让学生第一次
-   要同时算"钱"和"时间"，而"继续推进"的账单就是回合数本身。 */
+   v59：两条修正，让「继续推」变成"分数更高、但边际收益明显变低"：
+     1) 节奏分只算到过线那一刻——过线之后再磨，考的不是速度，是耐力和余量。
+        否则推满必然比收工低，选择就退化成"标准答案只有一个"。
+     2) 过线之后每个动作的效果按 postRate 逐回合打折（有地板），
+        所以多推一个人要花的动作越来越多，成果分的边际价值一路走低。 */
 const SCORE_RULES = {
   outcomeMax:55, passBase:40, perExtra:5,
   efficiencyMax:8,
   pacingMax:7, pacingPar:12, pacingPerRound:0.5,
+  postRate:0.92, postFloor:0.55,
   orgWeight:2, perMilestone:2, milestoneCap:10, full:100
 };
 /* 节奏分：12 回合以内满分，之后每多 2 回合 -1，扣完为止 */
@@ -5111,12 +5130,23 @@ function pacingScore(rounds){
   const over = Math.max(0, (Number(rounds)||0) - SCORE_RULES.pacingPar);
   return Math.max(0, Math.round(SCORE_RULES.pacingMax - over * SCORE_RULES.pacingPerRound));
 }
+/* v59：过线后的效果折扣——第 n 个深推回合 ×postRate^n，最低 postFloor。
+   这不是惩罚，是"该说服的人已经被说服过了"：剩下的人听过同样的话、看过同样的试点，
+   同一套动作在他们身上越来越轻。 */
+function postPassMul(){
+  if(!state || !state.passReached) return 1;
+  const n = Math.max(0, state.passFatigue||0);
+  return Math.max(SCORE_RULES.postFloor, Math.pow(SCORE_RULES.postRate, n));
+}
+function postPassMulText(m){ return '×' + (Math.round(m*100)/100).toFixed(2).replace(/0$/,''); }
 function roundsUsed(){ return Math.max(1, state.round - 1); }
 function scoreBreakdown(){
   const ids = Object.keys(state.people).filter(id=>id!=='pm');
   const conv = ids.filter(id=>state.people[id].status===4).length;
   const need = Math.ceil(ids.length * 0.5);
   const rounds = roundsUsed();
+  /* v59：节奏分定格在过线那一刻；没到线的人才按总回合算 */
+  const pacingRounds = state.passReached ? Math.max(1, state.passRounds || rounds) : rounds;
   const ms = (state.history||[]).reduce((sum,h)=>
     sum + (h.milestones||[]).filter(m=>/^(首次转化|转化过半|关键节点转化)/.test(m)).length, 0);
   const parts = {
@@ -5124,13 +5154,13 @@ function scoreBreakdown(){
       ? Math.min(SCORE_RULES.outcomeMax, SCORE_RULES.passBase + (conv - need) * SCORE_RULES.perExtra)
       : (need ? Math.round(conv / need * SCORE_RULES.passBase) : 0),
     efficiency: Math.round(Math.max(0, state.resources) / TOTAL_RESOURCES * SCORE_RULES.efficiencyMax),
-    pacing: pacingScore(rounds),
+    pacing: pacingScore(pacingRounds),
     org: Math.max(0, Math.min(SCORE_RULES.orgWeight*10, Math.round((state.credibility - state.pressure) * SCORE_RULES.orgWeight))),
     milestone: Math.min(SCORE_RULES.milestoneCap, ms * SCORE_RULES.perMilestone)
   };
   const total = Math.max(0, Math.min(SCORE_RULES.full,
     parts.outcome + parts.efficiency + parts.pacing + parts.org + parts.milestone));
-  return { total, parts, conv, need, rounds, totalPeople: ids.length, ms, grade: scoreGrade(total) };
+  return { total, parts, conv, need, rounds, pacingRounds, totalPeople: ids.length, ms, grade: scoreGrade(total) };
 }
 function scoreGrade(t){
   if(t>=80) return {k:'S', label:'教科书级'};
@@ -5167,6 +5197,8 @@ function runTurn(){
   state.currentPrediction = '';
 
   const before = { cred:state.credibility, pressure:state.pressure, people:snapshotPeople() };
+  // v59：本回合的效果折扣（过线后才小于 1）
+  const _postMul = postPassMul();
 
   state.resources -= a.weeks;
   // v14.1 修复：冷却 N = 执行后 N 个回合内不可用（原实现下一回合就解锁，相当于 cooldown-1）
@@ -5314,6 +5346,7 @@ function runTurn(){
   else if(dPress < 0) sideEffects.push({ kind:'pos', text:`压力 ${dPress}（现 ${after.pressure}）` });
   if(deltaConverted > 0) sideEffects.push({ kind:'pos', text:`新增完全配合 +${deltaConverted} 人（累计 ${Object.entries(after.people).filter(([id,x])=>id!=='pm' && x.status===4).length}）` });
   sideEffects.push({ kind:'neutral', text:`消耗 ${a.weeks} 资源，剩余 ${state.resources} / ${TOTAL_RESOURCES} 资源` });
+  if(_postMul < 1) sideEffects.push({ kind:'neg', text:`过线疲劳：本回合每个动作效果 ${postPassMulText(_postMul)}（第 ${state.passFatigue} 个深推回合，最低 ${postPassMulText(SCORE_RULES.postFloor)}）` });
   sideEffects.push({ kind:'neutral', text:`本动作覆盖 ${touched} 人，冷却 ${a.cooldown} 回合` });
 
   // v26：把合作累积成信任，再结算本回合逐人影响
@@ -5401,7 +5434,7 @@ function exportGamePdf(){
         <tr><th>可信度</th><td>${state.credibility}</td><th>压力</th><td>${state.pressure}</td></tr>
         <tr><th>剩余资源</th><td>${state.resources}/${typeof TOTAL_RESOURCES!=='undefined'?TOTAL_RESOURCES:32}</td><th>回合数</th><td>${Math.max(1, state.round-1)}</td></tr>
         ${scBlock?`<tr><th>本局总积分</th><td colspan="3"><b>${scBlock.total} / 100 分</b>（${scBlock.grade.k} · ${scBlock.grade.label}）　成果 ${scBlock.parts.outcome} ＋ 效率 ${scBlock.parts.efficiency} ＋ 节奏 ${scBlock.parts.pacing} ＋ 组织 ${scBlock.parts.org} ＋ 里程碑 ${scBlock.parts.milestone}</td></tr>`:''}
-        ${state.passReached?`<tr><th>达标线</th><td>第 ${state.passRound} 回合过 50%</td><th>之后的选择</th><td>${state.passChoice==='push'?`继续推进 ${state.passFatigue||0} 回合（节奏分 ${pacingScore(state.passRound)} → ${scBlock?scBlock.parts.pacing:'-'}）`:state.passChoice==='stop'?'收工结算':'未决'}</td></tr>`:''}
+        ${state.passReached?`<tr><th>达标线</th><td>第 ${state.passRound} 回合过 50%（节奏分定格 ${scBlock?scBlock.parts.pacing:'-'}/${SCORE_RULES.pacingMax}）</td><th>之后的选择</th><td>${state.passChoice==='push'?`继续推进 ${state.passFatigue||0} 回合（深推末段动作效果 ${postPassMulText(postPassMul())}）`:state.passChoice==='stop'?'收工结算':'未决'}</td></tr>`:''}
       </table>
     </section>`;
 
