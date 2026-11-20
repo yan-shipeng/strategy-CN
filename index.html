@@ -2145,7 +2145,7 @@ const ACTIONS=[
     }
     return res;
   }},
-  {id:'broadcast',label:'全员通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,adkar:'AW',desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
+  {id:'broadcast',label:'进展通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,adkar:'AW',desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。它和公开表彰的分工——表彰是给具体的人一个名分（点名），通报是把整体走到哪了讲给所有人听（不点名）。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
     if(convCount === 0){
       state.credibility = Math.max(0, state.credibility - 1);
@@ -2629,7 +2629,7 @@ function updateTrust(){
   if(!state.coop) state.coop={};
   const direct=new Set(state.selectedTargets||[]);
   /* v74：只有「点名指定了几个人」的动作才会长出私交。
-     原来全体动作（全员通报 / 亲身示范 / 总部背书 / 调整奖惩）会把全场 12 个人
+     原来全体动作（进展通报 / 亲身示范 / 总部背书 / 调整奖惩）会把全场 12 个人
      一起塞进 touchedThisTurn，一次通报就给 66 对关系各加几分——不用花心思，人人自来熟。
      一起被卷进同一件事才叫合作；一起收到一封邮件不叫。
      全体动作仍然会「触及」所有人（那是防止自然回冷用的），但不再产生任何一对私交。 */
