@@ -262,7 +262,7 @@
     .decision-footer .hint-strip.show{display:block;color:var(--muted)}
     .decision-footer .hint-strip.warn{display:block;color:var(--danger);font-weight:600}
     .decision-footer #runBtn{width:auto;min-width:200px;font-size:14px;padding:0 28px;height:48px;display:flex;align-items:center;justify-content:center}
-    #runBtn:disabled{box-shadow:inset 0 0 0 2px var(--danger);background:rgba(224,80,104,.1);color:var(--danger);opacity:1}
+    #runBtn:disabled{box-shadow:none;background:rgba(255,255,255,.07);color:#9fb3bd;opacity:1;border:1px solid var(--border)}
     .predict-box-footer textarea{width:100%;min-height:48px;max-height:48px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:13px;resize:none;background:#0d1e2a !important;color:var(--text) !important;transition:border-color 0.2s ease,box-shadow 0.2s ease;line-height:1.6;color-scheme:dark}
     /* v30：手机上预估条改成可横滑——原来 nowrap + ellipsis 只显示得下第一个人 */
     .predict-box-footer .decision-preview{font-size:12px;color:var(--muted);padding:0 2px;line-height:1.4;
@@ -278,6 +278,35 @@
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
     .modal.show{display:flex}
     .modal-card{max-width:780px;width:min(100%,780px);max-height:85vh;overflow:auto;background:var(--surface);border-radius:20px;box-shadow:var(--shadow-lg);padding:28px}
+    /* v60：线性流程——结果卡片只留一个主按钮，其余降级成文字链接 */
+    #modalActions .btn-primary{width:100%;height:52px;font-size:15.5px;font-weight:800;letter-spacing:.3px}
+    .modal-links{display:flex;justify-content:center;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+    .modal-links button{background:none;border:none;padding:4px 2px;color:var(--muted);font-size:12.5px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+    .modal-links button:hover{color:var(--primary)}
+    .modal-links .sep{opacity:.4}
+    /* v60：决策页的步骤条——告诉他现在在哪一步 */
+    .flow-steps{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 12px}
+    .flow-steps .fs{
+      display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+      font-size:12px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.04);
+      border:1px solid var(--border);transition:all .18s ease;white-space:nowrap;
+    }
+    .flow-steps .fs.on{color:#0b1a16;background:var(--primary);border-color:var(--primary);box-shadow:0 0 0 3px rgba(13,139,150,.16)}
+    .flow-steps .fs.done{color:var(--success);border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08)}
+    .flow-steps .arrow{color:var(--muted);opacity:.45;font-size:11px}
+    /* v60：回到决策页时动作列表轻亮一下，把视线拉回来 */
+    @keyframes focusPulse{
+      0%{box-shadow:0 0 0 0 rgba(13,139,150,0);border-color:var(--border)}
+      18%{box-shadow:0 0 0 4px rgba(13,139,150,.18);border-color:rgba(13,139,150,.55)}
+      100%{box-shadow:0 0 0 0 rgba(13,139,150,0);border-color:var(--border)}
+    }
+    #actionList.focus-pulse{animation:focusPulse 1.4s ease-out 1}
+    @media (prefers-reduced-motion: reduce){ #actionList.focus-pulse{animation:none} }
+    @media (max-width:768px){
+      .flow-steps{gap:6px}
+      .flow-steps .fs{font-size:11px;padding:4px 9px}
+      .flow-steps .arrow{display:none}
+    }
     .log-item{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);margin-bottom:12px;animation:slideIn 0.3s ease}
 
     /* 里程碑标签 */
@@ -340,10 +369,10 @@
       .decision-footer-inner{grid-template-columns:1fr}
       .decision-footer-inner button{width:100%}
       body.decision-active #screen-decision{padding-bottom:130px}
-      /* 决策页双栏 → 单栏堆叠；网络图移到顶部并 sticky */
+      /* 决策页双栏 → 单栏堆叠；v60：动作列表排第一，网络图可折叠放后面 */
       #screen-decision > div[data-decision-grid]{grid-template-columns:1fr !important}
-      #screen-decision > div[data-decision-grid] > .panel:nth-child(1){order:2}
-      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){order:1;position:sticky;top:10px;z-index:50;max-height:45vh;overflow:hidden}
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(1){order:1}
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){order:2;position:static;max-height:none;overflow:visible}
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:260px !important}
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{max-height:none !important;overflow:visible !important}
       .swipe-hint{display:flex !important}
@@ -561,7 +590,7 @@
     /* ── 决策页：动作列表优先，网络图可折叠 ── */
     body.decision-active #screen-decision{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
     #screen-decision > div[data-decision-grid]{gap:12px!important}
-    #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:static!important;max-height:none!important;overflow:visible!important;order:1}
+    #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:static!important;max-height:none!important;overflow:visible!important;order:2}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:300px!important}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2).net-collapsed .svg-wrapper,
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2).net-collapsed #detailBox2,
@@ -616,7 +645,7 @@
     #modalActions{flex:0 0 auto;flex-direction:column!important;margin-top:12px!important;gap:8px!important}
     #modalActions .btn{width:100%;height:48px;font-size:15px}
     #modalActions #nextRoundBtn{order:-1}
-    #modalActions #viewLogBtn{order:3;height:40px;font-size:13px;opacity:.85}
+    .modal-links{font-size:12px;gap:8px;flex-wrap:wrap}
 
     .ending-banner h3{font-size:20px}
     .round-card{padding:14px}
@@ -1647,8 +1676,13 @@
     <section class="screen" id="screen-decision">
       <div data-decision-grid style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
         <div class="panel section">
+          <div class="flow-steps" id="flowSteps">
+            <span class="fs on" data-fs="1">① 选动作</span><span class="arrow">›</span>
+            <span class="fs" data-fs="2">② 选目标</span><span class="arrow">›</span>
+            <span class="fs" data-fs="3">执行</span>
+          </div>
           <h2>本轮可选动作</h2>
-          <div class="small muted">先选动作，再点选目标人物（也可展开网络图直接点节点）。</div>
+          <div class="small muted">点一张动作卡，再点要推动的人。下面那条按钮会跟着你的进度变。</div>
           <div id="situationLine" style="margin-top:12px"></div>
           <div id="actionList" class="cards" style="margin-top:14px"></div>
         </div>
@@ -1713,10 +1747,15 @@
   <div class="modal" id="impactModal">
     <div class="modal-card">
       <div id="impactBody"></div>
-      <div id="modalActions" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn" id="viewLogBtn" style="flex:1">查看回合日志</button>
-        <button class="btn" id="nextDecisionBtn" style="flex:1">直接进入下一轮决策</button>
-        <button class="btn btn-primary" id="nextRoundBtn" style="flex:1">看网络结构 →</button>
+      <div id="modalActions" style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-primary" id="nextRoundBtn">进入下一回合 →</button>
+        <div class="modal-links">
+          <button id="nextDecisionBtn">先看看网络</button>
+          <span class="sep">·</span>
+          <button id="viewLogBtn">回合日志</button>
+          <span class="sep">·</span>
+          <span>按 Enter 继续</span>
+        </div>
       </div>
       <div id="modalFinalActions" style="margin-top:20px;display:none;flex-direction:column;gap:10px">
         <div class="small" style="padding:10px 12px;background:rgba(224,138,58,.1);border-left:3px solid var(--warn);border-radius:6px;color:#e0a050"><strong>💡 建议：</strong>重玩之前请先完成以下 3 步 —— ① 浏览下方复盘内容 ② 点「📊 查看回合日志」对照决策轨迹 ③ 点「📥 导出 PDF」保存本局记录。</div>
@@ -3027,6 +3066,16 @@ function showScreen(name){
   if(ctaRound) ctaRound.textContent = state.round;
   // 滚动到顶部，避免转场景时滑出浮动条后面
   window.scrollTo({top:0,behavior:'instant'});
+  /* v60：回到决策页时，让动作列表轻轻亮一下——视线自然落到"该从这里开始" */
+  if(name==='decision' && !state.ended){
+    const list=el('actionList');
+    if(list){
+      list.classList.remove('focus-pulse');
+      void list.offsetWidth;
+      list.classList.add('focus-pulse');
+      setTimeout(()=>{ try{ list.classList.remove('focus-pulse'); }catch(_){} }, 1500);
+    }
+  }
 }
 
 /* =========================================================
@@ -3491,6 +3540,19 @@ function renderActions(){
     state.groupOpen = {};
     ACTION_GROUPS.forEach(g => state.groupOpen[g.key] = false);
   }
+  /* v60：每个回合第一次渲染时，自动展开第一组还能用的动作——
+     不让他先猜"这些折叠条要点哪一个"。同回合内他手动收起，就不再自动打开。 */
+  if(state.selectedAction===null && state._autoOpenRound !== state.round){
+    state._autoOpenRound = state.round;
+    if(!ACTION_GROUPS.some(g=>state.groupOpen[g.key])){
+      const first = ACTION_GROUPS.find(g=>g.ids.map(id=>ACTIONS.findIndex(x=>x.id===id)).filter(i=>i>=0).some(i=>{
+        const a=ACTIONS[i];
+        const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
+        return !(wait>0 || state.resources<a.weeks);
+      }));
+      if(first) state.groupOpen[first.key]=true;
+    }
+  }
   ACTION_GROUPS.forEach(group=>{
     const groupActions = group.ids.map(id => ACTIONS.findIndex(x=>x.id===id)).filter(i=>i>=0);
     if(groupActions.length===0) return;
@@ -3829,14 +3891,30 @@ function updateRunButton(){
   // v15：同步更新决策预览
   const selA = state.selectedAction!=null ? ACTIONS[state.selectedAction] : null;
   renderDecisionPreview(selA, state.selectedTargets);
-  if(state.ended){ btn.disabled=true; hint.textContent='本局已结束，请查看回合日志或重新开始。'; hint.className='hint-strip show'; return; }
-  if(state.selectedAction===null){ btn.disabled=true; hint.textContent='请先选一个动作。'; hint.className='hint-strip show'; return; }
+  /* v60：底部按钮就是"下一步"——文案随进度变，学生不用再找该点哪里 */
+  const steps=el('flowSteps');
+  const setStep=(n)=>{ if(!steps) return; steps.querySelectorAll('.fs').forEach(s=>{
+    const k=+s.dataset.fs; s.classList.toggle('on', k===n); s.classList.toggle('done', k<n);
+  }); };
+  if(state.ended){
+    btn.disabled=false; btn.textContent='查看结局 →'; setStep(4);
+    hint.textContent='本局已结束。'; hint.className='hint-strip show'; return;
+  }
+  if(state.selectedAction===null){
+    btn.disabled=true; btn.textContent='① 先选一个动作'; setStep(1);
+    hint.textContent='从上面挑一张动作卡，开始这一回合。'; hint.className='hint-strip show'; return;
+  }
   const a=ACTIONS[state.selectedAction];
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
   const credOk=state.credibility>=a.reqCred;
   // v20: 可信度不足时仍允许执行（强行模式），但显示警告
   const ready=(tCountOk(a,state.selectedTargets.length) && wait===0 && state.resources>=a.weeks);
   btn.disabled=!ready;
+  const needMore = a.need>0 ? Math.max(0, tMin(a)-state.selectedTargets.length) : 0;
+  btn.textContent = ready
+    ? `▶ 执行「${a.label}」`
+    : (needMore>0 ? `② 还要再选 ${needMore} 人` : '这一回合动不了 · 换一个动作');
+  setStep(ready ? 3 : 2);
   let h=`已选动作：${a.label}`;
   const problems=[];
   const warnings=[];
@@ -3847,7 +3925,7 @@ function updateRunButton(){
   if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加压力 +${Math.min(3, a.reqCred-state.credibility)}`);
   if(problems.length){ hint.textContent = h + ' · ' + problems.join('；'); hint.className='hint-strip warn'; }
   else if(warnings.length){ hint.textContent = h + ' · ' + warnings.join('；') + '，确认强行执行'; hint.className='hint-strip warn'; }
-  else { hint.textContent = h; hint.className='hint-strip'; }
+  else { hint.textContent = h + ' · 点右边按钮执行'; hint.className='hint-strip show'; }
 }
 
 /* =========================================================
@@ -4441,7 +4519,7 @@ function showModal(){
   // 弹窗仅用于每回合反馈——局终结算已移至结局页
   if(normalActions) normalActions.style.display = 'flex';
   if(finalActions) finalActions.style.display = 'none';
-  if(nextBtn) nextBtn.textContent = '看网络结构 →';
+  if(nextBtn) nextBtn.textContent = `进入第 ${state.round} 回合 →`;
 
   /* v57：刚刚跨过达标线——把「收工还是继续」摆到他面前，而不是替他结算。
      这是这一局最像真实管理者的时刻：数字已经能交差，但你知道还没推透。 */
@@ -4513,7 +4591,7 @@ function goNextRound(){
       cheatToast(`⏳ 继续推进第 1 回合：动作效果 ${postPassMulText(postPassMul())}。之后每回合再乘 ${postPassMulText(SCORE_RULES.postRate)}，最低 ${postPassMulText(SCORE_RULES.postFloor)}——推得越深，一个人越贵。`);
     }
   }
-  showScreen('network');
+  showScreen('decision');
   render();
 }
 
@@ -5981,7 +6059,29 @@ el('restartBtn').addEventListener('click', ()=>{
   reset();
 });
 el('exportBtn').addEventListener('click', ()=>{ const ok = exportGamePdf(); if(ok !== false) _learnerExported = true; });
-el('runBtn').addEventListener('click',runTurn);
+/* v60：底部那颗按钮就是整局的"下一步"——同一个位置，同一颗按钮，
+   只换文案：选动作 → 选目标 → 执行 → 进入下一回合。学生不用再找该点哪里。 */
+function primaryAdvance(){
+  const modal=el('impactModal');
+  const open=!!(modal && modal.classList.contains('show'));
+  if(open){
+    if(state.ended){ showScreen('ending'); render(); return; }
+    goNextRound(); return;
+  }
+  if(state.ended){ showScreen('ending'); render(); return; }
+  runTurn();
+}
+el('runBtn').addEventListener('click',primaryAdvance);
+/* Enter = 同一条路：弹窗开着就进下一回合，否则执行本回合决策 */
+document.addEventListener('keydown',(e)=>{
+  if(e.key!=='Enter') return;
+  const t=e.target;
+  if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.isContentEditable)) return;
+  const modal=el('impactModal');
+  if(modal && modal.classList.contains('show')){ e.preventDefault(); primaryAdvance(); return; }
+  const btn=el('runBtn');
+  if(btn && !btn.disabled && document.body.classList.contains('decision-active')){ e.preventDefault(); runTurn(); }
+});
 
 /* v57：达标横幅上的两个选择 */
 if(el('passStopBtn')) el('passStopBtn').addEventListener('click', stopAtPass);
@@ -6004,12 +6104,12 @@ if(el('passPushBtn')) el('passPushBtn').addEventListener('click', pushBeyondPass
 el('nextRoundBtn').addEventListener('click',goNextRound);
 el('viewLogBtn').addEventListener('click',()=>{ closeModal(); showScreen('log'); });
 
-/* v25 手机端线性流程：结果 → 网络结构 → 下一轮决策 */
+/* v60：主路径是「下一回合」直接回决策页；网络与日志降级成文字链接，想去再去 */
 if(el('nextDecisionBtn')){
   el('nextDecisionBtn').addEventListener('click', ()=>{
     closeModal();
     if(state.ended){ showScreen('ending'); return; }
-    showScreen('decision'); render();
+    showScreen('network'); render();
   });
 }
 if(el('netToDecisionBtn')){
