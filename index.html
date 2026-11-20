@@ -254,13 +254,14 @@
 
     /* 决策按钮浮动粘底：在决策页始终可见，不随动作列表长度被顶下去 */
     .decision-footer{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--primary);padding:10px 16px;border-radius:0;display:none;grid-template-columns:1fr auto;align-items:center;gap:10px;z-index:200;box-shadow:0 -6px 20px rgba(26,24,21,.12)}
-    .decision-footer-inner{max-width:1240px;margin:0 auto;width:100%;display:grid;grid-template-columns:80% 20%;align-items:center;gap:12px}
+    .decision-footer-inner{max-width:1240px;margin:0 auto;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
     #screen-decision.active ~ .decision-footer,
     body.decision-active .decision-footer{display:block}
     body.decision-active #screen-decision{padding-bottom:90px}
-    .decision-footer .hint-strip{font-size:12px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .decision-footer .hint-strip.warn{color:var(--danger);font-weight:600}
-    .decision-footer #runBtn{width:100%;font-size:14px;padding:0 16px;min-width:auto;height:48px;display:flex;align-items:center;justify-content:center}
+    .decision-footer .hint-strip{display:none;font-size:12px;text-align:left;line-height:1.45;white-space:normal}
+    .decision-footer .hint-strip.show{display:block;color:var(--muted)}
+    .decision-footer .hint-strip.warn{display:block;color:var(--danger);font-weight:600}
+    .decision-footer #runBtn{width:auto;min-width:200px;font-size:14px;padding:0 28px;height:48px;display:flex;align-items:center;justify-content:center}
     #runBtn:disabled{box-shadow:inset 0 0 0 2px var(--danger);background:rgba(224,80,104,.1);color:var(--danger);opacity:1}
     .predict-box-footer textarea{width:100%;min-height:48px;max-height:48px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:13px;resize:none;background:#0d1e2a !important;color:var(--text) !important;transition:border-color 0.2s ease,box-shadow 0.2s ease;line-height:1.6;color-scheme:dark}
     /* v30：手机上预估条改成可横滑——原来 nowrap + ellipsis 只显示得下第一个人 */
@@ -270,16 +271,9 @@
     .predict-box-footer .decision-preview::-webkit-scrollbar{display:none}
     .predict-box-footer .decision-preview .dp-item{flex:0 0 auto}
     .predict-box-footer .decision-preview .dp-label{flex:0 0 auto}
-    .predict-box-footer textarea::placeholder{color:var(--muted);opacity:0.7}
-    .predict-box-footer textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(13,139,150,.1)}
     /* global textarea dark override */
     textarea{background:#0d1e2a;color:var(--text);color-scheme:dark;border:1px solid var(--border);border-radius:8px;font-family:inherit}
     textarea::placeholder{color:var(--muted);opacity:.7}
-    /* 预判框 */
-    .predict-box{margin-top:10px;padding:12px;border:1px dashed var(--primary);border-radius:12px;background:rgba(13,139,150,.04)}
-    .predict-box label{display:block;font-size:12px;font-weight:700;color:var(--primary-dark);margin-bottom:6px}
-    .predict-box textarea{width:100%;min-height:52px;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:inherit;font-size:13px;resize:vertical;background:#0d1e2a !important;color:var(--text) !important;color-scheme:dark}
-    .predict-box .small{margin-top:6px;color:var(--muted)}
 
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
     .modal.show{display:flex}
@@ -576,7 +570,8 @@
     /* v35：手机端只留一个按钮；minmax(0,1fr) 防止子元素撑破屏幕宽度 */
     .decision-footer-inner{grid-template-columns:minmax(0,1fr)!important;gap:0!important}
     .decision-footer #runBtn{height:46px;width:100%;font-size:15px;border-radius:12px}
-    .predict-box-footer #predictInput{display:none!important}
+    /* v41：预判输入框已删；平时不占位，只在未选动作或有警告时冒一行小字 */
+    .decision-footer .hint-strip{font-size:11px;line-height:1.35;margin-bottom:4px}
     .predict-box-footer{padding-right:0}
 
     /* ── 网络页：底部「进入决策」CTA ── */
@@ -632,7 +627,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v40</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v41</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1385,14 +1380,12 @@
     <!-- 浮动决策按钮：脱离 #screen-decision，只在决策页可见（由 body.decision-active 控制） -->
     <div class="decision-footer" id="decisionFooter" role="region" aria-label="执行决策">
       <div class="decision-footer-inner">
-        <!-- 左列：预判框（80%） -->
+        <!-- 左列：预计影响 + 状态提示（v41：预判输入框已移除） -->
         <div class="predict-box-footer" id="predictBoxFooter">
           <div id="decisionPreview" class="decision-preview" style="display:none"></div>
-          <textarea id="predictInput" maxlength="120" placeholder="💭 预判（选填）：我预计... | 提示：请先选一个动作" aria-label="决策预判"></textarea>
+          <div id="hintText" class="hint-strip show">请先选一个动作。</div>
         </div>
-        <!-- 提示文本（隐藏，仅供JS使用） -->
-        <div id="hintText" class="hint-strip muted" style="display:none"></div>
-        <!-- 右列：执行按钮（20%） -->
+        <!-- 右列：执行按钮 -->
         <button class="btn btn-primary" id="runBtn">执行本轮决策</button>
       </div>
     </div>
@@ -3402,8 +3395,8 @@ function updateRunButton(){
   // v15：同步更新决策预览
   const selA = state.selectedAction!=null ? ACTIONS[state.selectedAction] : null;
   renderDecisionPreview(selA, state.selectedTargets);
-  if(state.ended){ btn.disabled=true; hint.textContent='本局已结束，请查看回合日志或重新开始。'; hint.className='hint-strip muted'; return; }
-  if(state.selectedAction===null){ btn.disabled=true; hint.textContent='请先选一个动作。'; hint.className='hint-strip muted'; return; }
+  if(state.ended){ btn.disabled=true; hint.textContent='本局已结束，请查看回合日志或重新开始。'; hint.className='hint-strip show'; return; }
+  if(state.selectedAction===null){ btn.disabled=true; hint.textContent='请先选一个动作。'; hint.className='hint-strip show'; return; }
   const a=ACTIONS[state.selectedAction];
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
   const credOk=state.credibility>=a.reqCred;
@@ -3420,7 +3413,7 @@ function updateRunButton(){
   if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加激进压力 +${Math.min(3, a.reqCred-state.credibility)}`);
   if(problems.length){ hint.textContent = h + ' · ' + problems.join('；'); hint.className='hint-strip warn'; }
   else if(warnings.length){ hint.textContent = h + ' · ' + warnings.join('；') + '，确认强行执行'; hint.className='hint-strip warn'; }
-  else { hint.textContent = h + ' · 点击「执行本轮决策」'; hint.className='hint-strip'; }
+  else { hint.textContent = h; hint.className='hint-strip'; }
 }
 
 /* =========================================================
@@ -4308,9 +4301,9 @@ function runTurn(){
   if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<a.weeks) return;
   if(!credOk && !credOverride) return; // 完全无可信度时不允许
 
-  // 记录预判
-  const predictionText = (el('predictInput')?.value || '').trim();
-  state.currentPrediction = predictionText;
+  // v41：预判输入框已移除，保留字段以兼容旧记录
+  const predictionText = '';
+  state.currentPrediction = '';
 
   const before = { cred:state.credibility, pressure:state.pressure, people:snapshotPeople() };
 
@@ -4475,9 +4468,6 @@ function runTurn(){
     prediction: predictionText, // v29：把学生自己写的预判带进结果页，逼他对照
     convertedBefore: Object.values(before.people).filter(x=>x.status===4).length,
     convertedAfter: Object.values(state.people).filter(x=>x.status===4).length };
-
-  // 重置预判输入
-  if(el('predictInput')) el('predictInput').value='';
 
   if(checkEnding()){ renderEndingScreen(); showScreen('ending'); render(); return; }
 
@@ -4929,7 +4919,6 @@ function reset(){
   const keepName = state && state.learnerName ? state.learnerName : '';
   state = initState();
   state.learnerName = keepName;
-  if(el('predictInput')) el('predictInput').value='';
   updateRoleUI();
   // v17：重玩时保持在模拟内（task 页），顶栏/HUD 已显示无需再次显示
   revealSimulationChrome();
