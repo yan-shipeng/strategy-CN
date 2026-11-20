@@ -3712,6 +3712,7 @@ function buildActionCard(a, idx){
     card.className='action'+(state.selectedAction===idx?' selected':'')
       +((state.descOpen&&state.descOpen.has(a.id))?' desc-open':'');
     card.setAttribute('tabindex','0');
+    card.dataset.i = String(idx);   // v78：选中后要靠它把卡片钉回原来的位置
     card.setAttribute('role','button');
     card.setAttribute('aria-pressed', state.selectedAction===idx ? 'true' : 'false');
     const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
@@ -4799,7 +4800,24 @@ function chooseAction(idx, opts){
     ACTION_GROUPS.forEach(x=>{ state.groupOpen[x.key]=false; });
     state.groupOpen[g.key]=true;
   }
+  /* v78：手机端点了动作之后页面会往下窜。
+     原因是 render() 会把别的小组收起来——选中的那一组被提到页面靠上的位置，
+     整页高度一变，视口里看到的内容就整体错位了（学生刚点的那张卡甚至跑到屏幕外）。
+     这里在 render 前后量一次卡片在视口里的位置，把差值补回去，
+     效果就是：你点哪张卡，它就在原地展开，页面不动。 */
+  const beforeCard=document.querySelector(`.action[data-i="${idx}"]`);
+  const anchorTop=beforeCard?beforeCard.getBoundingClientRect().top:null;
   render();
+  if(anchorTop!==null){
+    const afterCard=document.querySelector(`.action[data-i="${idx}"]`);
+    if(afterCard){
+      const d=afterCard.getBoundingClientRect().top-anchorTop;
+      if(Math.abs(d)>1){
+        const cur=window.scrollY||window.pageYOffset||0;
+        try{ window.scrollTo(0, Math.max(0, cur+d)); }catch(_){ window.scrollBy(0, d); }
+      }
+    }
+  }
   // 选人区在卡片下半截，点了却在屏幕外就等于没展开——只在真的看不见时轻轻滚一下
   // v70：点「ⓘ 说明」是想读字，别把页面从字上拽走
   if(a.need && !(opts && opts.noReveal)) revealTargets();
@@ -4815,21 +4833,29 @@ function whyDisabled(a, wait, noTeacher){
   cheatToast(`⛔ 「${a.label}」现在用不了 —— ${why.length?why.join('；'):'条件不满足'}`);
 }
 
-/* v67：把选人区带进视野。只在它被吸顶条或底部推进栏挡住时才滚，
-   已经在视野里就一动不动，避免每点一次就跳屏。 */
+/* v67：把选人区带进视野。
+   v78：改成「以卡片为单位、只补看不见的那一段」，修手机端点一下就跳到底部。
+   原来的判断是"整块选人区必须完整可见"——可手机上一个动作的选人区（4 个人 + 说明）
+   往往比整屏还高，这个条件永远不成立，于是每次都把选人区的顶推到吸顶条下面，
+   页面就从卡片头部一路滑到卡片底部，学生刚点的动作反而看不见了。
+   现在的规则：只要选人区的开头已经在屏幕里，就一动不动；确实看不见，
+   就把整张卡片顶到吸顶条下面（而不是把选人区的底对齐底栏）。 */
 function revealTargets(){
   requestAnimationFrame(()=>{
-    const box=document.querySelector('.action.selected .target-selector');
+    const card=document.querySelector('.action.selected');
+    if(!card) return;
+    const box=card.querySelector('.target-selector');
     if(!box) return;
     const r=box.getBoundingClientRect();
     const vh=window.innerHeight||document.documentElement.clientHeight||0;
     const topPad=96, bottomPad=130;   // 吸顶 HUD 与底部推进栏的高度
-    if(r.top>=topPad && r.bottom<=vh-bottomPad) return;
     const cur=window.scrollY||window.pageYOffset||0;
+    const bottomLine=vh-bottomPad-40;
     let target;
-    if(r.height>vh-topPad-bottomPad) target=cur+r.top-topPad;              // 比可视区还高：对齐顶部
-    else if(r.bottom>vh-bottomPad)   target=cur+r.bottom-(vh-bottomPad);   // 被底栏挡住：把底部推上来
-    else                             target=cur+r.top-topPad;              // 被顶栏挡住
+    if(r.top>=topPad && r.top<=bottomLine) return;      // 开头已经露在视野里：不滚
+    if(r.top>bottomLine) target=cur+(r.top-bottomLine);  // 在屏幕下方：只把它拉到线下，不整卡上移
+    else target=cur+(r.top-topPad);                      // 被吸顶条盖住：拉回来
+    if(Math.abs(target-cur)<4) return;
     try{ window.scrollTo({top:Math.max(0,target),behavior:'smooth'}); }
     catch(_){ window.scrollTo(0,Math.max(0,target)); }
   });
