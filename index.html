@@ -670,7 +670,7 @@
     <div class="kpi"><div class="small">回合</div><div class="num" id="roundKpi">1</div></div>
     <div class="kpi"><div class="small">完全配合率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
-    <div class="kpi"><div class="small">积分 <span title="成果分 + 效率分 + 组织分 + 里程碑分，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
+    <div class="kpi"><div class="small">积分 <span title="满分 100：成果 55 + 效率 15 + 组织 20 + 里程碑 10，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
     <div class="kpi"><div class="small">压力</div><div class="num" id="pressureKpi">0</div></div>
   </div>
 
@@ -718,16 +718,19 @@
       /* slide container */
       .intro-slides{
         position:relative;z-index:1;
-        flex:1;display:flex;flex-direction:column;
+        flex:1;min-height:0;
+        display:flex;flex-direction:column;
+        overflow-y:auto;overflow-x:hidden;
+        scrollbar-width:thin;
       }
       /* individual slide */
       .intro-slide{
         display:none;
         flex-direction:column;
         justify-content:center;
-        min-height:calc(100vh - 72px);
-        padding:40px 32px 20px;
-        max-width:680px;
+        min-height:calc(100vh - 86px);
+        padding:56px 32px 40px;
+        max-width:720px;
         margin:0 auto;
         width:100%;
         box-sizing:border-box;
@@ -794,18 +797,19 @@
         display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;
       }
       .intro-card{
-        background:rgba(255,255,255,.04);
-        border:1px solid rgba(255,255,255,.09);
-        border-radius:14px;padding:16px;
-        transition:border-color .2s,background .2s;
+        background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+        border:1px solid rgba(255,255,255,.1);
+        border-radius:14px;padding:18px 18px 16px;
+        transition:border-color .2s,background .2s,transform .2s;
       }
       .intro-card:hover{
         border-color:rgba(13,139,150,.5);
-        background:rgba(13,139,150,.08);
+        background:rgba(13,139,150,.09);
+        transform:translateY(-2px);
       }
-      .intro-card-icon{font-size:22px;margin-bottom:8px;display:block;}
-      .intro-card-title{font-size:13px;font-weight:700;color:#d0e8ee;margin-bottom:5px;}
-      .intro-card-body{font-size:12px;color:#6a8a96;line-height:1.6;}
+      .intro-card-icon{font-size:24px;margin-bottom:10px;display:block;line-height:1;}
+      .intro-card-title{font-size:14px;font-weight:700;color:#dceef3;margin-bottom:6px;letter-spacing:.01em;}
+      .intro-card-body{font-size:12.5px;color:#7c98a4;line-height:1.7;}
       /* warning list */
       .intro-warn-list{list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:12px;}
       .intro-warn-list li{
@@ -854,9 +858,8 @@
       .intro-goal-box.lose strong{color:#e8b4bc;}
       /* progress dots */
       .intro-dots{
-        display:flex;justify-content:center;gap:8px;
-        padding:16px 0;
-        position:relative;z-index:1;
+        position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+        display:flex;justify-content:center;gap:8px;padding:0;
       }
       .intro-dot{
         width:8px;height:8px;border-radius:50%;
@@ -870,19 +873,32 @@
         width:24px;border-radius:4px;
       }
       /* nav bar */
-      .intro-nav{
-        position:relative;z-index:1;
-        display:flex;align-items:center;justify-content:space-between;
-        padding:16px 32px 24px;
-        max-width:680px;margin:0 auto;width:100%;box-sizing:border-box;
+      .intro-foot{
+        position:relative;z-index:3;flex:none;
+        display:flex;align-items:center;justify-content:space-between;gap:16px;
+        padding:14px 32px;
+        max-width:720px;margin:0 auto;width:100%;box-sizing:border-box;
+        border-top:1px solid rgba(255,255,255,.07);
+        background:rgba(4,13,19,.92);
+        -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
       }
+      /* 姓名区：一行放提示与跳过入口 */
+      .intro-name-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:9px;flex-wrap:wrap}
+      .intro-skip-link{
+        background:none;border:none;padding:2px 0;cursor:pointer;
+        color:#3ecfdc;font-size:12.5px;font-family:inherit;
+        text-decoration:underline;text-underline-offset:3px;
+      }
+      .intro-skip-link:hover{color:#7ce8f5}
+      .intro-hidden-btn{display:none}
       .intro-nav-back{
         background:transparent;border:1px solid rgba(255,255,255,.15);
         color:#6a8a96;border-radius:8px;padding:9px 18px;
         font-size:13px;cursor:pointer;transition:all .2s;
         font-family:inherit;
       }
-      .intro-nav-back:hover{border-color:rgba(255,255,255,.3);color:#d0e8ee;}
+      .intro-nav-back:hover:not(:disabled){border-color:rgba(255,255,255,.3);color:#d0e8ee;}
+      .intro-nav-back:disabled{opacity:.28;cursor:default;}
       .intro-nav-next{
         background:linear-gradient(135deg,#0d8b96,#065a63);
         border:none;color:#fff;border-radius:10px;
@@ -977,15 +993,16 @@
         .intro-lead{font-size:14px;line-height:1.7;}
         .intro-eyebrow{margin-bottom:10px;}
         .intro-name-block{margin-top:14px;}
-        /* 底部导航常驻，不用滚也能看到「下一步」 */
-        .intro-nav{
-          position:sticky;bottom:0;
+        /* 底部一条常驻，不用滚也能看到「下一步」 */
+        .intro-foot{
           padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));
-          background:#06111a;
-          border-top:1px solid rgba(255,255,255,.06);
+          gap:10px;
         }
         .intro-nav-back,.intro-nav-next{min-height:44px;}
-        .intro-slides{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+        .intro-nav-back{padding:9px 14px;font-size:12.5px;}
+        .intro-nav-next{padding:11px 20px;font-size:14px;}
+        .intro-slides{-webkit-overflow-scrolling:touch;}
+        .intro-name-foot{margin-top:8px;}
       }
 
       /* =========================================================
@@ -1175,14 +1192,13 @@
           <div class="intro-name-block">
             <div class="intro-name-label">你的姓名</div>
             <input id="learnerNameInput" type="text" maxlength="24" placeholder="例：张小明" aria-label="输入姓名" autocomplete="off" class="intro-name-input" />
-            <div id="learnerNameHint" class="intro-name-hint">姓名仅保存在本地。</div>
-            <div class="intro-name-btns">
-              <button class="intro-nav-next" id="toIntroBtn" style="flex:1">进入任务介绍 →</button>
-              <div id="skipIntroWrap" style="display:none;flex:1">
-                <button class="intro-nav-next" id="skipIntroBtn" style="width:100%;background:rgba(13,139,150,.25);border:1px solid rgba(13,139,150,.5);box-shadow:none">⚡ 直接开始</button>
-              </div>
+            <div class="intro-name-foot">
+              <span id="learnerNameHint" class="intro-name-hint">姓名只存在本地，用来导出报告。</span>
+              <button class="intro-skip-link" id="skipIntroBtn" style="display:none">已有记录 · 直接开始 →</button>
             </div>
           </div>
+          <!-- 兼容旧绑定：真正的"进入介绍"由底栏「下一步」触发 -->
+          <button id="toIntroBtn" class="intro-hidden-btn" aria-hidden="true" tabindex="-1">下一步</button>
         </div>
 
         <!-- ── Slide 2: Mission & Win/Lose ── -->
@@ -1269,19 +1285,17 @@
 
       </div><!-- /intro-slides -->
 
-      <!-- progress dots -->
-      <div class="intro-dots" id="introDots">
-        <button class="intro-dot active" data-slide="1"></button>
-        <button class="intro-dot" data-slide="2"></button>
-        <button class="intro-dot" data-slide="3"></button>
-        <button class="intro-dot" data-slide="4"></button>
-        <button class="intro-dot" data-slide="5"></button>
-      </div>
-
-      <!-- nav bar (hidden on slide 5) -->
-      <div class="intro-nav" id="introNavBar">
-        <button class="intro-nav-back" id="introPrevBtn">← 上一页</button>
-        <button class="intro-nav-next" id="introNextBtn">下一页 →</button>
+      <!-- 底部一条：进度点 + 前后翻页（最后一页整条隐藏） -->
+      <div class="intro-foot" id="introNavBar">
+        <button class="intro-nav-back" id="introPrevBtn">← 上一步</button>
+        <div class="intro-dots" id="introDots">
+          <button class="intro-dot active" data-slide="1" aria-label="第 1 页"></button>
+          <button class="intro-dot" data-slide="2" aria-label="第 2 页"></button>
+          <button class="intro-dot" data-slide="3" aria-label="第 3 页"></button>
+          <button class="intro-dot" data-slide="4" aria-label="第 4 页"></button>
+          <button class="intro-dot" data-slide="5" aria-label="第 5 页"></button>
+        </div>
+        <button class="intro-nav-next" id="introNextBtn">下一步 →</button>
       </div>
 
       <!-- hidden span kept for JS compat -->
@@ -1315,18 +1329,24 @@
           if(nav) nav.style.display = cur===TOTAL ? 'none' : '';
           // update next btn label
           const nb = document.getElementById('introNextBtn');
-          if(nb) nb.textContent = cur===TOTAL-1 ? '准备好了 →' : '下一页 →';
+          if(nb) nb.textContent = cur===TOTAL-1 ? '准备好了 →' : '下一步 →';
+          const pb = document.getElementById('introPrevBtn');
+          if(pb) pb.disabled = (cur===1);
         }, 280);
       }
 
-      document.getElementById('introNextBtn').addEventListener('click',()=>goTo(cur+1));
-      document.getElementById('introPrevBtn').addEventListener('click',()=>{
+      const nextBtnEl = document.getElementById('introNextBtn');
+      const prevBtnEl = document.getElementById('introPrevBtn');
+      // 第 1 页的「下一步」交给姓名校验（toIntroBtn 的 handler）去处理
+      nextBtnEl.addEventListener('click',()=>{
         if(cur===1){
-          // On slide 1, prev just focuses the name input
-          const ni = document.getElementById('learnerNameInput');
-          if(ni){ ni.focus(); ni.scrollIntoView({behavior:'smooth',block:'center'}); }
-        } else goTo(cur-1);
+          const b = document.getElementById('toIntroBtn');
+          if(b){ b.click(); return; }
+        }
+        goTo(cur+1);
       });
+      prevBtnEl.addEventListener('click',()=>{ if(cur>1) goTo(cur-1); });
+      prevBtnEl.disabled = true;   // 首页没有上一页
       document.querySelectorAll('#introDots .intro-dot').forEach(btn=>{
         btn.addEventListener('click',()=>goTo(parseInt(btn.dataset.slide)));
       });
@@ -1334,8 +1354,10 @@
       document.addEventListener('keydown',(e)=>{
         const intro = document.getElementById('screen-intro');
         if(!intro || !intro.classList.contains('active')) return;
-        if(e.key==='ArrowRight'||e.key===' ') goTo(cur+1);
-        if(e.key==='ArrowLeft') goTo(cur-1);
+        const t = e.target;
+        if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.isContentEditable)) return;
+        if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); nextBtnEl.click(); }
+        if(e.key==='ArrowLeft') prevBtnEl.click();
       });
 
       // inject learner name into slides
@@ -1367,7 +1389,9 @@
             const nav=document.getElementById('introNavBar');
             if(nav) nav.style.display='';
             const nb=document.getElementById('introNextBtn');
-            if(nb) nb.textContent='下一页 →';
+            if(nb) nb.textContent='下一步 →';
+            const pb2=document.getElementById('introPrevBtn');
+            if(pb2) pb2.disabled=true;
             refreshIntroName();
           }
         };
@@ -4083,6 +4107,7 @@ function debrief(){
 
 // 渲染结局页（普通页面，非弹窗）
 function renderEndingScreen(){
+  try{ renderTop(); }catch(_){ }
   const body = el('endingBody');
   if(!body) return;
   body.innerHTML = '';
@@ -4113,12 +4138,12 @@ function renderEndingScreen(){
         '</div>'+
       '</div>'+
       '<div class="score-parts">'+
-        `<div class="${cls(sc.parts.outcome)}"><b>${sc.parts.outcome}</b><span>成果分 · 完全配合 ${sc.conv} 人 × ${SCORE_RULES.perConvert}</span></div>`+
-        `<div class="${cls(sc.parts.efficiency)}"><b>${sc.parts.efficiency}</b><span>效率分 · 剩余 ${Math.max(0,state.resources)} 资源 × ${SCORE_RULES.perResource}</span></div>`+
-        `<div class="${cls(sc.parts.org)}"><b>${sc.parts.org}</b><span>组织分 · (可信度 ${state.credibility} − 压力 ${state.pressure}) × ${SCORE_RULES.orgWeight}</span></div>`+
-        `<div class="${cls(sc.parts.milestone)}"><b>${sc.parts.milestone}</b><span>里程碑分 · ${sc.ms} 个关键节点 × ${SCORE_RULES.perMilestone}</span></div>`+
+        `<div class="${cls(sc.parts.outcome)}"><b>${sc.parts.outcome}</b><span>成果分 · 完全配合 ${sc.conv}/${sc.totalPeople} 人（满分 ${SCORE_RULES.outcomeMax}）</span></div>`+
+        `<div class="${cls(sc.parts.efficiency)}"><b>${sc.parts.efficiency}</b><span>效率分 · 剩余 ${Math.max(0,state.resources)}/${TOTAL_RESOURCES} 资源（满分 ${SCORE_RULES.efficiencyMax}）</span></div>`+
+        `<div class="${cls(sc.parts.org)}"><b>${sc.parts.org}</b><span>组织分 · (可信度 ${state.credibility} − 压力 ${state.pressure}) × ${SCORE_RULES.orgWeight}（满分 ${SCORE_RULES.orgWeight*10}）</span></div>`+
+        `<div class="${cls(sc.parts.milestone)}"><b>${sc.parts.milestone}</b><span>里程碑分 · ${sc.ms} 个关键节点 × ${SCORE_RULES.perMilestone}（满分 ${SCORE_RULES.milestoneCap}）</span></div>`+
       '</div>'+
-      '<div class="small muted" style="margin-top:12px;line-height:1.7">分数不是排名，是把三件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少</b>（效率）、<b>留下的是什么组织</b>（组织分）。用高压换来的转化会在组织分里被扣回去——所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
+      '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 55 ＋ 效率 15 ＋ 组织 20 ＋ 里程碑 10。分数不是排名，是把三件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少</b>（效率）、<b>留下的是什么组织</b>（组织分）。用高压换来的转化会在组织分里被扣回去——所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
     wrap.appendChild(sb);
   }catch(_){}
 
@@ -4827,26 +4852,28 @@ function revealAfter(fn, newlyConverted){
      里程碑分 —— 关键节点（首次转化、转化过半、关键人物）有没有被点亮（每个 10，上限 100）
    压力和信誉是加权的：用高压换来的转化，会在组织分里被扣回去。
    ========================================================= */
-const SCORE_RULES = { perConvert:50, perResource:3, orgWeight:8, perMilestone:10, milestoneCap:100 };
+/* 满分 100：成果 55 + 效率 15 + 组织 20 + 里程碑 10 */
+const SCORE_RULES = { outcomeMax:55, efficiencyMax:15, orgWeight:2, perMilestone:2, milestoneCap:10, full:100 };
 function scoreBreakdown(){
   const ids = Object.keys(state.people).filter(id=>id!=='pm');
   const conv = ids.filter(id=>state.people[id].status===4).length;
   const ms = (state.history||[]).reduce((sum,h)=>
     sum + (h.milestones||[]).filter(m=>/^(首次转化|转化过半|关键节点转化)/.test(m)).length, 0);
   const parts = {
-    outcome: conv * SCORE_RULES.perConvert,
-    efficiency: Math.max(0, state.resources) * SCORE_RULES.perResource,
-    org: Math.round((state.credibility - state.pressure) * SCORE_RULES.orgWeight),
+    outcome: ids.length ? Math.round(conv / ids.length * SCORE_RULES.outcomeMax) : 0,
+    efficiency: Math.round(Math.max(0, state.resources) / TOTAL_RESOURCES * SCORE_RULES.efficiencyMax),
+    org: Math.max(0, Math.min(SCORE_RULES.orgWeight*10, Math.round((state.credibility - state.pressure) * SCORE_RULES.orgWeight))),
     milestone: Math.min(SCORE_RULES.milestoneCap, ms * SCORE_RULES.perMilestone)
   };
-  const total = Math.max(0, parts.outcome + parts.efficiency + parts.org + parts.milestone);
-  return { total, parts, conv, ms, grade: scoreGrade(total) };
+  const total = Math.max(0, Math.min(SCORE_RULES.full,
+    parts.outcome + parts.efficiency + parts.org + parts.milestone));
+  return { total, parts, conv, totalPeople: ids.length, ms, grade: scoreGrade(total) };
 }
 function scoreGrade(t){
-  if(t>=750) return {k:'S', label:'教科书级'};
-  if(t>=600) return {k:'A', label:'漂亮'};
-  if(t>=450) return {k:'B', label:'及格'};
-  if(t>=300) return {k:'C', label:'勉强'};
+  if(t>=85) return {k:'S', label:'教科书级'};
+  if(t>=70) return {k:'A', label:'漂亮'};
+  if(t>=55) return {k:'B', label:'及格'};
+  if(t>=40) return {k:'C', label:'勉强'};
   return {k:'D', label:'没落地'};
 }
 
@@ -5103,7 +5130,7 @@ function exportGamePdf(){
         <tr><th>完全配合率</th><td>${convRate}%</td><th>完全配合人数</th><td>${(typeof convertedCount==='function')?convertedCount():'-'} / 12</td></tr>
         <tr><th>可信度</th><td>${state.credibility}</td><th>压力</th><td>${state.pressure}</td></tr>
         <tr><th>剩余资源</th><td>${state.resources}/${typeof TOTAL_RESOURCES!=='undefined'?TOTAL_RESOURCES:32}</td><th>回合数</th><td>${Math.max(1, state.round-1)}</td></tr>
-        ${scBlock?`<tr><th>本局总积分</th><td colspan="3"><b>${scBlock.total} 分</b>（${scBlock.grade.k} · ${scBlock.grade.label}）　成果 ${scBlock.parts.outcome} ＋ 效率 ${scBlock.parts.efficiency} ＋ 组织 ${scBlock.parts.org} ＋ 里程碑 ${scBlock.parts.milestone}</td></tr>`:''}
+        ${scBlock?`<tr><th>本局总积分</th><td colspan="3"><b>${scBlock.total} / 100 分</b>（${scBlock.grade.k} · ${scBlock.grade.label}）　成果 ${scBlock.parts.outcome} ＋ 效率 ${scBlock.parts.efficiency} ＋ 组织 ${scBlock.parts.org} ＋ 里程碑 ${scBlock.parts.milestone}</td></tr>`:''}
       </table>
     </section>`;
 
@@ -5576,8 +5603,8 @@ document.querySelectorAll('#netViewBar .nv-btn').forEach(btn=>{
   try{
     const savedForSkip = safeStorage.getItem('co-v17-learnerName') || '';
     if(savedForSkip){
-      const skipWrap = el('skipIntroWrap');
-      if(skipWrap) skipWrap.style.display = 'block';
+      const skipBtn = el('skipIntroBtn');
+      if(skipBtn) skipBtn.style.display = '';
     }
   }catch(_){}
 
@@ -5840,9 +5867,9 @@ document.addEventListener('keydown',(e)=>{
     if(ni) ni.value = state.learnerName;
     const introTag = el('introLearnerTag');
     if(introTag) introTag.textContent = '' + state.learnerName;
-    // 显示跳过按鈕
-    const skipWrap = el('skipIntroWrap');
-    if(skipWrap) skipWrap.style.display = 'flex';
+    // 显示跳过入口
+    const skipBtn = el('skipIntroBtn');
+    if(skipBtn) skipBtn.style.display = '';
     if(window._refreshIntroName) window._refreshIntroName();
   }
   // 渲染（不可见也没关系，以便进入模拟后直接可用）
