@@ -1134,7 +1134,7 @@
 
       /* v52：作弊码提示条 */
       .cheat-toast{
-        position:fixed;left:50%;bottom:84px;transform:translate(-50%,14px);
+        position:fixed;left:50%;bottom:calc(112px + env(safe-area-inset-bottom,0px));transform:translate(-50%,14px);
         z-index:4000;width:max-content;max-width:min(92vw,540px);
         background:rgba(9,24,31,.97);border:1px solid rgba(62,207,220,.4);
         border-left:3px solid #3ecfdc;border-radius:12px;
@@ -1160,7 +1160,7 @@
       .pass-tag.stop{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.35);color:#7ce8a0}
       .pass-tag.push{background:rgba(224,138,58,.1);border:1px solid rgba(224,138,58,.35);color:#e8b878}
       @media(max-width:820px){
-        .cheat-toast{bottom:148px;width:calc(100vw - 28px);max-width:calc(100vw - 28px);font-size:12.5px;padding:10px 14px}
+        .cheat-toast{bottom:calc(158px + env(safe-area-inset-bottom,0px));width:calc(100vw - 28px);max-width:calc(100vw - 28px);font-size:12.5px;padding:10px 14px}
       }
 
       /* v57：达标横幅——收工 or 继续，由他自己定 */
@@ -3828,7 +3828,9 @@ function buildActionCard(a, idx){
       // v45：点"详细参数"或它展开的内容，不当作选中动作——否则重渲染会把刚展开的合上
       if(e.target.closest('.action-details')) return;
       if(e.target.classList.contains('desc-toggle')){ e.stopPropagation(); card.classList.toggle('desc-open'); return; }
-      if(!isHardDisabled) chooseAction(idx);
+      // v67：不可用的卡不再"点了毫无反应"，直接把卡在哪一步说出来
+      if(isHardDisabled){ whyDisabled(a, wait, noTeacher); return; }
+      chooseAction(idx);
     });
     // v45：把展开状态记进 state，选目标人物时重渲染也不会被关掉
     const det=card.querySelector('.action-details');
@@ -3839,7 +3841,10 @@ function buildActionCard(a, idx){
       });
     }
     card.addEventListener('keydown',(e)=>{
-      if((e.key==='Enter'||e.key===' ') && !isHardDisabled){ e.preventDefault(); chooseAction(idx); }
+      if(e.key==='Enter'||e.key===' '){
+        e.preventDefault();
+        if(isHardDisabled) whyDisabled(a, wait, noTeacher); else chooseAction(idx);
+      }
     });
     return card;
 }
@@ -4704,23 +4709,60 @@ function updatePassBanner(){
 /* =========================================================
    选择/执行
    ========================================================= */
+/* v67：点一下就是「选它」，点第二下不再取消。
+   原来是 toggle——已经选中的卡再点一次会取消，分组和选人区一起收起来，
+   学生看到的就成了「有时候点开会展开，有时候点了没反应」。
+   现在点已选中的卡＝重新摊开它（分组、详细参数、选人区），不会把它关掉；
+   想换动作直接点另一张，不用先取消。 */
 function chooseAction(idx){
   if(state.ended) return;
-  state.selectedAction = state.selectedAction===idx ? null : idx;
-  state.selectedTargets=[];
+  const a=ACTIONS[idx];
+  if(!a) return;
+  const same=state.selectedAction===idx;
+  state.selectedAction=idx;
+  // 换动作才清空已选目标；重复点同一张卡不该把刚挑好的人清掉
+  if(!same){ state.selectedTargets=[]; state.targetHint=''; }
   // v42：选中动作时只展开它所在的那一组
-  if(state.selectedAction!=null){
-    const a=ACTIONS[state.selectedAction];
-    // v53：点开动作就直接把详细参数摊开，别让人再点一次三角
-    if(!state.detailsOpen) state.detailsOpen=new Set();
-    state.detailsOpen.add(a.id);
-    const g=ACTION_GROUPS.find(x=>x.ids.includes(a.id));
-    if(g){
-      ACTION_GROUPS.forEach(x=>{ state.groupOpen[x.key]=false; });
-      state.groupOpen[g.key]=true;
-    }
+  if(!state.detailsOpen) state.detailsOpen=new Set();
+  state.detailsOpen.add(a.id);
+  const g=ACTION_GROUPS.find(x=>x.ids.includes(a.id));
+  if(g){
+    ACTION_GROUPS.forEach(x=>{ state.groupOpen[x.key]=false; });
+    state.groupOpen[g.key]=true;
   }
   render();
+  // 选人区在卡片下半截，点了却在屏幕外就等于没展开——只在真的看不见时轻轻滚一下
+  if(a.need) revealTargets();
+}
+
+/* v67：不可用的动作被点到时，把卡在哪一步说出来。
+   以前是直接 return，学生只会觉得"这张卡点不动"，却不知道为什么。 */
+function whyDisabled(a, wait, noTeacher){
+  const why=[];
+  if(noTeacher) why.push('还没有完全配合的人可以当讲师');
+  if(wait>0) why.push(`冷却中，还要等 ${wait} 回合`);
+  if(state.resources<a.weeks) why.push(`资源不够：这个动作要 ${a.weeks}，你只剩 ${state.resources}`);
+  cheatToast(`⛔ 「${a.label}」现在用不了 —— ${why.length?why.join('；'):'条件不满足'}`);
+}
+
+/* v67：把选人区带进视野。只在它被吸顶条或底部推进栏挡住时才滚，
+   已经在视野里就一动不动，避免每点一次就跳屏。 */
+function revealTargets(){
+  requestAnimationFrame(()=>{
+    const box=document.querySelector('.action.selected .target-selector');
+    if(!box) return;
+    const r=box.getBoundingClientRect();
+    const vh=window.innerHeight||document.documentElement.clientHeight||0;
+    const topPad=96, bottomPad=130;   // 吸顶 HUD 与底部推进栏的高度
+    if(r.top>=topPad && r.bottom<=vh-bottomPad) return;
+    const cur=window.scrollY||window.pageYOffset||0;
+    let target;
+    if(r.height>vh-topPad-bottomPad) target=cur+r.top-topPad;              // 比可视区还高：对齐顶部
+    else if(r.bottom>vh-bottomPad)   target=cur+r.bottom-(vh-bottomPad);   // 被底栏挡住：把底部推上来
+    else                             target=cur+r.top-topPad;              // 被顶栏挡住
+    try{ window.scrollTo({top:Math.max(0,target),behavior:'smooth'}); }
+    catch(_){ window.scrollTo(0,Math.max(0,target)); }
+  });
 }
 function toggleTarget(id){
   if(state.ended) return;
