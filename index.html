@@ -36,7 +36,7 @@
     .title{font-size:28px;font-weight:800;background:linear-gradient(90deg,#0d8b96,#3ecfdc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .sub{color:var(--muted);font-size:15px}
 
-    .btn{border:1px solid var(--border);border-radius:12px;padding:12px 20px;background:rgba(255,255,255,.05);color:var(--text);cursor:pointer;box-shadow:none;transition:all var(--transition);font-weight:500;font-size:14px}
+    .btn{border:1px solid var(--border);border-radius:12px;padding:12px 20px;background:rgba(255,255,255,.05);color:var(--text);cursor:pointer;box-shadow:none;transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;font-weight:500;font-size:14px}
     .btn-primary{background:linear-gradient(135deg,#0d8b96,#065a63);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(13,139,150,.3)}
     .btn:disabled{opacity:0.4;cursor:not-allowed}
     .btn:hover:not(:disabled){background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
@@ -46,8 +46,11 @@
     .tabs .btn.active{background:linear-gradient(135deg,#0d8b96,#065a63);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(13,139,150,.3)}
 
     .hud{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
-    .kpi{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow);transition:all var(--transition)}
+    .kpi{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow);transition:transform .18s ease,box-shadow .18s ease}
     .kpi:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+    /* v66：HUD 里的四格是吸顶的读数条，不该跟着鼠标上下跳（跳一次就要重绘一次整条） */
+    #hudBar .kpi{transition:none}
+    #hudBar .kpi:hover{transform:none;box-shadow:none}
     .kpi .num{font-size:32px;font-weight:800;margin:8px 0 0;background:linear-gradient(135deg,var(--primary),var(--primary-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .kpi .small{font-size:13px;color:var(--muted);font-weight:500}
 
@@ -76,7 +79,7 @@
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{max-height:none !important;overflow:visible !important}
 
     .cards{display:grid;gap:12px}
-    .card{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);transition:all var(--transition)}
+    .card{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);transition:border-color .16s ease,background-color .16s ease}
     .card:hover{border-color:var(--primary);background:var(--primary-light)}
 
     .hero{padding:32px;border-radius:20px;background:linear-gradient(135deg,rgba(13,139,150,.12) 0%,rgba(6,17,26,.8) 100%);border:1px solid rgba(13,139,150,.25);box-shadow:var(--shadow);margin-bottom:20px}
@@ -93,9 +96,11 @@
     .edge.hot{stroke:var(--primary);stroke-width:3;opacity:1}
     .edge.spread{stroke:var(--success);stroke-width:2.4;opacity:.85;stroke-dasharray:4 3}
     .node{cursor:grab}
-    /* Avatar node enhancements */
-    .node circle.bg{transition:filter 0.2s,stroke-width 0.2s}
-    .node:hover circle.bg{filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
+    /* Avatar node enhancements
+       v66：hover 不再走 filter:drop-shadow —— SVG 上每加一次滤镜就要多开一层渲染表面，
+       鼠标扫过 12 个节点等于连开 12 次，卡顿主要来自这里。改用描边加粗，代价几乎为零。 */
+    .node circle.bg{transition:stroke-width .16s ease,stroke .16s ease,opacity .16s ease}
+    .node:hover circle.bg{stroke-width:4}
     .node image{transition:opacity 0.2s}
     .node.faded image{opacity:0.25}
     .node.faded circle{opacity:0.25}
@@ -120,8 +125,8 @@
     .node.selected circle.bg{stroke:var(--primary);stroke-width:4;filter:drop-shadow(0 6px 14px rgba(13,139,150,.35))}
     .node.selected image{filter:none}
     .node:not(.faded) image{filter:none}
-    .node.faded circle.bg{opacity:0.2;filter:grayscale(1) brightness(1.3)}
-    .node.faded image{opacity:0.2;filter:grayscale(1)}
+    .node.faded circle.bg{opacity:0.2}
+    .node.faded image{opacity:0.2}
     .node.faded text{opacity:0.35}
     .node.influenced circle.bg{filter:drop-shadow(0 0 6px rgba(61,138,58,.6))}
 
@@ -134,7 +139,7 @@
     .legend-item{display:inline-flex;align-items:center;gap:6px}
     .legend-svg{width:22px;height:22px;flex-shrink:0}
 
-    .detail{margin-top:14px;padding:18px;border-radius:16px;background:rgba(13,139,150,.06);border:1px solid rgba(13,139,150,.2);min-height:160px;transition:all var(--transition)}
+    .detail{margin-top:14px;padding:18px;border-radius:16px;background:rgba(13,139,150,.06);border:1px solid rgba(13,139,150,.2);min-height:160px}
     .status{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;gap:6px}
     .status.s0{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
     .status.s1,.status.s2{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
@@ -143,7 +148,7 @@
     .status.s4{background:var(--s4);color:#fff}
     .status .glyph{font-size:18px;font-weight:800}
 
-    .action{padding:16px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);display:grid;gap:10px;transition:all var(--transition);cursor:pointer}
+    .action{padding:16px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);display:grid;gap:10px;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease;cursor:pointer}
     /* v15：动作分组折叠 */
     .action-group{border:1px solid var(--border);border-radius:14px;background:var(--surface);margin-bottom:12px;overflow:hidden}
     .action-group-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:rgba(255,255,255,.04);user-select:none;transition:background .15s}
@@ -224,20 +229,19 @@
     .action.cred-override .disabled-badge{background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)}
     .disabled-badge{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:rgba(224,80,104,.12);color:#e87a8a;border:1px solid rgba(224,80,104,.3);font-size:11px;font-weight:600;vertical-align:middle;white-space:nowrap;cursor:help}
     .action-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;cursor:pointer}
-    /* v40：ADKAR 角标——分组说"推到哪一段"，这个字母说"治哪种卡点" */
-    .adkar-tag{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:5px;border:1px solid;font-size:10.5px;font-weight:800;line-height:1;cursor:help;flex:none;letter-spacing:0;vertical-align:middle}
+    /* v66：ADKAR 角标已下线，样式随之删除（保留 .adkar-tag 会让旧截图和旧测试误以为还在） */
     .action-toggle{font-size:18px;transition:transform var(--transition);flex-shrink:0}
     .action.collapsed .action-toggle{transform:rotate(-90deg)}
     .action-content{display:grid;gap:10px}
     .action.collapsed .action-content{display:none}
 
     .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--border);font-size:12px;transition:all var(--transition);font-weight:500}
+    .chip{padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--border);font-size:12px;transition:color .16s ease,border-color .16s ease,background-color .16s ease;font-weight:500}
     .chip.bad{color:var(--danger);border-color:rgba(224,80,104,.3);background:rgba(224,80,104,.1)}
     .chip.warn{color:var(--warn);border-color:rgba(224,138,58,.3);background:rgba(224,138,58,.1)}
     .chip.good{color:var(--success);border-color:rgba(90,184,74,.3);background:rgba(90,184,74,.1)}
     /* v20: 冷却原因提示样式 */
-    .chip[title]{cursor:help;transition:all var(--transition)}
+    .chip[title]{cursor:help;transition:color .16s ease,border-color .16s ease,background-color .16s ease}
     .chip[title]:hover{color:var(--primary);border-color:var(--primary);background:var(--primary-light)}
 
     .target-selector{display:none;padding:14px;background:rgba(13,139,150,.1);border-radius:12px;border:1px solid rgba(13,139,150,.25);margin-top:10px}
@@ -246,7 +250,7 @@
     .target-selector-title{font-size:13px;font-weight:700;color:var(--text)}
     .target-selector-count{font-size:12px;color:var(--muted);font-weight:500}
     .targets{display:flex;gap:8px;flex-wrap:wrap}
-    .target{padding:8px 12px 6px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.05);cursor:pointer;transition:all var(--transition);font-size:13px;font-weight:500;display:inline-flex;flex-direction:column;gap:3px;color:var(--text)}
+    .target{padding:8px 12px 6px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.05);cursor:pointer;transition:border-color .16s ease,background-color .16s ease,color .16s ease;font-size:13px;font-weight:500;display:inline-flex;flex-direction:column;gap:3px;color:var(--text)}
     .target-score-bar{width:100%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
     .target-score-fill{height:100%;border-radius:2px;transition:width .3s ease;background:var(--primary)}
     .target:hover{border-color:var(--primary);background:var(--primary-light)}
@@ -300,13 +304,22 @@
     .flow-steps .fs.on{color:#0b1a16;background:var(--primary);border-color:var(--primary);box-shadow:0 0 0 3px rgba(13,139,150,.16)}
     .flow-steps .fs.done{color:var(--success);border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08)}
     .flow-steps .arrow{color:var(--muted);opacity:.45;font-size:11px}
-    /* v60：回到决策页时动作列表轻亮一下，把视线拉回来 */
-    @keyframes focusPulse{
-      0%{box-shadow:0 0 0 0 rgba(13,139,150,0);border-color:var(--border)}
-      18%{box-shadow:0 0 0 4px rgba(13,139,150,.18);border-color:rgba(13,139,150,.55)}
-      100%{box-shadow:0 0 0 0 rgba(13,139,150,0);border-color:var(--border)}
+    /* v60：回到决策页时动作列表轻亮一下，把视线拉回来
+       v66：改成只动 opacity / transform 的一圈描边。
+       原来动的是容器自己的 box-shadow，等于让整列 12 张卡每帧重绘 1.4 秒——
+       这段时间里鼠标一动就是卡顿。 */
+    #actionList{position:relative}
+    #actionList.focus-pulse::after{
+      content:'';position:absolute;inset:-6px;border-radius:20px;pointer-events:none;
+      border:2px solid rgba(13,139,150,.55);
+      opacity:0;
+      animation:focusPulseRing 1.4s ease-out 1;
     }
-    #actionList.focus-pulse{animation:focusPulse 1.4s ease-out 1}
+    @keyframes focusPulseRing{
+      0%{opacity:0;transform:scale(.995)}
+      16%{opacity:1;transform:scale(1)}
+      100%{opacity:0;transform:scale(1.006)}
+    }
     @media (prefers-reduced-motion: reduce){ #actionList.focus-pulse{animation:none} }
     @media (max-width:768px){
       .flow-steps{gap:6px}
@@ -556,14 +569,14 @@
     .screen.active{animation:screenIn .22s ease both}
     @keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-    /* ── HUD：压成一行横滑条，吸顶 ── */
+    /* v66：吸顶条不再用 backdrop-filter。它是 94% 不透明的，模糊几乎看不出来，
+       但每一帧都要把下面整页重新采样一次——鼠标一动、下面一重绘就掉帧。 */
     #hudBar{
       position:sticky;top:0;z-index:400;
       display:flex!important;gap:6px;
       overflow-x:auto;overflow-y:hidden;
       margin:0 -12px 12px;padding:8px 12px;
-      background:rgba(6,17,26,.94);
-      -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+      background:#06111a;
       border-bottom:1px solid var(--border);
       scrollbar-width:none;
     }
@@ -580,8 +593,7 @@
       position:fixed;left:0;right:0;bottom:0;z-index:800;
       display:flex!important;flex-wrap:nowrap;gap:2px;margin:0;
       padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));
-      background:rgba(6,17,26,.97);
-      -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+      background:#06111a;
       border-top:1px solid var(--border);
       box-shadow:0 -8px 24px rgba(0,0,0,.45);
     }
@@ -917,8 +929,7 @@
         padding:9px 16px calc(10px + env(safe-area-inset-bottom,0px));
         width:100%;box-sizing:border-box;
         border-top:2px solid var(--primary);
-        background:rgba(4,13,19,.94);
-        -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+        background:#040d13;
         box-shadow:0 -6px 20px rgba(0,0,0,.35);
       }
       .intro-foot-status{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;min-width:0;max-width:100%}
@@ -1062,7 +1073,6 @@
         position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;
         overflow:hidden;opacity:0;transition:opacity .18s ease;
         background:#050e15;
-        -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
       }
       #cine.on{display:flex;opacity:1}
       #cine::after{
@@ -1218,7 +1228,6 @@
       #cele{
         position:fixed;inset:0;z-index:3100;display:none;align-items:center;justify-content:center;overflow:hidden;
         background:#04100a;
-        -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
         opacity:0;transition:opacity .22s ease;cursor:pointer;
       }
       #cele.on{display:flex;opacity:1}
@@ -1261,7 +1270,22 @@
       }
       @keyframes celePop{0%{transform:scale(.5);opacity:0;filter:blur(7px)}62%{transform:scale(1.05)}100%{transform:none;opacity:1;filter:drop-shadow(0 8px 30px rgba(96,226,126,.35))}}
       .cele-name{font-size:clamp(20px,4.8vw,31px);font-weight:800;color:#f2fff5;letter-spacing:1px;animation:cineUp .5s .22s both;text-shadow:0 2px 20px rgba(0,0,0,.9),0 0 3px rgba(0,0,0,.6)}
+      /* v66：一轮里转化了几个人，就一个人一颗牌子，都带 ✓ —— 不让第二个人缩成一行小字 */
+      .cele-roster{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:14px auto 0;max-width:min(520px,92vw)}
+      .cele-person{
+        display:inline-flex;align-items:center;gap:7px;
+        padding:8px 15px 8px 12px;border-radius:999px;
+        font-size:clamp(14px,3.4vw,17px);font-weight:800;color:#f2fff5;letter-spacing:.5px;
+        background:linear-gradient(180deg,rgba(96,226,126,.22),rgba(58,158,56,.14));
+        border:1px solid rgba(140,240,170,.45);
+        box-shadow:0 0 22px rgba(90,224,120,.18),inset 0 1px 0 rgba(255,255,255,.10);
+        animation:celeNameIn .5s cubic-bezier(.16,1.5,.4,1) both;
+        text-shadow:0 2px 12px rgba(0,0,0,.6);
+      }
+      .cele-person::before{content:'✓';font-size:.86em;color:#8ef0a8;font-weight:900;line-height:1}
+      @keyframes celeNameIn{0%{transform:translateY(10px) scale(.84);opacity:0}100%{transform:none;opacity:1}}
       .cele-line{margin:16px auto 0;max-width:330px;font-size:14px;line-height:1.85;color:#b6d8bf;animation:cineUp .5s .34s both;text-shadow:0 2px 14px rgba(0,0,0,.95)}
+      .cele-line.wide{max-width:420px}
       .cele-extra{margin-top:12px;font-size:13px;color:#7fbf8c;animation:cineUp .5s .46s both}
       .cele-tip{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:11.5px;color:#6fa87e;letter-spacing:1.5px;z-index:3}
       .cele-mark{
@@ -2323,8 +2347,8 @@ const ACTION_GROUPS = [
     ids:['kpi','incentive','reorg'] }
 ];
 
-/* v40：ADKAR 五个字母挂在动作卡片角上。
-   分组回答「我现在该推到哪一段」，字母回答「这个动作在治哪种卡点」。
+/* v66：ADKAR 只作为内部数据留着（结局复盘要判断「是不是只在治意愿」），
+   不再在动作卡上渲染字母角标。
    A 出现两次（认知 Awareness / 能力 Ability），内部用 AW / AB 区分。 */
 const ADKAR_META = {
   AW:{ letter:'A', name:'认知', desc:'他知不知道为什么要变、不变会怎样' },
@@ -3754,16 +3778,14 @@ function buildActionCard(a, idx){
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
     })();
 
-    // v40：ADKAR 角标
-    const _ak = a.adkar ? ADKAR_META[a.adkar] : null;
-    const _AKC = {AW:'#4a90d9', DE:'#e08a3a', KN:'#8b6ad4', AB:'#0d8b96', RE:'#3f9e5a'};
-    const adkarTag = _ak ? `<span class="adkar-tag" style="color:${_AKC[a.adkar]};border-color:${_AKC[a.adkar]}66;background:${_AKC[a.adkar]}1f" title="ADKAR · ${_ak.name}（${a.adkar==='AB'?'Ability':_ak.letter==='A'?'Awareness':_ak.letter==='D'?'Desire':_ak.letter==='K'?'Knowledge':'Reinforcement'}）：${_ak.desc}">${_ak.letter}</span>` : '';
+    /* v66：卡片上不再挂 ADKAR 字母角标。
+       学生看不懂 A / D / K，只会把它当成又一个要背的缩写；动作名和类型已经说清「这是什么」。
+       a.adkar 字段保留，只服务于结局复盘里那段「你一直在治想不想，还是也治过会不会」。 */
 
     card.innerHTML=`<div class="action-header">
       <div style="min-width:0;flex:1">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <strong>${a.label}</strong>
-          ${adkarTag}
           <span class="chip" style="font-size:11px">${a.type}</span>
           ${headerBadge}
           <span class="chip ${successHint.cls}" style="font-size:11px" title="${successHint.tip}">${successHint.label}</span>
@@ -4199,7 +4221,7 @@ function debrief(){
   H.forEach(h=>{ const a=ACTIONS.find(x=>x.id===h.actionId); if(a&&a.adkar) _akUse[a.adkar]=(_akUse[a.adkar]||0)+1; });
   if(H.length>=5 && !_akUse.KN && !_akUse.AB){
     out.push({tag:'只治意愿', k:'warn',
-      t:`整局的动作全落在认知、意愿、巩固上，知识（K）和能力（A）一次没碰。很多被当成「抵触」的表现，其实是「不会做又不好意思说」——培训、试点补的正是这一块，而它们最容易被跳过，因为看起来不像「一把手该亲自干的事」。`});
+      t:`整局的动作全落在「让他想」上——造势、动员、表彰，一次没碰「让他会」。很多被当成「抵触」的表现，其实是「不会做又不好意思说」——培训、试点补的正是这一块，而它们最容易被跳过，因为看起来不像「一把手该亲自干的事」。`});
   }
 
   // 2c. 工具用错位（v48）：同一把锤子砸在不同阶段的人身上，效果能差一倍
@@ -5065,15 +5087,24 @@ function playCelebration(names, cb){
   }
   const d = document.createElement('div');
   d.id='cele';
+  /* v66：以前只把第一个人放大，其余塞进一行小字「同一轮达成：…」，
+     看上去像只转化了一个。现在一人一颗带 ✓ 的牌子，谁在这一轮跨过来都看得见。 */
+  const multi = names.length > 1;
+  const roster = multi
+    ? `<div class="cele-roster">${names.map((n,i)=>
+        `<span class="cele-person" style="animation-delay:${(0.26+i*0.085).toFixed(2)}s">${n}</span>`).join('')}</div>`
+    : `<div class="cele-name">${names[0]}</div>`;
+  const lead = multi
+    ? `本轮 ${names.length} 个人一起跨过这条线。他们不再只是「不反对」——开始主动替这件事说话，也愿意为它担责任。`
+    : '他不再只是「不反对」——他开始主动替这件事说话，也愿意为它担责任。';
   d.innerHTML = ps+
     '<div class="cele-core">'+
       '<div class="cele-halo"></div>'+
       '<div class="cele-mark">✓</div>'+
       '<div class="cele-kicker">跨 过 那 条 线</div>'+
       '<div class="cele-big">完全配合</div>'+
-      `<div class="cele-name">${names[0]}</div>`+
-      '<div class="cele-line">他不再只是「不反对」——他开始主动替这件事说话，也愿意为它担责任。</div>'+
-      (names.length>1?`<div class="cele-extra">同一轮达成：${names.slice(1).join('、')}</div>`:'')+
+      roster+
+      `<div class="cele-line${multi?' wide':''}">${lead}</div>`+
     '</div>'+
     '<div class="cele-tip">点击任意处继续</div>';
   document.body.appendChild(d);
@@ -5085,7 +5116,8 @@ function playCelebration(names, cb){
     setTimeout(()=>{ if(d.parentNode) d.remove(); if(typeof cb==='function') cb(); }, 240);
   };
   d.addEventListener('click', finish);
-  setTimeout(finish, CELE_MS);
+  // 名字多时多留一会儿，让最后一块牌子也来得及被看见（最多加 0.9 秒）
+  setTimeout(finish, CELE_MS + Math.min(names.length-1, 6) * 150);
 }
 
 /* =========================================================
