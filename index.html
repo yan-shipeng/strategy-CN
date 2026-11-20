@@ -627,7 +627,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v41</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v42</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -3078,19 +3078,17 @@ function renderActions(){
     const s=situationLine();
     sitBox.innerHTML = s ? `<div class="sit-line ${s.k}">⚠ ${s.t}</div>` : '';
   }
-  // v15：按动作类型分 5 组折叠
+  // v15：按动作类型分组折叠
   // v17：默认全部折叠，先看组标题（动作类型）再决定打开哪一组
+  // v42：手风琴——同一时间只展开一组，避免整页被十二张卡撑长
   if(!state.groupOpen){
     state.groupOpen = {};
     ACTION_GROUPS.forEach(g => state.groupOpen[g.key] = false);
   }
-  const selectedActionId = state.selectedAction!=null ? ACTIONS[state.selectedAction].id : null;
   ACTION_GROUPS.forEach(group=>{
     const groupActions = group.ids.map(id => ACTIONS.findIndex(x=>x.id===id)).filter(i=>i>=0);
     if(groupActions.length===0) return;
-    // 若当前选中动作属于本组，强制展开
-    if(selectedActionId && group.ids.includes(selectedActionId)) state.groupOpen[group.key] = true;
-    const isOpen = state.groupOpen[group.key] !== false;
+    const isOpen = state.groupOpen[group.key] === true;
     const availCount = groupActions.filter(i=>{
       const a=ACTIONS[i];
       const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
@@ -3105,19 +3103,24 @@ function renderActions(){
       </div>`;
     const body = document.createElement('div');
     body.className='action-group-body';
-    if(!isOpen) body.style.display='none';
-    groupActions.forEach(idx=>{
-      const a = ACTIONS[idx];
-      body.appendChild(buildActionCard(a, idx));
-    });
+    // v42：收起的组不建卡片——DOM 更轻，也不会有隐藏元素占位
+    if(isOpen){
+      groupActions.forEach(idx=>{
+        body.appendChild(buildActionCard(ACTIONS[idx], idx));
+      });
+    }
     groupWrap.appendChild(body);
     const header = groupWrap.querySelector('.action-group-header');
-    header.addEventListener('click', ()=>{
-      state.groupOpen[group.key] = !state.groupOpen[group.key];
+    // v42：点开一组就把其他组收起；点当前组则收起自己
+    const toggleGroup = ()=>{
+      const willOpen = state.groupOpen[group.key] !== true;
+      ACTION_GROUPS.forEach(g=>{ state.groupOpen[g.key] = false; });
+      state.groupOpen[group.key] = willOpen;
       render();
-    });
+    };
+    header.addEventListener('click', toggleGroup);
     header.addEventListener('keydown',(e)=>{
-      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); state.groupOpen[group.key]=!state.groupOpen[group.key]; render(); }
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleGroup(); }
     });
     box.appendChild(groupWrap);
   });
@@ -4011,7 +4014,21 @@ function loseOrWin(cr){
 /* =========================================================
    选择/执行
    ========================================================= */
-function chooseAction(idx){ if(state.ended) return; state.selectedAction = state.selectedAction===idx ? null : idx; state.selectedTargets=[]; render(); }
+function chooseAction(idx){
+  if(state.ended) return;
+  state.selectedAction = state.selectedAction===idx ? null : idx;
+  state.selectedTargets=[];
+  // v42：选中动作时只展开它所在的那一组
+  if(state.selectedAction!=null){
+    const a=ACTIONS[state.selectedAction];
+    const g=ACTION_GROUPS.find(x=>x.ids.includes(a.id));
+    if(g){
+      ACTION_GROUPS.forEach(x=>{ state.groupOpen[x.key]=false; });
+      state.groupOpen[g.key]=true;
+    }
+  }
+  render();
+}
 function toggleTarget(id){
   if(state.ended) return;
   if(id==='pm') return;   // v31：自己不是推动对象
