@@ -988,6 +988,142 @@
         .intro-nav-back,.intro-nav-next{min-height:44px;}
         .intro-slides{overflow-y:auto;-webkit-overflow-scrolling:touch;}
       }
+
+      /* =========================================================
+         v51 过场动画：动作「在组织里展开」的那一秒
+         目的不是好看，是给结果一个落地的节拍——先让动作发生，再让人物反应。
+         ========================================================= */
+      #cine{
+        position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;
+        overflow:hidden;opacity:0;transition:opacity .18s ease;
+        background:#050e15;
+        -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+      }
+      #cine.on{display:flex;opacity:1}
+      #cine::after{
+        content:'';position:absolute;inset:0;pointer-events:none;
+        background:radial-gradient(circle at 50% 44%,
+          rgba(20,170,185,.24) 0%,
+          rgba(17,145,165,.17) 14%,
+          rgba(14,115,138,.11) 28%,
+          rgba(10,85,105,.06) 42%,
+          rgba(8,60,78,.025) 54%,
+          transparent 66%);
+      }
+      #cine::before{
+        content:'';position:absolute;inset:0;
+        background-image:linear-gradient(rgba(62,207,220,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(62,207,220,.055) 1px,transparent 1px);
+        background-size:58px 58px;
+        transform:perspective(700px) rotateX(62deg) scale(1.45);
+        transform-origin:50% 50%;
+        animation:cineGrid 5.5s linear infinite;
+        -webkit-mask-image:linear-gradient(180deg,transparent 5%,#000 30%,#000 74%,transparent 97%);
+        mask-image:linear-gradient(180deg,transparent 5%,#000 30%,#000 74%,transparent 97%);
+      }
+      @keyframes cineGrid{to{background-position:0 58px,58px 0}}
+      .cine-scan{
+        position:absolute;left:0;right:0;top:-45%;height:45%;pointer-events:none;
+        background:linear-gradient(180deg,transparent,rgba(62,207,220,.07) 55%,rgba(190,255,255,.16) 90%,transparent);
+        animation:cineScan 1.15s cubic-bezier(.4,0,.5,1) forwards;
+      }
+      @keyframes cineScan{to{top:112%}}
+      .cine-rings{position:absolute;left:50%;top:50%;width:min(360px,86vw);height:min(360px,86vw);transform:translate(-50%,-50%);pointer-events:none}
+      .cine-rings i{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(62,207,220,.32);animation:cineRing 2.3s ease-out infinite}
+      .cine-rings i:nth-child(2){animation-delay:.6s}
+      .cine-rings i:nth-child(3){animation-delay:1.2s}
+      @keyframes cineRing{0%{transform:scale(.32);opacity:.85}100%{transform:scale(1.22);opacity:0}}
+      .cine-inner{position:relative;z-index:2;text-align:center;padding:0 26px;max-width:560px}
+      .cine-adkar{
+        width:58px;height:58px;margin:0 auto 18px;border-radius:17px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:26px;font-weight:800;line-height:1;
+        animation:cinePop .55s cubic-bezier(.2,1.6,.4,1) both;
+        box-shadow:0 10px 34px rgba(0,0,0,.5),inset 0 0 26px rgba(255,255,255,.14);
+      }
+      .cine-label{
+        font-size:clamp(22px,4.6vw,33px);font-weight:800;color:#eafcff;letter-spacing:.5px;line-height:1.3;
+        animation:cineUp .45s .08s cubic-bezier(.2,.9,.3,1) both;text-shadow:0 2px 26px rgba(62,207,220,.4);
+      }
+      .cine-sub{margin-top:10px;font-size:13.5px;color:#8fb8c4;animation:cineUp .45s .16s both}
+      .cine-targets{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+      .cine-chip{
+        font-size:12.5px;color:#c9eef6;background:rgba(255,255,255,.06);
+        border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:4px 12px;
+        animation:cineChip .28s both;
+      }
+      .cine-bar{width:min(260px,64vw);height:3px;border-radius:99px;background:rgba(255,255,255,.12);margin:28px auto 0;overflow:hidden}
+      .cine-bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#0d8b96,#3ecfdc,#a6f4ff);box-shadow:0 0 12px rgba(62,207,220,.85);animation:cineBar 1.2s cubic-bezier(.3,.7,.4,1) forwards}
+      .cine-tip{position:absolute;bottom:24px;left:0;right:0;text-align:center;font-size:11.5px;color:#74a4b6;letter-spacing:1.5px}
+      @keyframes cinePop{0%{transform:scale(.4) rotate(-12deg);opacity:0}100%{transform:none;opacity:1}}
+      @keyframes cineUp{0%{transform:translateY(12px);opacity:0}100%{transform:none;opacity:1}}
+      @keyframes cineChip{0%{transform:translateY(9px) scale(.9);opacity:0}100%{transform:none;opacity:1}}
+      @keyframes cineBar{0%{width:0}100%{width:100%}}
+
+      /* =========================================================
+         v51 转化祝贺：有人真的跨过那条线时，单独给他一束光
+         ========================================================= */
+      #cele{
+        position:fixed;inset:0;z-index:3100;display:none;align-items:center;justify-content:center;overflow:hidden;
+        background:#04100a;
+        -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+        opacity:0;transition:opacity .22s ease;cursor:pointer;
+      }
+      #cele.on{display:flex;opacity:1}
+      #cele::after{
+        content:'';position:absolute;inset:0;pointer-events:none;
+        background:radial-gradient(circle at 50% 46%,
+          rgba(70,200,100,.24) 0%,
+          rgba(58,175,84,.17) 15%,
+          rgba(45,145,68,.11) 30%,
+          rgba(30,110,50,.06) 44%,
+          rgba(20,80,38,.025) 56%,
+          transparent 68%);
+      }
+      .cele-p{position:absolute;top:-10vh;z-index:1;border-radius:2px;will-change:transform;animation:celeFall linear forwards}
+      @keyframes celeFall{
+        0%{transform:translate3d(0,0,0) rotate(0);opacity:0}
+        9%{opacity:1}
+        100%{transform:translate3d(var(--dx),116vh,0) rotate(var(--rot));opacity:.92}
+      }
+      .cele-core{position:relative;z-index:10;text-align:center;padding:0 24px;max-width:560px}
+      .cele-halo{
+        position:absolute;left:50%;top:50%;width:min(440px,110vw);height:min(440px,110vw);
+        transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
+        background:radial-gradient(circle,
+          rgba(96,226,126,.28) 0%,
+          rgba(90,210,118,.19) 22%,
+          rgba(70,180,95,.11) 42%,
+          rgba(50,140,70,.045) 56%,
+          transparent 68%);
+        animation:celeHalo 1.7s ease-out both;
+      }
+      @keyframes celeHalo{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}42%{opacity:1}100%{transform:translate(-50%,-50%) scale(1.4);opacity:.18}}
+      .cele-kicker{font-size:12.5px;letter-spacing:7px;color:#8fe0a0;font-weight:700;padding-left:8px;animation:cineUp .5s .08s both}
+      .cele-big{
+        font-size:clamp(36px,8.4vw,66px);font-weight:800;letter-spacing:2px;margin:8px 0 4px;line-height:1.2;
+        background:linear-gradient(180deg,#ffffff,#9cf0b0 58%,#3a9e38);
+        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+        animation:celePop .72s cubic-bezier(.16,1.5,.4,1) both;
+        filter:drop-shadow(0 8px 30px rgba(96,226,126,.35));
+      }
+      @keyframes celePop{0%{transform:scale(.5);opacity:0;filter:blur(7px)}62%{transform:scale(1.05)}100%{transform:none;opacity:1;filter:drop-shadow(0 8px 30px rgba(96,226,126,.35))}}
+      .cele-name{font-size:clamp(20px,4.8vw,31px);font-weight:800;color:#f2fff5;letter-spacing:1px;animation:cineUp .5s .22s both;text-shadow:0 2px 20px rgba(0,0,0,.9),0 0 3px rgba(0,0,0,.6)}
+      .cele-line{margin:16px auto 0;max-width:330px;font-size:14px;line-height:1.85;color:#b6d8bf;animation:cineUp .5s .34s both;text-shadow:0 2px 14px rgba(0,0,0,.95)}
+      .cele-extra{margin-top:12px;font-size:13px;color:#7fbf8c;animation:cineUp .5s .46s both}
+      .cele-tip{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:11.5px;color:#6fa87e;letter-spacing:1.5px;z-index:3}
+      .cele-mark{
+        width:64px;height:64px;margin:0 auto 34px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:30px;font-weight:800;color:#eafff0;line-height:1;
+        background:radial-gradient(circle at 34% 28%,rgba(150,255,180,.55),rgba(58,158,56,.38));
+        border:1px solid rgba(150,255,180,.5);
+        box-shadow:0 0 0 9px rgba(90,224,120,.09),0 0 44px rgba(90,224,120,.45);
+        animation:celeMark .62s cubic-bezier(.16,1.6,.4,1) both;
+      }
+      @keyframes celeMark{0%{transform:scale(.2) rotate(-25deg);opacity:0}100%{transform:none;opacity:1}}
+      @media (prefers-reduced-motion: reduce){
+        .cine-scan,.cine-rings i,.cele-p{animation-duration:.01s!important;animation-iteration-count:1!important}
+      }
     </style>
 
     <section class="screen" id="screen-intro">
@@ -2271,10 +2407,10 @@ function softeningBonus(targetId){  if(!(state.softened[targetId]>0)) return 1.0
 }
 
 function thresholdLock(personId, gainedAmount, viaDirectOrSpread){
-  // 从 65 → 85 的最后跳必须来自定向或扩散
+  // 从 50 → 85 的最后跳必须来自定向或扩散
   const p=state.people[personId];
   if(p.score>=50 && !viaDirectOrSpread){
-    // 广覆盖：在 65 以上只给 30% 权重
+    // 广覆盖：在 50 以上只给 30% 权重
     return Math.round(gainedAmount * 0.30);
   }
   return gainedAmount;
@@ -4053,7 +4189,7 @@ function showModal(){
       </tr>`;
     }).join('');
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
-      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 60 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 50 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
@@ -4490,8 +4626,119 @@ function scoreThisRound(deltaConverted, deltaCred, deltaPressure, fail){
   return Math.round(deltaConverted*8 + deltaCred*2 - deltaPressure*2);
 }
 
+/* =========================================================
+   v51：过场与高光
+   「执行」和「看到结果」之间需要一个节拍——否则学生的手指还停在按钮上，
+   结果已经把他淹了。所以先让动作在组织里展开一秒多，再让结果落地；
+   有人真的被推到「完全配合」时，单独给他一束光。
+   ========================================================= */
+const CINE_MS = 1250, CELE_MS = 2200;
+const CINE_AKC = {AW:'#4a90d9', DE:'#e08a3a', KN:'#8b6ad4', AB:'#0d8b96', RE:'#3f9e5a'};
+let _cineStart = 0, _cineBusy = false;
+
+/* 自动化测试/录屏需要跳过动画时：地址栏带 #nocine，或 window.__noCine=true */
+function cineDisabled(){
+  try{ return !!window.__noCine || /(^|#|&)nocine/.test(location.hash||''); }catch(_){ return false; }
+}
+
+function playActionCinematic(a, targetIds){
+  if(cineDisabled()) return;
+  const old = document.getElementById('cine');
+  if(old) old.remove();
+  const meta = a.adkar ? ADKAR_META[a.adkar] : null;
+  const col = CINE_AKC[a.adkar] || '#3ecfdc';
+  const ids = targetIds || [];
+  const n = ids.length;
+  const chips = ids.slice(0,6).map((id,i)=>{
+    const p = state.people[id];
+    return `<span class="cine-chip" style="animation-delay:${(0.06+i*0.04).toFixed(2)}s">${p?p.name:id}</span>`;
+  }).join('') + (n>6 ? `<span class="cine-chip" style="animation-delay:.3s">等 ${n} 人</span>` : '');
+  const d = document.createElement('div');
+  d.id='cine'; d.setAttribute('aria-hidden','true');
+  d.innerHTML =
+    '<div class="cine-rings"><i></i><i></i><i></i></div>'+
+    '<div class="cine-inner">'+
+      `<div class="cine-adkar" style="color:${col};border:1px solid ${col}66;background:linear-gradient(160deg,${col}3d,${col}12)">${meta?meta.letter:'·'}</div>`+
+      `<div class="cine-label">${a.label}</div>`+
+      `<div class="cine-sub">${a.need===0?'全员覆盖':`定向推动 ${n} 人`}${meta?' · '+meta.name:''} · 消耗 ${a.weeks} 资源</div>`+
+      `<div class="cine-targets">${chips}</div>`+
+      '<div class="cine-bar"><i></i></div>'+
+    '</div>'+
+    '<div class="cine-scan"></div>'+
+    '<div class="cine-tip">动作正在组织里展开</div>';
+  document.body.appendChild(d);
+  // 直接上屏：淡入交给内部元素的入场动画，overlay 本身不再做 opacity 过渡
+  d.classList.add('on');
+  _cineStart = Date.now();
+  _cineBusy = true;
+}
+
+function hideCinematic(){
+  const d = document.getElementById('cine');
+  if(!d) return;
+  d.style.opacity = '0';
+  setTimeout(()=>{ if(d.parentNode) d.remove(); }, 200);
+}
+
+function playCelebration(names, cb){
+  const old = document.getElementById('cele');
+  if(old) old.remove();
+  const COLORS = ['#5ab84a','#8ef0a8','#3ecfdc','#e0c85a','#fff6cf','#a6f4ff','#f0d98a','#6ee6a0','#d8ffe4'];
+  let ps = '';
+  for(let i=0;i<88;i++){
+    const c = COLORS[i%COLORS.length];
+    const w = 4.5 + Math.random()*6, h = w*(0.6 + Math.random()*1.7);
+    // 窄屏上给中间留出一条干净的通道，别让纸屑压在「完全配合」上
+    let lx = Math.random()*100;
+    if(window.innerWidth<760 && lx>33 && lx<67) lx = lx<50 ? lx-26 : lx+26;
+    const glow = Math.random()>.72 ? `box-shadow:0 0 10px ${c};` : '';
+    ps += `<i class="cele-p" style="left:${lx.toFixed(1)}%;width:${w.toFixed(1)}px;height:${h.toFixed(1)}px;background:${c};${glow}`+
+      `animation-duration:${(1.7+Math.random()*1.5).toFixed(2)}s;animation-delay:${(Math.random()*0.55).toFixed(2)}s;`+
+      `--dx:${(Math.random()*70-35).toFixed(0)}px;--rot:${(Math.random()*1000-500).toFixed(0)}deg;`+
+      `border-radius:${Math.random()>.5?'50%':'2px'}"></i>`;
+  }
+  const d = document.createElement('div');
+  d.id='cele';
+  d.innerHTML = ps+
+    '<div class="cele-core">'+
+      '<div class="cele-halo"></div>'+
+      '<div class="cele-mark">✓</div>'+
+      '<div class="cele-kicker">跨 过 那 条 线</div>'+
+      '<div class="cele-big">完全配合</div>'+
+      `<div class="cele-name">${names[0]}</div>`+
+      '<div class="cele-line">他不再只是「不反对」——他开始主动替这件事说话，也愿意为它担责任。</div>'+
+      (names.length>1?`<div class="cele-extra">同一轮达成：${names.slice(1).join('、')}</div>`:'')+
+    '</div>'+
+    '<div class="cele-tip">点击任意处继续</div>';
+  document.body.appendChild(d);
+  d.classList.add('on');
+  let fired = false;
+  const finish = ()=>{
+    if(fired) return; fired = true;
+    d.style.opacity = '0';
+    setTimeout(()=>{ if(d.parentNode) d.remove(); if(typeof cb==='function') cb(); }, 240);
+  };
+  d.addEventListener('click', finish);
+  setTimeout(finish, CELE_MS);
+}
+
+/* 等过场放完再揭结果：新转化的人先单独谢幕，然后才是复盘弹窗 */
+function revealAfter(fn, newlyConverted){
+  if(cineDisabled()){ fn(); return; }
+  const wait = Math.max(0, CINE_MS + 80 - (Date.now() - _cineStart));
+  setTimeout(()=>{
+    hideCinematic();
+    const names = (newlyConverted||[]).map(id=>state.people[id]?state.people[id].name:null).filter(Boolean);
+    // _cineBusy 一直锁到结果真正落地，避免动画期间再触发一次执行
+    const land = ()=>{ _cineBusy = false; fn(); };
+    if(names.length) setTimeout(()=>playCelebration(names, land), 150);
+    else setTimeout(land, 150);
+  }, wait);
+}
+
 function runTurn(){
   if(state.ended) return;
+  if(_cineBusy) return;
   if(state.selectedAction===null) return;
   const a=ACTIONS[state.selectedAction];
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
@@ -4500,6 +4747,9 @@ function runTurn(){
   const credOverride = !credOk && state.credibility >= 1; // 可信度至少为 1 才能强行
   if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<a.weeks) return;
   if(!credOk && !credOverride) return; // 完全无可信度时不允许
+
+  // v51：先放节拍，再算账——过场结束才揭结果
+  playActionCinematic(a, state.selectedTargets);
 
   // v41：预判输入框已移除，保留字段以兼容旧记录
   const predictionText = '';
@@ -4555,10 +4805,9 @@ function runTurn(){
     ];
     state.lastImpact = { story: impact.story, details: impact.details||[], sideEffects, actionLabel: a.label, people: [], relations: [] };
     // 检查结局
-    if(checkEnding()){ renderEndingScreen(); showScreen('ending'); render(); return; }
+    if(checkEnding()){ revealAfter(()=>{ renderEndingScreen(); showScreen('ending'); render(); }); return; }
     // 显示反馈弹窗
-    showModal();
-    render();
+    revealAfter(()=>{ showModal(); render(); });
     return;
   }
   const consequences = applyConsequences(a, impact);
@@ -4667,7 +4916,7 @@ function runTurn(){
     convertedBefore: Object.values(before.people).filter(x=>x.status===4).length,
     convertedAfter: Object.values(state.people).filter(x=>x.status===4).length };
 
-  if(checkEnding()){ renderEndingScreen(); showScreen('ending'); render(); return; }
+  if(checkEnding()){ revealAfter(()=>{ renderEndingScreen(); showScreen('ending'); render(); }, newlyConverted); return; }
 
   // v17.7：记录本轮执行的动作 id，供下一轮「以身作则连用」检测使用
   state.lastActionId = a.id;
@@ -4676,8 +4925,8 @@ function runTurn(){
   tickSoftening();
   state.selectedAction = null;
   state.selectedTargets = [];
-  showModal();
-  render();
+  // v51：有人跨过转化线，先给他一束光，再落到复盘弹窗
+  revealAfter(()=>{ showModal(); render(); }, newlyConverted);
 }
 
 /* =========================================================
