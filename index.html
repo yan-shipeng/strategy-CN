@@ -108,8 +108,8 @@
     /* 状态颜色：填充表示状态。形状由 glyph 文本（○ ◔ ◑ ◕ ●）+ 边框样式共同编码 */
     .node.s0 circle.bg{fill:rgba(255,255,255,.08);stroke:var(--s0);stroke-width:2.5;stroke-dasharray:3 3}
     .node.s0 text.glyph{fill:var(--s0)}
-    .node.s1 circle.bg{fill:var(--s1-light);stroke:var(--s1);stroke-width:2.5}
-    .node.s1 text.glyph{fill:var(--s1)}
+    .node.s1 circle.bg{fill:rgba(255,255,255,.08);stroke:var(--s0);stroke-width:2.5;stroke-dasharray:3 3}
+    .node.s1 text.glyph{fill:var(--s0)}
     .node.s2 circle.bg{fill:var(--s2-light);stroke:var(--s2);stroke-width:3}
     .node.s2 text.glyph{fill:var(--s2)}
     .node.s3 circle.bg{fill:var(--s3-light);stroke:var(--s3);stroke-width:3.5}
@@ -137,7 +137,7 @@
     .detail{margin-top:14px;padding:18px;border-radius:16px;background:rgba(13,139,150,.06);border:1px solid rgba(13,139,150,.2);min-height:160px;transition:all var(--transition)}
     .status{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;gap:6px}
     .status.s0{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
-    .status.s1{background:var(--s1-light);color:var(--s1)}
+    .status.s1{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
     .status.s2{background:var(--s2-light);color:var(--s2)}
     .status.s3{background:var(--s3-light);color:var(--s3)}
     .status.s4{background:var(--s4);color:#fff}
@@ -424,6 +424,11 @@
   .impact-table td:nth-child(1),.impact-table td:nth-child(2){white-space:nowrap}
   .impact-table td:nth-child(3){white-space:nowrap}
   /* v46：未约谈者的说服度占位 */
+  /* v47：档位的「会不会掉分」标记 */
+  .decay-tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.2px}
+  .decay-tag.cold{color:#ff8a9a;background:rgba(224,80,104,.12);border:1px solid rgba(224,80,104,.35)}
+  .cold-mark{font-size:11px;line-height:1;color:#9fd4f0;margin-left:3px;cursor:help;vertical-align:1px}
+  .decay-tag.warm{color:#5ab84a;background:rgba(90,184,74,.1);border:1px solid rgba(90,184,74,.3)}
   .locked-score{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;
     color:var(--muted);background:rgba(255,255,255,.05);border:1px dashed var(--border);cursor:help;
     white-space:nowrap;word-break:keep-all}
@@ -645,7 +650,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v46</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v47</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -660,10 +665,10 @@
   <div class="hud" id="hudBar" style="display:none">
     <div class="kpi" id="resourcesKpiCard"><div class="small">剩余资源</div><div class="num" id="resourcesKpi">32</div><div class="resources-bar-wrap" aria-hidden="true"><div class="resources-bar-fill" id="resourcesBarFill"></div></div></div>
     <div class="kpi"><div class="small">回合</div><div class="num" id="roundKpi">1</div></div>
-    <div class="kpi"><div class="small">已转化率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
+    <div class="kpi"><div class="small">完全配合率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
     <div class="kpi"><div class="small">激进压力</div><div class="num" id="pressureKpi">0</div></div>
-    <div class="kpi" id="tipKpiCard"><div class="small">临界点 <span title="主动参与及以上的人占到 1/3，观望的心理成本就会变高">ⓘ</span></div><div class="num" id="tipKpi">0/4</div><div class="small" id="tipKpiSub" style="margin-top:2px">主动参与以上</div></div>
+    <div class="kpi" id="tipKpiCard"><div class="small">临界点 <span title="初步参与及以上的人占到 1/3，观望的心理成本就会变高">ⓘ</span></div><div class="num" id="tipKpi">0/4</div><div class="small" id="tipKpiSub" style="margin-top:2px">初步参与以上</div></div>
   </div>
 
   <div class="tabs" id="tabsBar" style="display:none">
@@ -1021,11 +1026,11 @@
           <h1 class="intro-h1">赢得<em>人心</em>，<br>而非只是<em>服从</em>。</h1>
           <div class="intro-goal-box win">
             <strong>✅ 胜利条件</strong><br>
-            在 60 个资源内让 ≥50% 的关键人物进入「已转化」状态。<br>
+            在 60 个资源内让 ≥50% 的关键人物进入「完全配合」状态。<br>
             <strong>剩余资源越多，排名越高。</strong>
           </div>
           <p class="intro-lead" style="margin-bottom:0;font-size:14px">
-            每个人物有 5 个状态：未动 → 意识觉醒 → 初步理解 → 主动参与 → <strong style="color:#6ba84a">已转化</strong>。
+            每个人物有 4 个状态：未动 → 初步理解 → 初步参与 → <strong style="color:#6ba84a">完全配合</strong>。<strong>45 分是分水岭</strong>：以下每回合会自己冷掉，以上不再掉分。
             你需要把他们一步步推进。
           </p>
         </div>
@@ -1043,7 +1048,7 @@
             <div class="intro-card">
               <span class="intro-card-icon">📊</span>
               <div class="intro-card-title">四个关键指标</div>
-              <div class="intro-card-body">剩余资源 · 转化率 · 可信度 · 激进压力。压力过高会触发反弹。</div>
+              <div class="intro-card-body">剩余资源 · 完全配合率 · 可信度 · 激进压力。压力过高会触发反弹。</div>
             </div>
             <div class="intro-card">
               <span class="intro-card-icon">🔗</span>
@@ -1291,7 +1296,7 @@
       <div class="hero">
         <h2>任务回顾 <span id="currentRoleBadge" class="badge" style="margin-left:8px;background:var(--primary-light);color:var(--primary);font-weight:600">🎛️ 整合负责人</span></h2>
         <p id="roleBriefingText" style="margin:8px 0">你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 60 个资源内推动新的治理和协同方式落地。</p>
-        <div class="small" id="roleGoalText" style="padding:8px 12px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:4px"><strong>你的目标：</strong>在 60 个资源内让 ≥50% 的关键人物真正进入「已转化」状态。</div>
+        <div class="small" id="roleGoalText" style="padding:8px 12px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:4px"><strong>你的目标：</strong>在 60 个资源内让 ≥50% 的关键人物真正进入「完全配合」状态。</div>
         <div class="badges" style="margin-top:12px"><span class="badge">先理解任务</span><span class="badge">再看社会网络</span><span class="badge">然后做决策</span></div>
         <button class="btn btn-primary" id="startBtn2" style="margin-top:14px">查看社会网络 →</button>
       </div>
@@ -1304,7 +1309,7 @@
           <div class="mech-card">
             <div class="mech-icon">📊</div>
             <div class="mech-title">说服度是分档的</div>
-            <div class="mech-text">每个人有 0-100 的「说服度」，跨过 25 / 45 / 65 / 85 才升一档。加 10 分给一个 78 分的人，他不会动；加 10 分给一个 58 分的人，他升档了。<b>同一个动作，价值取决于你选的是谁。</b></div>
+            <div class="mech-text">每个人有 0-100 的「说服度」，分四档：未动 → 初步理解 → 初步参与 → 完全配合。<b>45 分是分水岭：以下每回合会自己冷掉，以上不再掉分。</b>加 10 分给一个 78 分的人，他不会动；加 10 分给一个 58 分的人，他升档了。同一个动作，价值取决于你选的是谁。</div>
           </div>
           <div class="mech-card">
             <div class="mech-icon">🕸</div>
@@ -1319,7 +1324,7 @@
           <div class="mech-card">
             <div class="mech-icon">🔥</div>
             <div class="mech-title">临界点之后会自加速</div>
-            <div class="mech-text">「主动参与」以上的人一旦超过全员的 1/3，观望的心理成本突然变高——继续不动意味着站在少数人那边。<b>临界点之前你推石头，之后石头自己滚。</b></div>
+            <div class="mech-text">「初步参与」以上的人一旦超过全员的 1/3，观望的心理成本突然变高——继续不动意味着站在少数人那边。<b>临界点之前你推石头，之后石头自己滚。</b></div>
           </div>
           <div class="mech-card">
             <div class="mech-icon">🏛</div>
@@ -1417,7 +1422,7 @@
         <div class="log-list" id="logList"></div>
 
         <h3 style="margin-top:26px">指标演化</h3>
-        <div class="small muted">三条曲线分别对应已转化人数、可信度、激进压力。黄点是里程碑。</div>
+        <div class="small muted">三条曲线分别对应完全配合人数、可信度、激进压力。黄点是里程碑。</div>
         <div class="trend-wrap" id="trendWrap"></div>
       </div>
     </section>
@@ -1545,7 +1550,7 @@ const PEOPLE={
     prefs:{'制度':0.20,'政治':0.15,'叙事':-0.10}}
 };
 
-/* 状态字形（双编码核心）：未动○ → 觉醒◔ → 理解◑ → 参与◕ → 已转化● */
+/* 状态字形（双编码核心，v47 四档）：未动○ → 初步理解◑ → 初步参与◕ → 完全配合● */
 const AVATARS={
   ceo:'data:image/jpeg;base64,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',
   cfo:'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCAB4AHgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD6opaSigQtJS0lABRUTzqvA+Y/pULTO/cj2FOwXLZIHU4pN6/3h+dfPfxM/ach8P6vcaJ4UsrXUZ7djHNf3Mh8hXHVUCn58dM5Az0zXA237T3xCWTzJBoE0ZP3PshCH23K+QfrVqkyOdH2GCD0INFePfC74/aF46hFpqz2mha0JBELWWfCXBPQxFsd+Np5B9c16sszpxnPsalxa3KTuW6WoUuFbg/KalqRi0UlLQMSilNFAhKUUlFAASAMk4AqtLOX4HC/zonl3naPuj9ahpiFryf9pXxVd+G/h2LexmeCXVrpbN5Yzhli2lnAPuAF+hNer14l+1hbrceBtL2uv2iPUQ6R92UxsrN9ASmT7irh8SJlsecfDf4KW3irw/BrmqX93ZRXeTb29ntX5ASA7Eg8nBwAOlbh/ZtsDNIw8R3iqRhCLZN3/AudrD8BXRTa5cfDXTtH0GGDR5LS3tooVkvtUFvNO+Odq7CBznliM/hXVX+vTWWiJffYojdtCJvskl5GgVeNxMp+Xau4cjOcjHWvIqYrEc3NF6PbY9mnhcPy8slqt9zwD4kfCKXwDpsWsRam+pWssgt7nfCI2iLfdZQCQRxjnocfh9K/BbxFc+KPhjoWo3srTXQia3llblpGjcpuPuQoNeW+I9Sn+JHw+8QRzR6UkNvB9rgn0/UftPzxndsdSqkZ2sMjjr6V6B+zvHFD8JNGijcNIDM0y9DG7SFtpHY7WU/Qg16GHqTnTaqfEmediacIVE6fwtHpFSxTlODyv8qiorQxL4IIyORS1Ugl2Hafun9KtUhimikooAKjnfYmB1NS1UuG3SH24poGRUUUUCCvOvjXpS3Xh+O+kXdbwx3FrckjISOaPCufQLKkRJ7A57V6LSg4IPX29aGrqw07O551pzWmuaVp9/LbQy+dDDdIXjDbWKAgjPQjJwe3NVjc6Zc+ILeCO6hNxbRSwtaeWcgEowOMYAGzg9D2PFQ6cE0TULjwbLcLDeWYaeyzg+daMzGNwO5T7rL/ALGehzRHa+JvthifViLZRkXBghO722YyPz/OvAnTcJuL0se/CopwjJa3I/GiWeleCdXSKK3tYWtmg+VAiJ5jbSeOgy5J/E11vw1sDaeHXujE0K6hcyXMMbqVKQYWOEEHpmONDj/arnLZ4fEPi2y8PWsqyrpcyalqRzkRKhJhi92Z9pI7KnPUV6b9ea9LA03GHNLdnm4+opT5I7IKKKK7TiCrcD70weoqpUtu22QD14oEWqKWikMKoMcsT6mr56Gs+mhBRRWJ4q8aaD4LtI7nW9QS284kQwgF5Z2HUIg5Y9PYd6dgubdZfiXxNpXhHSZdV1i6W3to+Bxl5W7Ii9WY9gP0rxjxP8f9Z1HfB4csE0mE8C6uwJbgj1CD5E/EtXkt5qN1rPiCS81e+ury8RNscl3IXd8jLMueAO2FxjniqUe5LZ7LZNffEC2v/HN1p001k9ybJrK1Ym606ODmKeFl5L5kkLhefmG3IBB0ZYlTSl1GbxzqL6W4G2WNbcNIDwFWRY9xYngBfmzx1rG+BHjyDwzaeINO1ZtlisovLV1GWeUxrvhA7u20FB3+Ydq4/Q/GPiGL40SX76Cst+b6fz9DiRT5ChTvaMdBMEXd5g5c5GcNXNWwntJcydjqo4v2UeVq53lzeXvwrl0jxS+lPa6bfudMOjg/v1tsNN57k5zPvDHaT0OCdxOPXtE1zTfEemQ6npN5FeWcwyksZ4+hHVSO4PIrwn47+NIfFWs6JaaXKk+k20Mlx9oXpNMypwPZEcZ/2nI6qa8y0fVr/QdfkutE1G7sbiRd0strIRsYdnH3WBHZgenvXRGCUUjnlNuTbPtGivC/DP7QWoWmyDxPpi30Q4N5p6hJR7tETtb/AICR9K9f8N+KtF8X2BvtD1CG9gVtkmzIaJ8Z2up5VvYilYVzVpVOGB9DSUUDNDtRQOlFSMKoMMMR6VfqpcLtkJ9eaaEyKvmf9ofUvtnjp4w2V0i0tlA/uszGR/8Ax1lr6ZAycDqa+RvHl2Nd8XeJrnO5bi+niQ/7Kful/wDQKuJLMrGKpW6CS9naYl5om/d56KjDjA/ME+1T2UvnWcEp6tGpP1xzUd3/AKPcQ3XRf9VJ/uk8H8Gx+ZpiPVv2fXtZfGV9p15BBOs9pHeQiVA2yaCTAdc9GAmOCOetcr4Z8UtJ8fYdeDcXmty25PrFIWhUfQDZ+VHw61tfDvjzRdRkfZF5klvIf9mSNlGf+BBK4HQ7x7fUtLvs4eO7t58+h81WNOKE2er/ABuktV+IMmn2VvDbW+nWccflQoEUSSu80hwO5LqT6mvOGQR6jEICUaQM8wH3WUDAJHrnHPsa6LxhqY1rxl4g1IPvSfUZgjeqI3lr+GEB/GufsAZvNvCDiY/J7Rjhfz5P40hlpmCKWbooyfoK9F/ZovzaeIb3T3bA1HThc49ZI5Mk/XbL+leYajIDYTBGBLDywQc8scf1rsfhbejSviP4dcHaks72Tf7skbKP/HgtHQD6mpVGWA96SpbdcyA+nNQWW6KKKkYVHOm9MjqKkooBmXc3K2VtNdSEBII2lJ9lBP8ASvjK1leaBJ5OXl/et/vMdx/U19Y/FS6/sn4e+I7tTtxp8yKfRnXYP1avlFUEahB0UBR+HFWtiGWfAfhhfGXirS/DMpcWz3Ez3DLjKxR5bvx3HWvQdb/ZykeORfD3iGOWNwR9nucxM2ewzlT+GKl/Zx0aJNa8S+JpYJZo4vLsI1RN3LYMhA9BgZr1e18W2H/CSLpsGlHyUt1mklLZdHeXy0UKfUKzdeAOlNt30BLTU+ZfEvw+8beHrKWHU9FnA2bVuIwcKR0beuVzwD1FcXPviheMo8Uqp8oPXPQEEdea+0NL8TajrvjeGwhkWKwtrCS5uUVQRKZJdkOSeQdqM3HrXyv8QdXg8T/EvVru3ES2ovDFGEUKvlxDrgepAJ+tVGTJkihdiWO0isYcvNIuw/Ng7QPnOf8APJpi6aSABZwBRwBLM8mB9OlWLLNwz3rAjzeIwe0Y6fn1/KrdK9h2M02gtzDEPL/fXKuVRNqgKueB/wABFa9nenTL+x1BThrO6guM/wC5IrH9Aaz5iG1K2T+7HI//AKCP6mpruMy2k8Y6tGyj8QaLgfajYLEjpnj6VagTamT1NY3hG7/tjw3pGok7lubKCbPqWjU/zrdrNloKKKKQwooooAr6jp1pq9jPYX9vHc2s6FJIpBlXB7GvmL4q/CPxB4Nun1LQk/tDRT8xMn3rfno+BnH+309ff6lpGUMpVgCCMEHvTTsJq58u+BPiefCHgiHw9Y2WpQatNPI8t1DDHOss0hwm0Btx5KjGMmvSbfxnqni/SdPWxt7eOTyF+2atcWZGJhkMsEb4LHOcsflHbceBs6r8GdBn1+z17SwdOurWY3HkRgeRK+1gpK/w4Yhvl9OlN07wtqOg6PYWMsPmG1tooWeH5lJVQCR36juK58XWlCN4LU6cHRhOdqj0PLdSh8XWjagdLtPFsN7MiM10s8RjdoxhERIMAjHHznaMkkMa8Zg02R76SNo3jKqIrvdwVfJLpj1Jwp9ga96+K+qW+mWcBureOTYGZBLbmT5yQFAzKi9eoO445xXhdjYyC6aUXIQRTMHROFc4Gcdsc/kBVYOrKcHKQsbSjCfLE2AMcAYop0SPO4SFWlc8BUG4n8BXW6B8J/F/iFlMOky2kLf8t739yuPXB+Y/gK6TlOIazZ7sX+SEhK2x9MyLI4/9FGvTPht8ItQ8YSxX+pJLZaMDneRiS5HonoP9r8s9vT/BPwR0jw7bSHWGj1i4knhudskeIYpI1dV2r/FxI33vbivSVUKoVQAAMADtSlLsNIg07T7XSbC3sLGBLe1to1iiiToiKMAD8KsUUVBQUUUUAGaM0UUDDNJRRQAZozRRQBWu9MsNQZWvLK2uSoIBmiV8D8RVEeDvDSsWHh7SAxOSRZx5J9elFFAF+106ysRi0tLe3HpFGqfyFWM0UUALmkzRRQAZpc0UUAGaKKKAP//Z',
@@ -1566,9 +1571,22 @@ const REPORTS_TO={ceo:null,pm:'ceo',cfo:'ceo',region:'pm',plant:'region',ops:'re
   hr:'ops',sales:'ops',engineer:'plant',union:'plant',gov:'engineer',customer:'sales',finance:'sales'};
 Object.keys(REPORTS_TO).forEach(id=>{ if(PEOPLE[id]) PEOPLE[id].reportsTo=REPORTS_TO[id]; });
 
-const GLYPHS=['◯','◔','◑','◕','●'];
-const STATUS_LABELS=['未动','意识觉醒','初步理解','主动参与','已转化'];
-const STATUS_CUTOFFS=[0,25,45,65,85];
+/* v47：显示上四档——「未动」把原来的「意识觉醒」并进来了。
+   内部仍保留 5 个数值槽（0/1 都显示「未动」），因为「越冷掉得越快」本身就是教学点：
+   前段会自己滑走，跨过 45 分才站得住。
+   每一档都必须有一个可观察的后果，STATUS_INFO 里那句就是给学生看的话。 */
+const GLYPHS=['◯','◯','◑','◕','●'];
+const STATUS_LABELS=['未动','未动','初步理解','初步参与','完全配合'];
+const STATUS_CUTOFFS=[0,0,45,65,85];
+const STATUS_INFO=[
+  {min:0,  decay:-2, what:'还没在听。对他喊话打四折，每回合自己冷掉 2 分。', how:'只有点名谈得动。'},
+  {min:25, decay:-1, what:'听说了，但没往心里去。喊话打七折，每回合冷掉 1 分。', how:'广播能推一点，但推不住，一停就退。'},
+  {min:45, decay:0,  what:'认同为什么要做，但还没动手。从这一档起不再掉分。', how:'喊话全额有效——全员通报、表彰现在最划算。'},
+  {min:65, decay:0,  what:'开始做了，但只是照做。喊话只给三成，必须点名谈。', how:'差最后一跳，靠广播永远差一口气。'},
+  {min:85, decay:0,  what:'会替你去说服别人，能当内部讲师。', how:'该让他带人了。'}
+];
+function statusInfo(s){ return STATUS_INFO[s] || STATUS_INFO[0]; }
+function decayHint(s){ const d=statusInfo(s).decay; return d<0 ? ('每回合自然 '+d) : '不再掉分'; }
 
 /* =========================================================
    v31：隐藏信息
@@ -1756,7 +1774,7 @@ const ACTIONS=[
   }},
   {id:'training',label:'上手培训',weeks:2,cooldown:4,need:4,min:1,type:'赋能',reqCred:5,disrupt:1,adkar:'KN',desc:'帮助想做但不会做的人掌握实际技能——这是"赋能"，把人从「不想」推到「不会」，再推到「会」。小班效果最好：只带一个人时能贴身教，人一多就变成走过场的公开课。',cooldownReason:'培训需要精心设计和充分准备。频繁的培训会分散团队的注意力，也难以确保每次培训的质量。',run(ids){ return affectTargets(ids, Math.round(12*focusMul(ids.length)), ids.length===1?'一对一带着做，对方真的学会了。':'培训让他们获得了实际能力。', false, '赋能'); }},
   {id:'internal-training',label:'内部培训',weeks:2,cooldown:3,need:4,min:4,type:'赋能',reqCred:5,disrupt:1,adkar:'AB',roleMode:'teacher',
-   desc:'让一个已经转化的人去带三个还没动的人。外面请来的专家讲得再对，学员心里那句「你不懂我们这儿」消不掉；自己人讲，说服力来自关系，不来自内容。先点讲师（必须已转化），再点三位学员。',
+   desc:'让一个已经转化的人去带三个还没动的人。外面请来的专家讲得再对，学员心里那句「你不懂我们这儿」消不掉；自己人讲，说服力来自关系，不来自内容。先点讲师（必须完全配合），再点三位学员。',
    cooldownReason:'内部讲师也要上自己的班，连续开课会拖垮他的本职。',
    run(ids){
      const tId=ids[0], t=state.people[tId];
@@ -1789,7 +1807,7 @@ const ACTIONS=[
      return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
    }},
   {id:'pilot',label:'小范围试点',weeks:3,cooldown:5,need:3,type:'验证',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'验证'); }},
-  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「主动参与」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
+  {id:'honor',label:'表彰与案例',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「初步参与」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
     const p=state.people[ids[0]];
     if(!p) return {story:'没有可表彰的对象。', details:[], noEffect:true};
 
@@ -1812,7 +1830,7 @@ const ACTIONS=[
           `❌ 表彰严重失当：${p.name}目前仍处于「${statusText(p.status)}」状态，尚未形成任何示范效应。激进压力 +2。`,
           `📚 管理学原理：${factionCtx}`,
           hitNames.length ? `👥 全组织质疑：${hitNames.join('、')} 对你的判断力产生怀疑（分数 -8）。` : '',
-          `💡 建议：目标必须至少达到「主动参与」状态才能表彰，才有真正的榜样效应。`
+          `💡 建议：目标必须至少达到「初步参与」状态才能表彰，才有真正的榜样效应。`
         ].filter(Boolean),fail:true};
     }
 
@@ -1826,7 +1844,7 @@ const ACTIONS=[
         details:[
           `❌ 表彰时机失当：${p.name}当前处于「${statusText(p.status)}」状态，尚未有足够的成果支撑公开认可。${p.name}感到被孤立（分数 -12），激进压力 +1。`,
           `📚 管理学原理：过早的公开表彰会让被表彰者在同事中显得「被特殊对待」，反而引发同伴压力和孤立效应（Peer Isolation Effect）。`,
-          `💡 建议：等${p.name}进入「主动参与」状态后再表彰。`
+          `💡 建议：等${p.name}进入「初步参与」状态后再表彰。`
         ],fail:true};
     }
 
@@ -1869,7 +1887,7 @@ const ACTIONS=[
         story:'你在全体会上宣布了硬性KPI与时限，但台下的议论是「你自己还没打通一个案例，凭什么压我们」。',
         details:[
           '⚠️ 信用未立而先推KPI：实干派怒火起来。可信度 -2，激进压力 +2。',
-          hit.length ? `👥 反弹：${hit.join('、')} 分数 -6（感到被“指标绱架”）。` : '👥 所有实干派已表态或已转化，反弹较小。',
+          hit.length ? `👥 反弹：${hit.join('、')} 分数 -6（感到被“指标绱架”）。` : '👥 所有实干派已表态或完全配合，反弹较小。',
           '💡 建议：先通过试点/培训达到 3 以上转化，或可信度提升到 8+ 再推硬性KPI。'
         ]
       };
@@ -1939,7 +1957,7 @@ const ROLES = {
     name:'整合负责人',
     tag:'中方 · 总部派驻',
     briefing:'你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 60 个资源内推动新的治理和协同方式落地。',
-    goal:'在 60 个资源内让 ≥50% 的关键人物真正进入「已转化」状态，同时尽量维持组织承受力。',
+    goal:'在 60 个资源内让 ≥50% 的关键人物真正进入「完全配合」状态，同时尽量维持组织承受力。',
     startCred:6,
     startPressure:0,
     pressureCap:10,
@@ -2059,12 +2077,14 @@ function resetNodePositions(){
 }
 function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 function statusText(s){ return STATUS_LABELS[s]; }
+/* v47：你自己不是被改造的对象，别挂在档位上 */
+function statusLabelFor(id, s){ return id==='pm' ? '发起人' : STATUS_LABELS[s]; }
 function updateStatus(p){
-  // v30：已转化是终态，不会因为后来没人管就退回去
+  // v30：完全配合是终态，不会因为后来没人管就退回去
   if(p.status>=4) return;
   const stubborn = ['union','ops','engineer'];
   const isStubborn = stubborn.includes(p.id);
-  /* 临界点不改门槛——它只做两件事：一次性把已经"主动参与"的人往前推一把，
+  /* 临界点不改门槛——它只做两件事：一次性把已经"初步参与"的人往前推一把，
      以及永久提高广覆盖的渗透力。最后一跳仍然必须由学生自己打穿，
      否则"过线即通关"会把整局的意义抹掉。 */
   if(isStubborn){
@@ -2084,7 +2104,7 @@ function updateStatus(p){
 function convertedCount(){ return Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length; }
 function convertedRate(){ const total = Object.keys(state.people).filter(id=>id!=='pm').length; return total>0 ? Math.round(convertedCount()/total*100) : 0; }
 /* v17.1：变革早期判定——原本依赖 phase()==='动员'，现改成数据粒度：
-   已转化者 < 3 人算作「早期」（原理与原 phase '动员' 条件一致）。*/
+   完全配合者 < 3 人算作「早期」（原理与原 phase '动员' 条件一致）。*/
 function isEarlyChange(){ return convertedCount() < 3; }
 function el(id){ return document.getElementById(id); }
 function setText(id,val){ const x=el(id); if(x) x.textContent=val; }
@@ -2280,9 +2300,10 @@ function decayUntouched(){
         amount:Math.round(p.score-scoreBeforeDecay), from:Math.round(scoreBeforeDecay), to:Math.round(p.score),
         prev, now:p.status, locked:false});
     }catch(_){}
-    if(prev!==p.status){
+    // v47：只有「显示档位」真的变了才提示——内部 0/1 两槽都叫未动，不必惊动学生
+    if(prev!==p.status && STATUS_LABELS[prev]!==STATUS_LABELS[p.status]){
       state.lastDecayChanges = state.lastDecayChanges || [];
-      state.lastDecayChanges.push(`${p.name}：${STATUS_LABELS[prev]} → ${STATUS_LABELS[p.status]}（自然衰减，未被本轮触及）`);
+      state.lastDecayChanges.push(`${p.name}：${STATUS_LABELS[prev]} → ${STATUS_LABELS[p.status]}`);
     }
   });
 }
@@ -2339,7 +2360,7 @@ function affectNonAdopters(amount, story, actionType){
    一个人真的被转化之后，他不只是"变软"，而是会主动替你去说话。
    这是网络模拟最该教的一课：你不可能亲自说服 12 个人，但你可以让 1 个人替你说服 3 个人。
    - 传染强度 = 基础 × 桥梁系数 × 对方偏好 × 私交系数
-   - 只在 converter 已转化（status=4）时触发；每跳衰减（一度 100%，二度 45%）
+   - 只在 converter 完全配合（status=4）时触发；每跳衰减（一度 100%，二度 45%）
    - 对 stubborn 角色（工会主席/运营主管/工程师）传染力减半——他们不信"别人说的" */
 /* v36：私交不是开关，是深度。信任 40 刚过线，100 是过命的交情 */
 function informalMul(a,b,base0,span){
@@ -2379,7 +2400,7 @@ function handleConversions(newlyConverted, details, originActionType){
     const softened = softenNeighbors(id, 3);
     if(softened.length){
       const strengthNote = isBridge(id) ? '（桥梁节点，+60% 软化）' : '（+40% 软化）';
-      details.push(`${state.people[id].name}已转化${strengthNote}，向邻居 ${softened.map(s=>state.people[s].name).join('、')} 扩散影响（未来3回合内推动效果放大）。`);
+      details.push(`${state.people[id].name}完全配合${strengthNote}，向邻居 ${softened.map(s=>state.people[s].name).join('、')} 扩散影响（未来3回合内推动效果放大）。`);
     }
     // v27：社会传染——他替你说话了
     const pushed=[];
@@ -2587,7 +2608,7 @@ function renderTop(){
     const need=Math.ceil(ids.length/3);
     const tipEl=el('tipKpi'), tipSub=el('tipKpiSub'), tipCard=el('tipKpiCard');
     if(tipEl) tipEl.textContent = state.tippingPointReached ? '✓' : (Math.min(active,need)+'/'+need);
-    if(tipSub) tipSub.textContent = state.tippingPointReached ? '已越过' : '主动参与以上';
+    if(tipSub) tipSub.textContent = state.tippingPointReached ? '已越过' : '初步参与以上';
     if(tipCard){
       tipCard.style.borderColor = state.tippingPointReached ? 'rgba(30,160,120,.55)' : '';
       tipCard.style.background = state.tippingPointReached ? 'rgba(30,160,120,.12)' : '';
@@ -2726,7 +2747,11 @@ function renderDetail(id, boxId){
         ${stubbornBadge}
       </div>
       <div class="small muted" style="margin-top:4px"><strong>${p.role}</strong></div>
-      <div style="margin-top:8px"><span class="status s${p.status}" style="white-space:nowrap"><span class="glyph">${GLYPHS[p.status]}</span> ${statusText(p.status)}</span></div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="status s${p.status}" style="white-space:nowrap"><span class="glyph">${GLYPHS[p.status]}</span> ${statusLabelFor(id,p.status)}</span>
+        ${id==='pm'?'':`<span class="decay-tag ${statusInfo(p.status).decay<0?'cold':'warm'}">${statusInfo(p.status).decay<0?('❄ 会回冷 · '+decayHint(p.status)):'✔ 不再掉分'}</span>`}
+      </div>
+      ${id==='pm'?'':`<div class="small" style="margin-top:6px;line-height:1.55;color:var(--muted)">${statusInfo(p.status).what}<br/>→ ${statusInfo(p.status).how}</div>`}
     </div>
   </div>
   ${bridgeNote?`<div style="margin-top:8px">${bridgeNote}</div>`:''}
@@ -2826,7 +2851,7 @@ function drawNetwork(svgId, forceView){
     nodeG.setAttribute('data-id',id);
     nodeG.setAttribute('tabindex','0');
     nodeG.setAttribute('role','button');
-    nodeG.setAttribute('aria-label',`${p.name}：${statusText(p.status)}${isBridge(id)?'，桥梁节点':''}${isInfluenced?'，处于扩散圈':''}`);
+    nodeG.setAttribute('aria-label',`${p.name}：${statusLabelFor(id,p.status)}${isBridge(id)?'，桥梁节点':''}${isInfluenced?'，处于扩散圈':''}`);
 
     const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
     circle.setAttribute('class','bg');
@@ -3047,17 +3072,26 @@ function updateNodePosition(svgId, personId){
 function renderLegend(){
   const box=el('legendBox'); if(!box) return;
   const view=state.netView||'all';
-  const statusItems = STATUS_LABELS.map((label,i)=>`
-    <div class="legend-item">
+  // v47：四档，并把「会不会掉分」直接写在图例上——这是学生最容易漏掉的一条
+  const statusItems = [0,2,3,4].map(i=>{
+    const inf=statusInfo(i);
+    const mark = inf.decay<0
+      ? '<span style="color:#e05068;font-weight:700">会掉分</span>'
+      : '<span style="color:#5ab84a;font-weight:700">不掉分</span>';
+    return `
+    <div class="legend-item" title="${inf.what}">
       <svg class="legend-svg" viewBox="-12 -12 24 24" aria-hidden="true">
         <g class="node s${i}">
           <circle class="bg" cx="0" cy="0" r="10"></circle>
           <text class="glyph" x="0" y="0" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:800">${GLYPHS[i]}</text>
         </g>
       </svg>
-      <span>${label}</span>
-    </div>
-  `).join('');
+      <span>${STATUS_LABELS[i]} · ${mark}</span>
+    </div>`;
+  }).join('')
+  + `<div class="legend-item" style="grid-column:1/-1;margin-top:2px;opacity:.85">
+      <span style="font-size:11px;line-height:1.45">跨过 <b>45 分</b>进入「初步理解」就不再自然掉分；45 分以下每回合会自己冷掉，越冷掉得越快。</span>
+    </div>`;
 
   let edgeItems='';
   if(view!=='informal'){
@@ -3066,7 +3100,7 @@ function renderLegend(){
   if(view!=='formal'){
     edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#e0a03a" stroke-width="1.4" stroke-dasharray="2 4"/></svg><span>私交（刚建立）</span></div>`;
     edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#e0a03a" stroke-width="3.4" stroke-dasharray="2 4"/></svg><span>私交（越粗越深，扩散越省力）</span></div>`;
-    edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="var(--success)" stroke-width="2.4" stroke-dasharray="4 3"/></svg><span>已转化者向邻居扩散</span></div>`;
+    edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="var(--success)" stroke-width="2.4" stroke-dasharray="4 3"/></svg><span>完全配合者向邻居扩散</span></div>`;
     edgeItems += `<div class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(61,138,58,.4)"></span>扩散影响圈（本轮推动效果放大）</div>`;
   }
   box.innerHTML = statusItems + edgeItems;
@@ -3157,7 +3191,7 @@ function buildActionCard(a, idx){
     const credBad=state.credibility<a.reqCred;
     // v21: credBad 不再阻断卡片点击——可信度不足时仍可选中（强行执行模式）
     // 只有冷却中或资源不足才真正禁用
-    // v39：内部培训需要一位已转化的讲师
+    // v39：内部培训需要一位完全配合的讲师
     const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
     const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher;
     const isDisabled=isHardDisabled; // credBad 仅作为视觉警告，不禁用卡片
@@ -3173,9 +3207,13 @@ function buildActionCard(a, idx){
           : `已选 ${state.selectedTargets.length} 人 · 需 ${tRangeText(a)}`}</div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin:-2px 0 10px;line-height:1.45">${a.roleMode==='teacher'
-        ? '先点一位<span style="color:var(--success);font-weight:700">已转化</span>的人当讲师，再点三位还没动的学员。学员跟他有没有私交，直接决定这堂课有没有人真听。'
+        ? '先点一位<span style="color:var(--success);font-weight:700">完全配合</span>的人当讲师，再点三位还没动的学员。学员跟他有没有私交，直接决定这堂课有没有人真听。'
         : '预计 ? = 没约谈过，推不准；谈过之后显示预计值和他吃哪一套（▲偏好 / ▼抵触）。'}</div>
       ${state.targetHint?`<div class="sit-line warn" style="margin:-4px 0 10px;font-size:11.5px">${state.targetHint}</div>`:''}
+      ${(()=>{ // v47：把 ❄ 的含义就地解释，别让学生猜
+        const cold=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status<2);
+        return cold.length ? `<div class="small" style="margin:-2px 0 10px;font-size:11.5px;color:#8fb9d4">❄ 标记的人还在 45 分以下：这一轮不管他，每回合会自己往回掉；推过 45 分才站得住。</div>` : '';
+      })()}
       <div class="targets">${(()=>{ 
         // v26：当前动作被选中时，先算一遍每个人"这一下能推多少"
         let estMap=null;
@@ -3210,7 +3248,8 @@ function buildActionCard(a, idx){
         const riskStyle = (recogRisk||roleDim) ? `style="opacity:${roleDim?0.45:0.55};${recogRisk?'border-color:var(--danger)':''}"` : '';
         // Progress bar: score vs next threshold
         const stubborn = ['union','ops','engineer'];
-        const thresholds = stubborn.includes(id) ? [25,50,70,90,100] : [25,45,65,85,100];
+        // v47：四档——未动(0-44) / 初步理解(45-64) / 初步参与(65-84) / 完全配合(85+)
+        const thresholds = stubborn.includes(id) ? [50,70,90,100] : [45,65,85,100];
         const nextThresh = thresholds.find(t => p.score < t) || 100;
         const prevThresh = thresholds[thresholds.indexOf(nextThresh)-1] || 0;
         const barPct = nextThresh > prevThresh ? Math.round((p.score - prevThresh) / (nextThresh - prevThresh) * 100) : 100;
@@ -3219,7 +3258,7 @@ function buildActionCard(a, idx){
         const blocks = Math.round(barPct/20); // 0-5 filled blocks out of 5
         const barBlocks = '█'.repeat(blocks) + '░'.repeat(5-blocks);
         return `<button class="target ${state.selectedTargets.includes(id)?'on':''}" data-id="${id}" ${disabledAttr} ${riskStyle} onclick="event.stopPropagation();toggleTarget('${id}')">
-          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}</span>
+          <span>${state.selectedTargets.includes(id)?'✓':''} ${GLYPHS[p.status]} ${p.name} ${roleMark}${soft}${bridge}${prefMark}${recogMark}${p.status<2?'<span class="cold-mark" title="45 分以下：这一轮不管他，每回合会自己往回掉">❄</span>':''}</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
@@ -3239,11 +3278,11 @@ function buildActionCard(a, idx){
     if(credBad) reasonChips.push('<span class="chip bad reason-chip">可信度不足（需'+a.reqCred+'）</span>');
     if(wait>0) reasonChips.push('<span class="chip bad reason-chip">还需等待'+wait+'轮</span>');
     if(state.resources<a.weeks) reasonChips.push('<span class="chip bad reason-chip">资源不足（需 '+a.weeks+'）</span>');
-    if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有已转化的人可以当讲师</span>');
+    if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有完全配合的人可以当讲师</span>');
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[noTeacher?'还没有已转化的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
           ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
@@ -3259,7 +3298,7 @@ function buildActionCard(a, idx){
         // v20: 渐进式信息展示 - 计算成功率估计
     const successHint = (() => {
       // v45：已经不可用时别再打"可执行"的绿标，两个徽章互相打脸
-      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有已转化的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
+      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
       if(credBad) return { label: '⚠️ 强行', cls: 'warn', tip: '可信度不足，强行执行将增加压力' };
       if(a.disrupt >= 3 && isEarlyChange()) return { label: '⚡ 高风险', cls: 'bad', tip: '早期使用高扰动动作会引发组织反弹' };
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
@@ -3282,7 +3321,7 @@ function buildActionCard(a, idx){
         <!-- v20: 核心信息行（始终可见） -->
         <div class="chips" style="margin-top:6px">
           <span class="chip" title="执行此动作消耗的资源数">⏱ ${a.weeks} 资源</span>
-          <span class="chip ${a.need===0?'good':''}" title="${a.roleMode==='teacher'?'先点讲师（必须已转化），再点三位学员':(a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标')}">${a.roleMode==='teacher'?'🎓 1 讲师 + 3 学员':(a.need?'👤 '+tRangeText(a):'🌐 全体')}</span>
+          <span class="chip ${a.need===0?'good':''}" title="${a.roleMode==='teacher'?'先点讲师（必须完全配合），再点三位学员':(a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标')}">${a.roleMode==='teacher'?'🎓 1 讲师 + 3 学员':(a.need?'👤 '+tRangeText(a):'🌐 全体')}</span>
           ${credBad ? `<span class="chip warn" title="当前可信度${state.credibility}，需要${a.reqCred}">🔒 需信誉${a.reqCred}</span>` : ''}
           ${wait>0 ? `<span class="chip bad" title="冷却中">⏳ 冷却${wait}轮</span>` : ''}
         </div>
@@ -3462,7 +3501,7 @@ function endingNarratives(type){
   if(type==='win-excellent'){
     return {
       cls:'win', title:'非常成功 · 变革沙漏',
-      story:`在第 ${state.round-1} 回合、消耗 ${weeksUsed} 个资源后，你把已转化率推到了 ${finalRate}%。整个组织已经完全接纳了新的流程和价值观——不仅是执行层的一致性，更是中高管的真正信服。当总部CEO拿着你的复盘材料走进董事会时，他不仅带着一份可复制的整合方法论，更带着一份可传播的文化遗产。`,
+      story:`在第 ${state.round-1} 回合、消耗 ${weeksUsed} 个资源后，你把完全配合率推到了 ${finalRate}%。整个组织已经完全接纳了新的流程和价值观——不仅是执行层的一致性，更是中高管的真正信服。当总部CEO拿着你的复盘材料走进董事会时，他不仅带着一份可复制的整合方法论，更带着一份可传播的文化遗产。`,
       teach:'▶ 文化层：示范者已经成为了新价值观的沟通者，旧权力结构的抵触不再是主要障碍。你是如何实现了不仅是"接受"而是"信服"的转变？\n▶ 制度层：你是否在早期就建立了自我强化的反馈机制，让新流程成为了不可逆的组织习惯？\n▶ 个人层：你是否充分投资了桥梁人物（区域GM/HR）的个人信誉，使他们成为了变革的真正推动者？',
       realWorld:'▶ <strong>美的·库卡（2016）</strong>：保留原团队、避免大规模派驻，用业绩和文化耐心实现了深度整合。\n▶ <strong>吉利·沃尔沃（2010-2020）</strong>："两个品牌·一个集团"的隔离化设计，十年后沃尔沃盈利翻盘、吉利也反哺了新能源转型。\n▶ <strong>宁德时代·德国工厂（2019-2024）</strong>：以全球化中心技术赋能配合本地化管理的方式，实现了效率、ESG与合规的三边平衡。'
     };
@@ -3470,7 +3509,7 @@ function endingNarratives(type){
   if(type==='win-early'){
     return {
       cls:'win', title:'提前成功 · 变革生根',
-      story:`仅用 ${weeksUsed} 份资源、${state.round-1} 个回合，你就把已转化率拉到 ${finalRate}%。会议室外的走廊上，工厂总经理主动跟区域GM讨论起下一步标准化方案——这是真正的"自驱动"信号。当总部CEO拿着你的复盘材料走进董事会时，他第一次没有带紧迫感，而是带着一份"可复制的整合方法论"。`,
+      story:`仅用 ${weeksUsed} 份资源、${state.round-1} 个回合，你就把完全配合率拉到 ${finalRate}%。会议室外的走廊上，工厂总经理主动跟区域GM讨论起下一步标准化方案——这是真正的"自驱动"信号。当总部CEO拿着你的复盘材料走进董事会时，他第一次没有带紧迫感，而是带着一份"可复制的整合方法论"。`,
       teach:'▶ 文化层：在无法直接命令的文化边界上，示范者是如何取代「导入模板」成为合法性来源的？\n▶ 制度层：你在哪一回合用小范围试点/培训替代了硬 KPI？制度与叙事的时序，是否早期胜利的关键？\n▶ 个人层：示范者的扩散效应在哪一回合开始指数化？桥梁人物（区域GM/HR）的个人信誉是否被充分投资？',
       realWorld:'▶ <strong>美的·库卡（2016）</strong>：保留原团队、避免大规模派驻，用业绩和文化耐心实现相对成功整合。\n▶ <strong>吉利·沃尔沃（2010-2020）</strong>：「两个品牌·一个集团」的隔禄系设计，十年后沃尔沃盈利翻盘、吉利也反哺了新能源转型。\n▶ <strong>宁德时代·德国工厂（2019-2024）</strong>：以局部本地化管理➕总部技术赋能的方式实现 ESG 与合规平衡。'
     };
@@ -3489,7 +3528,7 @@ function endingNarratives(type){
     // 根据整体爆发风险给出内部估评描述
     let verdict;
     if (finalCred >= 7 && state.pressure <= 2) {
-      verdict = '基层展现出良好的跟进意愿，虽然部分前高管仍在观望，但只要保持当前的信任节奏，已转化者很快能形成自我强化的规范阵地';
+      verdict = '基层展现出良好的跟进意愿，虽然部分前高管仍在观望，但只要保持当前的信任节奏，完全配合者很快能形成自我强化的规范阵地';
     } else if (finalCred >= 5 || state.pressure <= 3) {
       verdict = '基层已初步适应新流程，但更多是将其视为"总部的要求"而非内化的习惯，部分前高管私下仍有保留意见';
     } else {
@@ -3497,7 +3536,7 @@ function endingNarratives(type){
     }
     return {
       cls:'pass', title:'阶段达标 · 破局启航',
-      story:`你在第 ${state.round-1} 回合、用掉 ${weeksUsed} 份资源时把已转化率推到 ${finalRate}%。恭喜你跨过了50%的关键门槛！${credPhrase}，${pressPhrase}。${verdict}。阶段性的胜利已经写入汇报材料，你成功撕开了旧体系的缺口，但真正的挑战才刚刚开始：如何将这50%的转化转化为不可逆的组织习惯？`,
+      story:`你在第 ${state.round-1} 回合、用掉 ${weeksUsed} 份资源时把完全配合率推到 ${finalRate}%。恭喜你跨过了50%的关键门槛！${credPhrase}，${pressPhrase}。${verdict}。阶段性的胜利已经写入汇报材料，你成功撕开了旧体系的缺口，但真正的挑战才刚刚开始：如何将这50%的转化转化为不可逆的组织习惯？`,
       teach:'▶ 文化层：从「被动接受」到「内化认同」的跨越还需要什么？你现有的转化者中，谁能成为下一步的火种？\n▶ 制度层：回顾整个过程，KPI与压力的施加是否走在了信任积累的前面？这为后续管理留下了哪些隐患？\n▶ 个人层：如果重玩，你是否愿意用初期的进度换取更扎实的信任基础？',
       realWorld:'▶ <strong>联想·IBM PC（2005）</strong>：前三年达成业务整合的阶段性目标，随后通过引入熟悉双方文化的高管团队，耗时多年才实现深度的文化融合。\n▶ <strong>TikTok·海外治理（2020-）</strong>：通过架构隔离和本地化团队迅速达到合规要求，但建立真正的跨文化信任仍是一项长期工程。\n▶ <strong>宁德时代·德国工厂（2019-）</strong>：初期以硬性标准推动建厂，随后逐步转向本地化柔性管理，在效率与认同之间寻找平衡。'
     };
@@ -3508,7 +3547,7 @@ function endingNarratives(type){
     const active=ids.filter(id=>state.people[id].status>=3).length;
     return {
       cls:'mid', title:'阶段达标 · 但未固化',
-      story:`时间走完。${active}/${ids.length} 的人已经进入「主动参与」以上——他们开始用新流程干活，会上的表态也不再是敷衍。但真正"内化"的只有 ${finalRate}%。这是一种非常真实的状态：<b>行为变了，认同还没跟上</b>。三个月后如果总部撤掉你这个角色，这批人里有多少会退回原样？答案取决于你有没有动过制度——汇报关系、激励与奖惩、谁能决定什么。`,
+      story:`时间走完。${active}/${ids.length} 的人已经进入「初步参与」以上——他们开始用新流程干活，会上的表态也不再是敷衍。但真正"内化"的只有 ${finalRate}%。这是一种非常真实的状态：<b>行为变了，认同还没跟上</b>。三个月后如果总部撤掉你这个角色，这批人里有多少会退回原样？答案取决于你有没有动过制度——汇报关系、激励与奖惩、谁能决定什么。`,
       teach:'▶ 文化层：行为的改变可以靠推动，认同的改变只能靠时间和一致性。你的转化者里，谁是"因为理解"而不是"因为你在盯着"？\n▶ 制度层：你有没有把新的行为写进考核、汇报线和资源分配？没有制度承载的变革，人一走就散。\n▶ 个人层：你几乎把资源都用在了"让人动起来"，剩下多少留给了"让动起来的人留下来"？',
       realWorld:'▶ <strong>联想·IBM PC（2005）</strong>：前三年业务整合达标，但文化融合花了近十年——阶段目标与深度认同从来不是同一件事。\n▶ <strong>海尔·GE 家电（2016-）</strong>：先保留人、保留流程，用两三年才逐步引入人单合一，避免"改得太快、认同没跟上"。\n▶ <strong>反面：TCL·阿尔卡特（2004）</strong>：组织表面上接受了新流程，但关键岗位认同缺失，整合红利在两年内被内耗吃掉。'
     };
@@ -3518,9 +3557,9 @@ function endingNarratives(type){
   if (state.pressure >= 7 || finalCred <= 2) {
     failCause = `可信度跌至 ${finalCred}、激进压力高达 ${state.pressure}，组织开始反弹`;
   } else if (finalCred <= 4) {
-    failCause = `已转化率止步于 ${finalRate}%，可信度仅剩 ${finalCred}，资源数也已耗尽`;
+    failCause = `完全配合率止步于 ${finalRate}%，可信度仅剩 ${finalCred}，资源数也已耗尽`;
   } else {
-    failCause = `已转化率停在 ${finalRate}%，离达标线还差几个关键人，而 ${TOTAL_RESOURCES} 份资源已经用完`;
+    failCause = `完全配合率停在 ${finalRate}%，离达标线还差几个关键人，而 ${TOTAL_RESOURCES} 份资源已经用完`;
   }
   return {
     cls:'fail', title:'组织反弹 · 变革失败',
@@ -3571,7 +3610,7 @@ function actionGroupPieSvg(){
     <div class="pie-legend">${legend.join('')}</div>`;
 }
 
-/* v15：结局复盘——已转化率曲线（v17.3：移除支持率辅助线） */
+/* v15：结局复盘——完全配合率曲线（v17.3：移除支持率辅助线） */
 function ratesCurveSvg(){
   const totalOthers = Math.max(1, Object.keys(state.people).length - 1); // 排除 pm（12人）
   const conv = state.trend.converted.map(n => Math.round(n / totalOthers * 100));
@@ -3583,13 +3622,13 @@ function ratesCurveSvg(){
   const path = (arr) => arr.map((v,i)=> `${i===0?'M':'L'} ${xs(i).toFixed(1)} ${ys(v).toFixed(1)}`).join(' ');
   const gridLines = [0, 25, 50, 75, 100].map(v => `<line x1="${pad.l}" y1="${ys(v)}" x2="${w-pad.r}" y2="${ys(v)}" stroke="var(--border)" stroke-width="0.5"/><text x="${pad.l-4}" y="${ys(v)+3}" font-size="9" text-anchor="end" fill="var(--muted)">${v}</text>`).join('');
   const xLabels = [0, Math.floor((n-1)/2), n-1].map(i => `<text x="${xs(i)}" y="${h-6}" font-size="9" text-anchor="middle" fill="var(--muted)">回合${i}</text>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" aria-label="已转化率曲线">
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" aria-label="完全配合率曲线">
     ${gridLines}
     <path d="${path(conv)}" fill="none" stroke="#4ade80" stroke-width="2.5"/>
     ${xLabels}
   </svg>
   <div class="pie-legend">
-    <span class="pl-chip"><span class="pl-dot" style="background:#4ade80"></span>已转化率 %</span>
+    <span class="pl-chip"><span class="pl-dot" style="background:#4ade80"></span>完全配合率 %</span>
   </div>`;
 }
 
@@ -3598,7 +3637,7 @@ function turningPointsList(){
   if(state.history.length === 0) return '<div class="small muted">尚无回合数据。</div>';
   const sorted = state.history.slice().sort((a,b)=> Math.abs(b.deltas.converted||0) - Math.abs(a.deltas.converted||0));
   const top = sorted.slice(0, 3).filter(h => (h.deltas.converted||0) !== 0);
-  if(top.length === 0) return '<div class="small muted">本局没有明显的转折回合（已转化人数无变动）。</div>';
+  if(top.length === 0) return '<div class="small muted">本局没有明显的转折回合（完全配合人数无变动）。</div>';
   const sign = n => n>0 ? `+${n}` : (n<0 ? `${n}` : '±0');
   const cls = (n, invert=false) => {
     if(n===0) return 'neutral';
@@ -3623,7 +3662,7 @@ function turningPointsList(){
       ${tgts}
       <div class="tp-highlight">
         <span class="tp-hl-value ${cls(dc)}">${sign(dc)}</span>
-        <span class="tp-hl-label">已转化人数</span>
+        <span class="tp-hl-label">完全配合人数</span>
       </div>
       <div class="tp-sub">
         <div class="tp-sub-item">
@@ -3645,12 +3684,12 @@ function peopleRecap(){
   const rows = order.map(id=>{
     const p=state.people[id];
     const comment = id==='pm' ? '你自己' :
-      p.status===4 ? '✅ 走完全程' :
-      p.status===3 ? '🚀 差一步即可转化' :
-      p.status===2 ? '📘 已经理解，但没被推过参与' :
-      p.status===1 ? '👂 只有觉醒，未深入' :
-      '❌ 始终未被触及';
-    return `<tr><td>${p.name}</td><td>${GLYPHS[p.status]} ${statusText(p.status)}</td><td>${p.score}</td><td class="small muted">${comment}</td></tr>`;
+      p.status===4 ? '✅ 完全配合' :
+      p.status===3 ? '🚀 差一步就完全配合' :
+      p.status===2 ? '📘 理解了，但没动手' :
+      p.status===1 ? '👂 听说了，没往心里去' :
+      '❌ 始终没在听';
+    return `<tr><td>${p.name}</td><td>${GLYPHS[p.status]} ${statusLabelFor(id,p.status)}</td><td>${p.score}</td><td class="small muted">${comment}</td></tr>`;
   }).join('');
   return `<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:13px">
     <thead><tr style="background:var(--surface2)"><th style="text-align:left;padding:6px">人物</th><th style="text-align:left;padding:6px">最终状态</th><th style="text-align:left;padding:6px">分数</th><th style="text-align:left;padding:6px">复盘点评</th></tr></thead>
@@ -3754,7 +3793,7 @@ function debrief(){
   },0);
   if(spreadHits===0 && rounds>=6){
     out.push({tag:'网络没用上', k:'warn',
-      t:`整局没有一次转化引发连锁扩散。扩散只有在"某个人真的跨到已转化"之后才会发生——如果你一直在给所有人均匀加一点分，谁都不会跨过去，网络就永远是静态的背景图。`});
+      t:`整局没有一次转化引发连锁扩散。扩散只有在"某个人真的跨到完全配合"之后才会发生——如果你一直在给所有人均匀加一点分，谁都不会跨过去，网络就永远是静态的背景图。`});
   } else if(spreadHits>=4){
     out.push({tag:'网络被点燃', k:'good',
       t:`这一局发生了 ${spreadHits} 次由转化引发的连锁（邻居被带动、私交替你说服）。这正是变革扩散的真实机制：你不是在说服 12 个人，你是在点燃 12 个人之间的关系。`});
@@ -3775,10 +3814,10 @@ function debrief(){
   const _tipped = state.tippingPointReached || (_ids2.length>0 && _active/_ids2.length >= 1/3);
   if(_tipped){
     out.push({tag:'越过临界点', k:'good',
-      t:`第 ${state.tippingPointRound} 回合你越过了临界点——「主动参与」以上的人超过 1/3。此后观望的心理成本变高，广覆盖对未动者的渗透从 40% 提到 58%。真实变革里这个点一旦过了，事情就开始自己往前走；过不了，你永远在推石头。`});
+      t:`第 ${state.tippingPointRound} 回合你越过了临界点——「初步参与」以上的人超过 1/3。此后观望的心理成本变高，广覆盖对未动者的渗透从 40% 提到 58%。真实变革里这个点一旦过了，事情就开始自己往前走；过不了，你永远在推石头。`});
   } else {
     out.push({tag:'没过临界点', k:'tip',
-      t:`终局「主动参与」以上只有 ${_active}/${_ids2.length} 人，始终没到 1/3 的临界点。在临界点之前，每一步都要你亲自推；过了之后，观望者会因为"多数人都在做"而自己走过来。所以早期该做的不是广覆盖，而是尽快把 1/3 的人推到"主动参与"。`});
+      t:`终局「初步参与」以上只有 ${_active}/${_ids2.length} 人，始终没到 1/3 的临界点。在临界点之前，每一步都要你亲自推；过了之后，观望者会因为"多数人都在做"而自己走过来。所以早期该做的不是广覆盖，而是尽快把 1/3 的人推到"初步参与"。`});
   }
 
   // 7. 可信度管理
@@ -3845,9 +3884,9 @@ function renderEndingScreen(){
   dash.innerHTML = `<strong>📊 本局战略复盘仪表板</strong>
     <div class="dashboard-grid">
       <div class="dash-card compact"><div class="dash-title">四段推进分布</div>${actionGroupPieSvg()}</div>
-      <div class="dash-card compact"><div class="dash-title">已转化率曲线</div>${ratesCurveSvg()}</div>
+      <div class="dash-card compact"><div class="dash-title">完全配合率曲线</div>${ratesCurveSvg()}</div>
     </div>
-    <div class="dash-card" style="margin-top:24px;clear:both"><div class="dash-title">转折点（已转化人数变动最大的 3 个回合）</div>${turningPointsList()}</div>`;
+    <div class="dash-card" style="margin-top:24px;clear:both"><div class="dash-title">转折点（完全配合人数变动最大的 3 个回合）</div>${turningPointsList()}</div>`;
   wrap.appendChild(dash);
 
   const recap=document.createElement('div'); recap.className='log-item';
@@ -3921,11 +3960,13 @@ function showModal(){
       </tr>`;
     }).join('');
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
-      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，每跨过 25 / 45 / 65 / 85 就升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分四档，跨过 45 / 65 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
-      (decayed.length?('<div class="small muted" style="margin-top:8px">另有 '+decayed.length+' 人本轮没被触及，自然衰减 '+
-        decayed.reduce((s,r)=>s+r.delta,0)+'：'+decayed.map(r=>r.name).join('、')+'。走到「初步理解」以上的人不再自然回冷。</div>'):'');
+      (decayed.length?('<div class="small" style="margin-top:10px;padding:9px 11px;background:rgba(224,138,58,.08);border-left:3px solid #e0a050;border-radius:6px">'+
+        '<strong style="color:#e0a050">❄ 另有 '+decayed.length+' 人本轮没被触及，一共掉了 '+Math.abs(decayed.reduce((s,r)=>s+r.delta,0))+' 分：</strong>'+
+        decayed.map(r=>r.name).join('、')+'。'+
+        '<div style="margin-top:5px;color:var(--muted)">45 分以下的人会一直往回掉，越冷掉得越快；跨过 45 分进入「初步理解」就不再自然回冷。</div></div>'):'');
     body.appendChild(box);
   }
 
@@ -4072,7 +4113,7 @@ function toggleTarget(id){
   const pos=arr.indexOf(id);
   if(pos>=0){ arr.splice(pos,1); state.targetHint=''; render(); return; }
   const p=state.people[id];
-  // v39：内部培训——第一个点的是讲师，必须已经转化；已转化的人不占学员名额
+  // v39：内部培训——第一个点的是讲师，必须已经转化；完全配合的人不占学员名额
   if(a.roleMode==='teacher'){
     if(arr.length===0){
       if(p.status!==4){ state.targetHint='讲师必须是已经转化的人——先有人真的信了，才谈得上让他去带人。'; render(); return; }
@@ -4156,7 +4197,7 @@ function buildPeopleImpact(before, after){
 
 /* =========================================================
    v27：临界点（tipping point）
-   「主动参与及以上」的人一旦占到 1/3，观望者的心理成本就变了：
+   「初步参与及以上」的人一旦占到 1/3，观望者的心理成本就变了：
    继续不动意味着站在少数人那边。此后广覆盖对未动者的力度从 40% 提到 58%。
    这是一次性事件，也是整局最有教学价值的一刻。
    ========================================================= */
@@ -4176,7 +4217,7 @@ function checkTippingPoint(){
     const p=state.people[id];
     if(p.status>=4) return;
     const before=p.status;
-    // 已经走到"主动参与"的人，规范一变就顺势过线；还没动的人只是被提醒了一下
+    // 已经走到"初步参与"的人，规范一变就顺势过线；还没动的人只是被提醒了一下
     // 用 spread 而不是 broad：这一刻要绕开"65 以上广覆盖只剩 30%"的阈值锁——它本来就是被这一下打破的
     applyGain(id, before===3 ? 10 : 6, '', 'spread');   // 不挂任何偏好：这是规范效应，不是某个动作
     if(p.status>before){
@@ -4189,14 +4230,14 @@ function checkTippingPoint(){
     const p=state.people[id];
     if(p.status<4){
       const b=p.status; updateStatus(p);
-      if(p.status===4 && !flipped.some(x=>x.indexOf(p.name)===0)) flipped.push(`${p.name}（${STATUS_LABELS[b]}→已转化）`);
+      if(p.status===4 && !flipped.some(x=>x.indexOf(p.name)===0)) flipped.push(`${p.name}（${STATUS_LABELS[b]}→完全配合）`);
     }
   });
   state.credibility=Math.min(10, state.credibility+1);
   const extra = (flipped.length?`当场跨过转化线的有 ${flipped.length} 人：${flipped.join('、')}。`:'')+
     (pushed.length?`另有 ${pushed.length} 人往上走了一档：${pushed.join('、')}。`:'')+
     ' 此后广覆盖动作对还没动的人的渗透力从 40% 提到 58%——但最后一跳仍然要你亲自去打穿。';
-  return `🔥 临界点被触发（第 ${state.round} 回合）：组织里已经有 ${active}/${ids.length} 人进入「主动参与」以上，超过 1/3。规范变了——继续不动开始有社交成本。你的可信度 +1（现 ${state.credibility}），此后广覆盖动作对未动者的力度从 40% 提到 58%。${extra}`;
+  return `🔥 临界点被触发（第 ${state.round} 回合）：组织里已经有 ${active}/${ids.length} 人进入「初步参与」以上，超过 1/3。规范变了——继续不动开始有社交成本。你的可信度 +1（现 ${state.credibility}），此后广覆盖动作对未动者的力度从 40% 提到 58%。${extra}`;
 }
 
 function snapshotPeople(){
@@ -4224,11 +4265,13 @@ function diagnose(){
   const silent=ids.filter(id=>state.people[id].status===0);
 
   // —— 0. 临门一脚：离转化线只差几分的人
-  const THR={0:25,1:45,2:65,3:85};
+  // v47：按显示的四档算——未动的内部 0/1 两槽都指向 45
+  const THR={0:45,1:45,2:65,3:85};
+  const THR_STUBBORN={0:50,1:50,2:70,3:90};
   const near=ids.map(id=>{
     const p=state.people[id];
     if(p.status>=4) return null;
-    const thr=['union','ops','engineer'].includes(id) ? ({0:25,1:50,2:70,3:90})[p.status] : THR[p.status];
+    const thr=['union','ops','engineer'].includes(id) ? THR_STUBBORN[p.status] : THR[p.status];
     return {id, name:p.name, gap:Math.round(thr-p.score), status:p.status};
   }).filter(x=>x && x.gap>0 && x.gap<=8);
   if(near.length>=2){
@@ -4237,10 +4280,10 @@ function diagnose(){
       t:`${near.length} 个人离下一档只差 1-8 分：${near.slice(0,4).map(x=>x.name+'（差 '+x.gap+'）').join('、')}${near.length>4?' 等':''}。这个位置最亏——你已经付了 90% 的成本，却没拿到那一档。下一轮把定向动作压到他们身上，比开新战场划算得多。`});
   }
 
-  // —— 1. 阈值锁：卡在「主动参与」的人
+  // —— 1. 阈值锁：卡在「初步参与」的人
   if(stuck.length>=2){
     out.push({k:'tip', tag:'阈值锁', w:60,
-      t:`有 ${stuck.length} 个人卡在「主动参与」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 上手培训）打穿，广覆盖只剩 30% 力度。`});
+      t:`有 ${stuck.length} 个人卡在「初步参与」——他们已经想干了，只差最后一脚。最后一跳必须靠定向动作（小范围试点 / 公开认可 / 上手培训）打穿，广覆盖只剩 30% 力度。`});
   }
 
   // —— 2. 火力分散：近三回合碰了太多人
@@ -4325,7 +4368,7 @@ function situationLine(){
   if(state.credibility<=3) return {k:'warn', t:`可信度 ${state.credibility}/10，动作力度被打折。`};
   if(state.resources<=10) return {k:'warn', t:`只剩 ${state.resources} 份资源，还差 ${need-conv} 人。`};
   const stuck=ids.filter(id=>state.people[id].status===3).length;
-  if(stuck>=3) return {k:'tip', t:`${stuck} 人卡在「主动参与」，需要定向动作打穿最后一跳。`};
+  if(stuck>=3) return {k:'tip', t:`${stuck} 人卡在「初步参与」，需要定向动作打穿最后一跳。`};
   return null;
 }
 
@@ -4343,7 +4386,7 @@ function detectMilestones(before, after){
 
 function scoreThisRound(deltaConverted, deltaCred, deltaPressure, fail){
   if(fail) return -3;
-  // v17.3: 以「已转化人数增量」为核心维度（原本用支持率 delta %，现改用人数 × 8 粗略折算成 0-100 追踪力度）
+  // v17.3: 以「完全配合人数增量」为核心维度（原本用支持率 delta %，现改用人数 × 8 粗略折算成 0-100 追踪力度）
   return Math.round(deltaConverted*8 + deltaCred*2 - deltaPressure*2);
 }
 
@@ -4389,7 +4432,7 @@ function runTurn(){
   const impact = a.run(state.selectedTargets);
 
   /* v27：临界点（tipping point）
-     组织里"主动参与及以上"的人一旦超过 1/3，规范就变了——观望者的心理成本突然变高。
+     组织里"初步参与及以上"的人一旦超过 1/3，规范就变了——观望者的心理成本突然变高。
      这是真实变革里最关键、也最容易被忽略的一件事：不是线性累积，而是过线之后自加速。 */
   try{
     const tp = checkTippingPoint();
@@ -4433,9 +4476,7 @@ function runTurn(){
 
   // 自然衰减
   decayUntouched();
-  if(state.lastDecayChanges && state.lastDecayChanges.length){
-    consequences.push('自然衰减：' + state.lastDecayChanges.join('；'));
-  }
+  // v47：掉档明细统一在「这一步动了谁」下面呈现，这里不再重复
 
   const after = { cred:state.credibility, pressure:state.pressure, people:snapshotPeople() };
 
@@ -4511,7 +4552,7 @@ function runTurn(){
   else if(dCred < 0) sideEffects.push({ kind:'neg', text:`可信度 ${dCred}（现 ${after.cred}）` });
   if(dPress > 0) sideEffects.push({ kind:'neg', text:`激进压力 +${dPress}（现 ${after.pressure}）` });
   else if(dPress < 0) sideEffects.push({ kind:'pos', text:`激进压力 ${dPress}（现 ${after.pressure}）` });
-  if(deltaConverted > 0) sideEffects.push({ kind:'pos', text:`新增已转化 +${deltaConverted} 人（累计 ${Object.entries(after.people).filter(([id,x])=>id!=='pm' && x.status===4).length}）` });
+  if(deltaConverted > 0) sideEffects.push({ kind:'pos', text:`新增完全配合 +${deltaConverted} 人（累计 ${Object.entries(after.people).filter(([id,x])=>id!=='pm' && x.status===4).length}）` });
   sideEffects.push({ kind:'neutral', text:`消耗 ${a.weeks} 资源，剩余 ${state.resources} / ${TOTAL_RESOURCES} 资源` });
   sideEffects.push({ kind:'neutral', text:`本动作覆盖 ${touched} 人，冷却 ${a.cooldown} 回合` });
 
@@ -4594,7 +4635,7 @@ function exportGamePdf(){
     <section class="section">
       <h2>📊 关键指标</h2>
       <table class="kpi">
-        <tr><th>已转化率</th><td>${convRate}%</td><th>已转化人数</th><td>${(typeof convertedCount==='function')?convertedCount():'-'} / 12</td></tr>
+        <tr><th>完全配合率</th><td>${convRate}%</td><th>完全配合人数</th><td>${(typeof convertedCount==='function')?convertedCount():'-'} / 12</td></tr>
         <tr><th>可信度</th><td>${state.credibility}</td><th>激进压力</th><td>${state.pressure}</td></tr>
         <tr><th>剩余资源</th><td>${state.resources}/${typeof TOTAL_RESOURCES!=='undefined'?TOTAL_RESOURCES:32}</td><th>回合数</th><td>${Math.max(1, state.round-1)}</td></tr>
       </table>
@@ -4606,9 +4647,9 @@ function exportGamePdf(){
       <h2>📈 战略复盘仪表板</h2>
       <div class="dash">
         <div class="dash-box"><h4>四段推进分布</h4>${(typeof actionGroupPieSvg==='function')?actionGroupPieSvg():''}</div>
-        <div class="dash-box"><h4>已转化率曲线</h4>${(typeof ratesCurveSvg==='function')?ratesCurveSvg():''}</div>
+        <div class="dash-box"><h4>完全配合率曲线</h4>${(typeof ratesCurveSvg==='function')?ratesCurveSvg():''}</div>
       </div>
-      <h4 style="margin-top:20px">转折点（已转化人数变动最大的 3 个回合）</h4>
+      <h4 style="margin-top:20px">转折点（完全配合人数变动最大的 3 个回合）</h4>
       ${(typeof turningPointsList==='function')?turningPointsList():''}
     </section>`;
 
@@ -4622,7 +4663,7 @@ function exportGamePdf(){
       <div class="log-row">
         <div class="log-head">第 ${h.round} 回合 · <b>${h.actionLabel}</b> <span class="tag">${h.actionType||''}</span> ${milestoneTags}</div>
         <div class="log-meta">对象：${h.targets.length?h.targets.join('、'):'（面向全体）'} · 消耗 ${h.weeksUsed} 资源 · 剩余 ${h.weeksLeft} 资源</div>
-        <div class="log-deltas">已转化 ${sign(h.deltas.converted)} · 可信度 ${sign(h.deltas.cred)} · 压力 ${sign(h.deltas.pressure)}</div>
+        <div class="log-deltas">完全配合 ${sign(h.deltas.converted)} · 可信度 ${sign(h.deltas.cred)} · 压力 ${sign(h.deltas.pressure)}</div>
         ${prediction}
         <div class="log-story">${h.story||''}</div>
       </div>`;
@@ -4792,7 +4833,7 @@ function sharePermalink(){
    ========================================================= */
 function renderLogScreen(){
   const wrap = el('trendWrap'); wrap.innerHTML='';
-  wrap.appendChild(buildTrendCard('已转化人数', state.trend.converted, 'var(--success)', 0, 12));
+  wrap.appendChild(buildTrendCard('完全配合人数', state.trend.converted, 'var(--success)', 0, 12));
   wrap.appendChild(buildTrendCard('可信度', state.trend.cred, 'var(--s3)', 0, 12));
   wrap.appendChild(buildTrendCard('激进压力', state.trend.pressure, 'var(--danger)', 0, Math.max(10, ...state.trend.pressure)));
 
@@ -4813,7 +4854,7 @@ function renderLogScreen(){
       <h4>第 ${h.round} 回合 · ${h.actionLabel} <span class="chip" style="font-size:11px">${h.actionType||''}</span>${milestoneTags}<span class="score-pill ${scoreCls}">${scoreLabel} ${h.turnScore}</span></h4>
       <div class="small muted">对象：${h.targets.length?h.targets.join('、'):'（面向全体）'} · 消耗 ${h.weeksUsed} 资源（剩余 ${h.weeksLeft} 资源）</div>
       <div class="meta">
-        <span class="chip ${cls(h.deltas.converted)}">已转化 ${sign(h.deltas.converted)} 人</span>
+        <span class="chip ${cls(h.deltas.converted)}">完全配合 ${sign(h.deltas.converted)} 人</span>
         <span class="chip ${cls(h.deltas.cred)}">可信度 ${sign(h.deltas.cred)}</span>
         <span class="chip ${cls(h.deltas.pressure,true)}">压力 ${sign(h.deltas.pressure)}</span>
       </div>
@@ -4876,7 +4917,7 @@ function buildTrendCard(title, series, color, ymin, ymax){
 function renderPeopleQuickList(){
   const box = el('peopleQuickList'); if(!box) return;
   const order = Object.keys(state.people);
-  // 按状态从高到低排序，便于快速看到已转化/参与者
+  // 按状态从高到低排序，便于快速看到完全配合/参与者
   order.sort((a,b)=>{
     const pa=state.people[a], pb=state.people[b];
     if(pb.status!==pa.status) return pb.status-pa.status;
@@ -4890,7 +4931,7 @@ function renderPeopleQuickList(){
     const stubbornMarker = isStubborn ? '<span class="stubborn-marker">🔒 阻力</span>' : '';
     return `<div class="qp-item${activeCls}${isStubborn ? ' stubborn' : ''}" data-pid="${id}" title="${p.role||''}">
       <span class="qp-name">${p.name}${stubbornMarker}</span>
-      <span class="status s${p.status}" style="padding:2px 8px;font-size:11px">${STATUS_LABELS[p.status]}</span>
+      <span class="status s${p.status}" style="padding:2px 8px;font-size:11px">${statusLabelFor(id,p.status)}</span>
     </div>`;
   }).join('');
   box.querySelectorAll('.qp-item').forEach(item=>{
@@ -5566,7 +5607,7 @@ document.addEventListener('keydown',(e)=>{
       return '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px">'+
         '<thead><tr style="background:var(--surface2);color:var(--muted)">'+
         '<th style="text-align:left;padding:6px 8px">名次</th><th style="text-align:left;padding:6px 8px">姓名</th>'+
-        '<th style="text-align:left;padding:6px 8px">转化率</th><th style="text-align:left;padding:6px 8px">剩余资源</th>'+
+        '<th style="text-align:left;padding:6px 8px">完全配合率</th><th style="text-align:left;padding:6px 8px">剩余资源</th>'+
         '<th style="text-align:left;padding:6px 8px">可信度</th><th style="text-align:left;padding:6px 8px">回合</th></tr></thead>'+
         '<tbody>'+(rows||'<tr><td colspan="6" style="padding:10px;color:var(--muted)">还没有人提交</td></tr>')+'</tbody></table>';
     }
