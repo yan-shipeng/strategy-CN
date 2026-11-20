@@ -670,7 +670,7 @@
     <div class="kpi"><div class="small">回合</div><div class="num" id="roundKpi">1</div></div>
     <div class="kpi"><div class="small">完全配合率 <span style="color:var(--success);font-weight:700">★</span></div><div class="num" id="convertedKpi">0%</div><div class="small" id="convertedKpiSub" style="margin-top:2px">目标 ≥ 50%</div></div>
     <div class="kpi"><div class="small">可信度</div><div class="num" id="credKpi">6</div></div>
-    <div class="kpi"><div class="small">积分 <span title="满分 100：成果 55 + 效率 15 + 组织 20 + 里程碑 10，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
+    <div class="kpi"><div class="small">积分 <span title="满分 100：成果 55（达标 40，每多 1 人 +5）+ 效率 15 + 组织 20 + 里程碑 10，见结局页拆解">ⓘ</span></div><div class="num" id="scoreKpi">0</div></div>
     <div class="kpi"><div class="small">压力</div><div class="num" id="pressureKpi">0</div></div>
   </div>
 
@@ -4138,12 +4138,12 @@ function renderEndingScreen(){
         '</div>'+
       '</div>'+
       '<div class="score-parts">'+
-        `<div class="${cls(sc.parts.outcome)}"><b>${sc.parts.outcome}</b><span>成果分 · 完全配合 ${sc.conv}/${sc.totalPeople} 人（满分 ${SCORE_RULES.outcomeMax}）</span></div>`+
+        `<div class="${cls(sc.parts.outcome)}"><b>${sc.parts.outcome}</b><span>成果分 · 完全配合 ${sc.conv} 人（达标线 ${sc.need} 人，每多 1 人 +${SCORE_RULES.perExtra}）</span></div>`+
         `<div class="${cls(sc.parts.efficiency)}"><b>${sc.parts.efficiency}</b><span>效率分 · 剩余 ${Math.max(0,state.resources)}/${TOTAL_RESOURCES} 资源（满分 ${SCORE_RULES.efficiencyMax}）</span></div>`+
         `<div class="${cls(sc.parts.org)}"><b>${sc.parts.org}</b><span>组织分 · (可信度 ${state.credibility} − 压力 ${state.pressure}) × ${SCORE_RULES.orgWeight}（满分 ${SCORE_RULES.orgWeight*10}）</span></div>`+
         `<div class="${cls(sc.parts.milestone)}"><b>${sc.parts.milestone}</b><span>里程碑分 · ${sc.ms} 个关键节点 × ${SCORE_RULES.perMilestone}（满分 ${SCORE_RULES.milestoneCap}）</span></div>`+
       '</div>'+
-      '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 55 ＋ 效率 15 ＋ 组织 20 ＋ 里程碑 10。分数不是排名，是把三件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少</b>（效率）、<b>留下的是什么组织</b>（组织分）。用高压换来的转化会在组织分里被扣回去——所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
+      '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 55（达标即 40，每多推 1 人 +5）＋ 效率 15 ＋ 组织 20 ＋ 里程碑 10。分数不是排名，是把三件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少</b>（效率）、<b>留下的是什么组织</b>（组织分）。用高压换来的转化会在组织分里被扣回去——所以"赢了但压力拉满"的一局，总分通常不好看。</div>';
     wrap.appendChild(sb);
   }catch(_){}
 
@@ -4855,28 +4855,37 @@ function revealAfter(fn, newlyConverted){
      里程碑分 —— 关键节点（首次转化、转化过半、关键人物）有没有被点亮（每个 10，上限 100）
    压力和信誉是加权的：用高压换来的转化，会在组织分里被扣回去。
    ========================================================= */
-/* 满分 100：成果 55 + 效率 15 + 组织 20 + 里程碑 10 */
-const SCORE_RULES = { outcomeMax:55, efficiencyMax:15, orgWeight:2, perMilestone:2, milestoneCap:10, full:100 };
+/* 满分 100：成果 55 + 效率 15 + 组织 20 + 里程碑 10
+   v56：成果分不再按 12 人摊——一局在转化率过 50% 时就结算，
+   按全员算的话天花板只有 30 分左右，A 和 S 根本摸不到。
+   改成以达标线（6 人）为基准：达标给 40，每多推 1 人 +5，封顶 55。 */
+const SCORE_RULES = {
+  outcomeMax:55, passBase:40, perExtra:5,
+  efficiencyMax:15, orgWeight:2, perMilestone:2, milestoneCap:10, full:100
+};
 function scoreBreakdown(){
   const ids = Object.keys(state.people).filter(id=>id!=='pm');
   const conv = ids.filter(id=>state.people[id].status===4).length;
+  const need = Math.ceil(ids.length * 0.5);
   const ms = (state.history||[]).reduce((sum,h)=>
     sum + (h.milestones||[]).filter(m=>/^(首次转化|转化过半|关键节点转化)/.test(m)).length, 0);
   const parts = {
-    outcome: ids.length ? Math.round(conv / ids.length * SCORE_RULES.outcomeMax) : 0,
+    outcome: conv >= need
+      ? Math.min(SCORE_RULES.outcomeMax, SCORE_RULES.passBase + (conv - need) * SCORE_RULES.perExtra)
+      : (need ? Math.round(conv / need * SCORE_RULES.passBase) : 0),
     efficiency: Math.round(Math.max(0, state.resources) / TOTAL_RESOURCES * SCORE_RULES.efficiencyMax),
     org: Math.max(0, Math.min(SCORE_RULES.orgWeight*10, Math.round((state.credibility - state.pressure) * SCORE_RULES.orgWeight))),
     milestone: Math.min(SCORE_RULES.milestoneCap, ms * SCORE_RULES.perMilestone)
   };
   const total = Math.max(0, Math.min(SCORE_RULES.full,
     parts.outcome + parts.efficiency + parts.org + parts.milestone));
-  return { total, parts, conv, totalPeople: ids.length, ms, grade: scoreGrade(total) };
+  return { total, parts, conv, need, totalPeople: ids.length, ms, grade: scoreGrade(total) };
 }
 function scoreGrade(t){
-  if(t>=85) return {k:'S', label:'教科书级'};
-  if(t>=70) return {k:'A', label:'漂亮'};
-  if(t>=55) return {k:'B', label:'及格'};
-  if(t>=40) return {k:'C', label:'勉强'};
+  if(t>=80) return {k:'S', label:'教科书级'};
+  if(t>=68) return {k:'A', label:'漂亮'};
+  if(t>=52) return {k:'B', label:'及格'};
+  if(t>=42) return {k:'C', label:'勉强'};
   return {k:'D', label:'没落地'};
 }
 
