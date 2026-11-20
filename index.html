@@ -252,12 +252,18 @@
     .target:hover{border-color:var(--primary);background:var(--primary-light)}
     .target.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 
-    /* 决策按钮浮动粘底：在决策页始终可见，不随动作列表长度被顶下去 */
-    .decision-footer{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--primary);padding:10px 16px;border-radius:0;display:none;grid-template-columns:1fr auto;align-items:center;gap:10px;z-index:200;box-shadow:0 -6px 20px rgba(26,24,21,.12)}
+    /* v61：全局推进栏——固定底部，贯穿任务 / 网络 / 决策 / 日志 / 结算 */
+    .decision-footer{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--primary);padding:10px 16px;border-radius:0;display:none;grid-template-columns:1fr auto;align-items:center;gap:10px;z-index:1200;box-shadow:0 -6px 20px rgba(26,24,21,.12)}
     .decision-footer-inner{max-width:1240px;margin:0 auto;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
-    #screen-decision.active ~ .decision-footer,
-    body.decision-active .decision-footer{display:block}
-    body.decision-active #screen-decision{padding-bottom:90px}
+    body.sim-active .decision-footer{display:block}
+    body.sim-active .app{padding-bottom:104px}
+    .fb-context{display:flex;align-items:center;gap:10px;min-width:0}
+    .fb-chip{
+      flex:0 0 auto;padding:4px 10px;border-radius:999px;white-space:nowrap;
+      background:rgba(13,139,150,.16);border:1px solid rgba(13,139,150,.35);
+      color:#3ecfdc;font-size:11.5px;font-weight:800;letter-spacing:.2px;
+    }
+    .fb-context .predict-box-footer{min-width:0;flex:1 1 auto}
     .decision-footer .hint-strip{display:none;font-size:12px;text-align:left;line-height:1.45;white-space:normal}
     .decision-footer .hint-strip.show{display:block;color:var(--muted)}
     .decision-footer .hint-strip.warn{display:block;color:var(--danger);font-weight:600}
@@ -275,7 +281,7 @@
     textarea{background:#0d1e2a;color:var(--text);color-scheme:dark;border:1px solid var(--border);border-radius:8px;font-family:inherit}
     textarea::placeholder{color:var(--muted);opacity:.7}
 
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px 20px 104px;z-index:1000}
     .modal.show{display:flex}
     .modal-card{max-width:780px;width:min(100%,780px);max-height:85vh;overflow:auto;background:var(--surface);border-radius:20px;box-shadow:var(--shadow-lg);padding:28px}
     /* v60：线性流程——结果卡片只留一个主按钮，其余降级成文字链接 */
@@ -588,7 +594,7 @@
     #swipeHint{display:none!important}
 
     /* ── 决策页：动作列表优先，网络图可折叠 ── */
-    body.decision-active #screen-decision{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+    body.sim-active .app{padding-bottom:calc(var(--tabbar-h) + 104px + env(safe-area-inset-bottom,0px))}
     #screen-decision > div[data-decision-grid]{gap:12px!important}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:static!important;max-height:none!important;overflow:visible!important;order:2}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:300px!important}
@@ -606,14 +612,10 @@
     .net-toggle .chev{transition:transform .2s ease;font-size:15px}
     .net-collapsed .net-toggle .chev{transform:rotate(-90deg)}
 
-    /* 决策浮动条：叠在底部导航之上
-       v30：不再依赖 body.decision-active——万一这个 class 没打上，按钮会掉到 tabbar 后面看不见。
-       改成只要决策页是 active 就抬起来，双保险。 */
-    body.decision-active .decision-footer,
-    #screen-decision.active ~ .decision-footer,
-    .app:has(#screen-decision.active) .decision-footer{
+    /* v61：推进栏在所有阶段都贴着底部导航之上 */
+    body.sim-active .decision-footer{
       bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px));
-      padding:6px 12px;z-index:900;
+      padding:6px 12px;z-index:1200;
     }
     /* v35：手机端只留一个按钮；minmax(0,1fr) 防止子元素撑破屏幕宽度 */
     .decision-footer-inner{grid-template-columns:minmax(0,1fr)!important;gap:0!important}
@@ -622,23 +624,15 @@
     .decision-footer .hint-strip{font-size:11px;line-height:1.35;margin-bottom:4px}
     .predict-box-footer{padding-right:0}
 
-    /* ── 网络页：底部「进入决策」CTA ── */
-    #netCta{
-      display:none;position:fixed;left:0;right:0;z-index:790;
-      bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px));
-      padding:8px 12px;
-      background:linear-gradient(to top,rgba(6,17,26,.98),rgba(6,17,26,.88));
-      border-top:1px solid var(--border);
-    }
-    body[data-screen="network"] #netCta{display:block}
-    #netCta .btn{width:100%;height:50px;font-size:15px;border-radius:14px}
+    /* ── 网络页：v61 起由全局推进栏接管，旧 CTA 不再显示 ── */
+    #netCta{display:none!important}
     body[data-screen="network"] .app{padding-bottom:calc(var(--tabbar-h) + 84px + env(safe-area-inset-bottom,0px))}
 
-    /* ── 结果弹窗：全屏，按钮竖排，主行动置顶 ── */
+    /* ── 结果弹窗：全屏，底部让给推进栏 ── */
     .modal{padding:0;align-items:stretch}
     .modal-card{
       max-width:none;width:100%;max-height:100dvh;height:100dvh;
-      border-radius:0;padding:16px 14px calc(14px + env(safe-area-inset-bottom,0px));
+      border-radius:0;padding:16px 14px calc(150px + env(safe-area-inset-bottom,0px));
       display:flex;flex-direction:column;
     }
     #impactBody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
@@ -1591,7 +1585,7 @@
         <p id="roleBriefingText" style="margin:8px 0">你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 60 个资源内推动新的治理和协同方式落地。</p>
         <div class="small" id="roleGoalText" style="padding:8px 12px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:4px"><strong>你的目标：</strong>在 60 个资源内让 ≥50% 的关键人物真正进入「完全配合」状态。过了 50% 就算达标——收工还是继续推，你自己判断。</div>
         <div class="badges" style="margin-top:12px"><span class="badge">先理解任务</span><span class="badge">再看社会网络</span><span class="badge">然后做决策</span></div>
-        <button class="btn btn-primary" id="startBtn2" style="margin-top:14px">查看社会网络 →</button>
+        <div class="small muted" style="margin-top:10px">看完就点右下角那颗按钮——它会一直带着你往下走。</div>
       </div>
 
       <!-- v27：机制速览——开局就把"这个模拟器在教什么"讲清楚 -->
@@ -1698,16 +1692,17 @@
   
     </section>
 
-    <!-- 浮动决策按钮：脱离 #screen-decision，只在决策页可见（由 body.decision-active 控制） -->
-    <div class="decision-footer" id="decisionFooter" role="region" aria-label="执行决策">
+    <!-- v61：全局推进栏——从第一回合到结算，所有推进都走这一条 -->
+    <div class="decision-footer" id="decisionFooter" role="region" aria-label="推进流程">
       <div class="decision-footer-inner">
-        <!-- 左列：预计影响 + 状态提示（v41：预判输入框已移除） -->
-        <div class="predict-box-footer" id="predictBoxFooter">
-          <div id="decisionPreview" class="decision-preview" style="display:none"></div>
-          <div id="hintText" class="hint-strip show">请先选一个动作。</div>
+        <div class="fb-context">
+          <span class="fb-chip" id="fbChip">第 1 回合</span>
+          <div class="predict-box-footer" id="predictBoxFooter">
+            <div id="decisionPreview" class="decision-preview" style="display:none"></div>
+            <div id="hintText" class="hint-strip show">先选一个动作</div>
+          </div>
         </div>
-        <!-- 右列：执行按钮 -->
-        <button class="btn btn-primary" id="runBtn">执行本轮决策</button>
+        <button class="btn btn-primary" id="runBtn">① 先选一个动作</button>
       </div>
     </div>
 
@@ -1747,14 +1742,13 @@
   <div class="modal" id="impactModal">
     <div class="modal-card">
       <div id="impactBody"></div>
-      <div id="modalActions" style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
-        <button class="btn btn-primary" id="nextRoundBtn">进入下一回合 →</button>
+      <div id="modalActions" style="margin-top:18px;display:flex;flex-direction:column;gap:10px">
         <div class="modal-links">
           <button id="nextDecisionBtn">先看看网络</button>
           <span class="sep">·</span>
           <button id="viewLogBtn">回合日志</button>
           <span class="sep">·</span>
-          <span>按 Enter 继续</span>
+          <span>按 Enter 或点下面的按钮继续</span>
         </div>
       </div>
       <div id="modalFinalActions" style="margin-top:20px;display:none;flex-direction:column;gap:10px">
@@ -3059,6 +3053,7 @@ function showScreen(name){
   // v25：手机端按当前屏切换底部 CTA
   document.body.dataset.screen = name;
   renderTabs();
+  try{ updateFlowBar(); }catch(_){}
   if(name==='log') renderLogScreen();
   if(name==='ending') renderEndingScreen();
   // v25：网络页 CTA 文案跟随回合数
@@ -3886,23 +3881,49 @@ function renderDecisionPreview(a, targetIds){
     <span class="dp-item">消耗 ${a.weeks} 资源</span>`;
 }
 
-function updateRunButton(){
-  const btn=el('runBtn'); const hint=el('hintText');
-  // v15：同步更新决策预览
-  const selA = state.selectedAction!=null ? ACTIONS[state.selectedAction] : null;
-  renderDecisionPreview(selA, state.selectedTargets);
-  /* v60：底部按钮就是"下一步"——文案随进度变，学生不用再找该点哪里 */
+/* v61：全局推进栏的状态机。一局从头到尾只有这一颗按钮，
+   它永远在同一个位置，只换文案——学生不需要判断"下一步该点哪里"。 */
+function updateFlowBar(){
+  const btn=el('runBtn'); const hint=el('hintText'); const chip=el('fbChip');
+  const modal=el('impactModal');
+  const modalOpen=!!(modal && modal.classList.contains('show'));
+  const scr=state.currentScreen;
+  if(chip) chip.textContent = state.ended ? '本局结束' : `第 ${state.round} 回合`;
   const steps=el('flowSteps');
   const setStep=(n)=>{ if(!steps) return; steps.querySelectorAll('.fs').forEach(s=>{
     const k=+s.dataset.fs; s.classList.toggle('on', k===n); s.classList.toggle('done', k<n);
   }); };
-  if(state.ended){
-    btn.disabled=false; btn.textContent='查看结局 →'; setStep(4);
-    hint.textContent='本局已结束。'; hint.className='hint-strip show'; return;
+  const say=(txt,cls)=>{ if(!hint) return; hint.textContent=txt; hint.className='hint-strip '+(cls||'show'); };
+  // v15：同步更新决策预览
+  const selA = state.selectedAction!=null ? ACTIONS[state.selectedAction] : null;
+  renderDecisionPreview(selA, state.selectedTargets);
+
+  /* ① 结算卡片开着：按钮变成"进入下一回合"（卡片里不再放按钮） */
+  if(modalOpen && !state.ended){
+    if(state.passReached && !state.passChoice){
+      btn.disabled=true; btn.textContent='先在上面做选择';
+      say('收工，还是继续推进？');
+    } else {
+      btn.disabled=false; btn.textContent=`进入第 ${state.round} 回合 →`;
+      say('结果看完了就继续');
+    }
+    setStep(4);
+    return;
   }
+  /* ② 结局 */
+  if(state.ended){
+    btn.disabled=false; btn.textContent='🔄 再来一局';
+    say('点一次是准备，再点一次才重开');
+    return;
+  }
+  /* ③ 非决策页：按钮负责把人送回决策 */
+  if(scr==='task'){ btn.disabled=false; btn.textContent='先看社会网络 →'; say('第一步：认识这 12 个人，再决定先动谁'); return; }
+  if(scr==='network'){ btn.disabled=false; btn.textContent=`进入第 ${state.round} 回合决策 →`; say('看清人，再动手'); return; }
+  if(scr==='log'){ btn.disabled=false; btn.textContent='回到决策 →'; say('复盘完就继续'); return; }
+  /* ④ 决策页：三步 */
   if(state.selectedAction===null){
     btn.disabled=true; btn.textContent='① 先选一个动作'; setStep(1);
-    hint.textContent='从上面挑一张动作卡，开始这一回合。'; hint.className='hint-strip show'; return;
+    say('从上面挑一张动作卡，开始这一回合。'); return;
   }
   const a=ACTIONS[state.selectedAction];
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
@@ -3923,10 +3944,12 @@ function updateRunButton(){
   if(state.resources<a.weeks) problems.push(`资源不足（需 ${a.weeks}，剩 ${state.resources}）`);
   if(a.reqPressure && state.pressure < a.reqPressure) warnings.push(`⚠️ 当前压力为 ${state.pressure}，此动作需要压力 ≥ ${a.reqPressure} 才有实质效果（执行后会浪费资源）`);
   if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加压力 +${Math.min(3, a.reqCred-state.credibility)}`);
-  if(problems.length){ hint.textContent = h + ' · ' + problems.join('；'); hint.className='hint-strip warn'; }
-  else if(warnings.length){ hint.textContent = h + ' · ' + warnings.join('；') + '，确认强行执行'; hint.className='hint-strip warn'; }
-  else { hint.textContent = h + ' · 点右边按钮执行'; hint.className='hint-strip show'; }
+  if(problems.length){ say(h + ' · ' + problems.join('；'), 'warn'); }
+  else if(warnings.length){ say(h + ' · ' + warnings.join('；') + '，确认强行执行', 'warn'); }
+  else { say(h + ' · 点右边按钮执行'); }
 }
+/* 兼容旧调用点 */
+function updateRunButton(){ updateFlowBar(); }
 
 /* =========================================================
    弹窗 / 结局（v13 增强）
@@ -4564,11 +4587,13 @@ function showModal(){
   modal.setAttribute('aria-modal','true');
   const card = modal.querySelector('.modal-card');
   if(card) card.scrollTop = 0;
+  try{ updateFlowBar(); }catch(_){}
 }
 function closeModal(){
   const modal=el('impactModal');
   modal.classList.remove('show');
   modal.setAttribute('aria-hidden','true');
+  try{ updateFlowBar(); }catch(_){}
   // v17: 焦点返回
   try{
     if(state._lastFocus && typeof state._lastFocus.focus==='function'){
@@ -5906,6 +5931,8 @@ function reset(){
 
 /* v17：从「姓名 → 介绍 → 模拟」过渡时揭示顶栏/HUD/标签栏 */
 function revealSimulationChrome(){
+  // v61：进入模拟后，底部推进栏常驻
+  document.body.classList.add('sim-active');
   // v20: 初始化移动端网络视图
   const netScreen = document.getElementById('screen-network');
   if(netScreen && !netScreen.classList.contains('network-view') && !netScreen.classList.contains('list-view')){
@@ -6059,16 +6086,34 @@ el('restartBtn').addEventListener('click', ()=>{
   reset();
 });
 el('exportBtn').addEventListener('click', ()=>{ const ok = exportGamePdf(); if(ok !== false) _learnerExported = true; });
-/* v60：底部那颗按钮就是整局的"下一步"——同一个位置，同一颗按钮，
-   只换文案：选动作 → 选目标 → 执行 → 进入下一回合。学生不用再找该点哪里。 */
+/* v61：整局只有这一条推进栏，所以这里就是唯一的分流器 */
+let _restartArmedAt=0;
 function primaryAdvance(){
   const modal=el('impactModal');
   const open=!!(modal && modal.classList.contains('show'));
+  if(state.ended){
+    if(open) closeModal();
+    // 重开是不可逆的：第一次点只是上膛，3.5 秒内再点才真的重开
+    if(Date.now()-_restartArmedAt < 3500){
+      _restartArmedAt=0; reset(); return;
+    }
+    _restartArmedAt=Date.now();
+    const btn=el('runBtn');
+    if(btn) btn.textContent='再点一次 · 确认重开';
+    setTimeout(()=>{ _restartArmedAt=0; try{ updateFlowBar(); }catch(_){} }, 3600);
+    return;
+  }
   if(open){
-    if(state.ended){ showScreen('ending'); render(); return; }
+    if(state.passReached && !state.passChoice){
+      updatePassBanner();
+      cheatToast('🎯 先在上面定一下：收工结算，还是继续推进。');
+      return;
+    }
     goNextRound(); return;
   }
-  if(state.ended){ showScreen('ending'); render(); return; }
+  const scr=state.currentScreen;
+  if(scr==='task'){ showScreen('network'); render(); return; }
+  if(scr==='network'||scr==='log'){ showScreen('decision'); render(); return; }
   runTurn();
 }
 el('runBtn').addEventListener('click',primaryAdvance);
@@ -6101,7 +6146,8 @@ if(el('passPushBtn')) el('passPushBtn').addEventListener('click', pushBeyondPass
     if(buf === 'cheat'){ buf = ''; cheatFloor(75); }
   });
 })();
-el('nextRoundBtn').addEventListener('click',goNextRound);
+/* v61：结果卡片里不再有按钮，推进统一走底部那条栏 */
+if(el('nextRoundBtn')) el('nextRoundBtn').addEventListener('click',goNextRound);
 el('viewLogBtn').addEventListener('click',()=>{ closeModal(); showScreen('log'); });
 
 /* v60：主路径是「下一回合」直接回决策页；网络与日志降级成文字链接，想去再去 */
