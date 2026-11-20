@@ -358,7 +358,8 @@
       /* v39：手机端头部改成竖排，那个 ▶ 会掉到左下方变成孤立符号，直接藏掉 */
       .action-toggle{display:none!important}
       /* 未选中的卡片不再显示"详细参数"那一段，卡片缩到三行 */
-      .action:not(.selected) .action-content{display:none!important}
+      /* v45：未选中的卡片只藏目标选择器，"详细参数"仍然点得开 */
+      .action:not(.selected) .action-content > .target-selector{display:none!important}
       .action-header .disabled-badge{font-size:10px}
       .action-group-header .group-label{font-size:13px}
       .action-group-header .group-meta{font-size:10px;padding:1px 6px}
@@ -426,6 +427,10 @@
   .impact-table .band{font-weight:600;font-size:12px;white-space:nowrap;opacity:.92}
   /* v39：动作卡默认只留一行要点，说明点开才看 */
   .action-desc{max-height:0;overflow:hidden;margin:0;transition:max-height .22s ease, margin .22s ease}
+  .action-details summary{list-style:none}
+  .action-details summary::-webkit-details-marker{display:none}
+  .action-details summary::before{content:'▸ ';display:inline-block}
+  .action-details[open] summary::before{content:'▾ '}
   .action.desc-open .action-desc{max-height:260px;margin-top:6px}
   .desc-toggle{display:inline-block;margin-top:6px;font-size:11px;color:var(--muted);border:1px dashed var(--border);
     border-radius:999px;padding:2px 9px;cursor:pointer;user-select:none}
@@ -634,7 +639,7 @@
 <div class="app">
   <div class="topbar">
     <div>
-      <div class="title">中国企业出海变革模拟 <span class="ver">v44</span></div>
+      <div class="title">中国企业出海变革模拟 <span class="ver">v45</span></div>
       <div class="sub" id="learnerBadge" style="display:none"></div>
     </div>
     <div id="topbarActions" style="display:none;gap:8px;flex-wrap:wrap">
@@ -1989,6 +1994,7 @@ function initState(){
     people:clonePeople(),
     selectedAction:null,
     selectedTargets:[],
+    detailsOpen:new Set(),   // v45：记住哪几张卡片的"详细参数"是展开的，重渲染后不丢
     focusedNode:null,
     nextAvailable:{},
     lastImpact:null,
@@ -3244,6 +3250,8 @@ function buildActionCard(a, idx){
     
         // v20: 渐进式信息展示 - 计算成功率估计
     const successHint = (() => {
+      // v45：已经不可用时别再打"可执行"的绿标，两个徽章互相打脸
+      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有已转化的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
       if(credBad) return { label: '⚠️ 强行', cls: 'warn', tip: '可信度不足，强行执行将增加压力' };
       if(a.disrupt >= 3 && isEarlyChange()) return { label: '⚡ 高风险', cls: 'bad', tip: '早期使用高扰动动作会引发组织反弹' };
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
@@ -3277,8 +3285,8 @@ function buildActionCard(a, idx){
     </div>
     <div class="action-content">
       <!-- v20: 详细参数折叠区 -->
-      <details class="action-details" style="margin-top:4px">
-        <summary style="cursor:pointer;font-size:12px;color:var(--muted);user-select:none;padding:4px 0">▸ 查看详细参数</summary>
+      <details class="action-details" style="margin-top:4px" ${(state.detailsOpen&&state.detailsOpen.has(a.id))?'open':''}>
+        <summary style="cursor:pointer;font-size:12px;color:var(--muted);user-select:none;padding:4px 0">查看详细参数</summary>
         <div class="chips" style="margin-top:8px">
           <span class="chip" ${cooldownTitle} ${cooldownCursor}>冷却${a.cooldown}轮</span>
           <span class="chip">需可信度${a.reqCred}</span>
@@ -3290,9 +3298,19 @@ function buildActionCard(a, idx){
     </div>`;
     card.addEventListener('click',(e)=>{
       if(e.target.classList.contains('target')) return;
+      // v45：点"详细参数"或它展开的内容，不当作选中动作——否则重渲染会把刚展开的合上
+      if(e.target.closest('.action-details')) return;
       if(e.target.classList.contains('desc-toggle')){ e.stopPropagation(); card.classList.toggle('desc-open'); return; }
       if(!isHardDisabled) chooseAction(idx);
     });
+    // v45：把展开状态记进 state，选目标人物时重渲染也不会被关掉
+    const det=card.querySelector('.action-details');
+    if(det){
+      det.addEventListener('toggle',()=>{
+        if(!state.detailsOpen) state.detailsOpen=new Set();
+        if(det.open) state.detailsOpen.add(a.id); else state.detailsOpen.delete(a.id);
+      });
+    }
     card.addEventListener('keydown',(e)=>{
       if((e.key==='Enter'||e.key===' ') && !isHardDisabled){ e.preventDefault(); chooseAction(idx); }
     });
