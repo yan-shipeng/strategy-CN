@@ -4800,15 +4800,15 @@ function chooseAction(idx, opts){
     ACTION_GROUPS.forEach(x=>{ state.groupOpen[x.key]=false; });
     state.groupOpen[g.key]=true;
   }
-  /* v78：手机端点了动作之后页面会往下窜。
-     原因是 render() 会把别的小组收起来——选中的那一组被提到页面靠上的位置，
-     整页高度一变，视口里看到的内容就整体错位了（学生刚点的那张卡甚至跑到屏幕外）。
-     这里在 render 前后量一次卡片在视口里的位置，把差值补回去，
-     效果就是：你点哪张卡，它就在原地展开，页面不动。 */
+  /* v78：render() 会把别的小组收起来，整页高度一变，视口里的内容就整体错位。
+     点「ⓘ 说明」是想读字（v70），这种时候只在 render 前后量一次卡片位置、把差值补回去，
+     页面一动不动；正常选动作则交给 focusSelectedCard 把它摆到视线中间（v79）。 */
+  const keepStill = !!(opts && opts.noReveal);   // 点「ⓘ 说明」：只想读字，页面不许动
+  if(keepStill) focusToken++;                     // 取消上一次点击还没跑完的摆位
   const beforeCard=document.querySelector(`.action[data-i="${idx}"]`);
   const anchorTop=beforeCard?beforeCard.getBoundingClientRect().top:null;
   render();
-  if(anchorTop!==null){
+  if(keepStill && anchorTop!==null){
     const afterCard=document.querySelector(`.action[data-i="${idx}"]`);
     if(afterCard){
       const d=afterCard.getBoundingClientRect().top-anchorTop;
@@ -4818,9 +4818,7 @@ function chooseAction(idx, opts){
       }
     }
   }
-  // 选人区在卡片下半截，点了却在屏幕外就等于没展开——只在真的看不见时轻轻滚一下
-  // v70：点「ⓘ 说明」是想读字，别把页面从字上拽走
-  if(a.need && !(opts && opts.noReveal)) revealTargets();
+  if(!keepStill) focusSelectedCard();
 }
 
 /* v67：不可用的动作被点到时，把卡在哪一步说出来。
@@ -4833,32 +4831,50 @@ function whyDisabled(a, wait, noTeacher){
   cheatToast(`⛔ 「${a.label}」现在用不了 —— ${why.length?why.join('；'):'条件不满足'}`);
 }
 
-/* v67：把选人区带进视野。
-   v78：改成「以卡片为单位、只补看不见的那一段」，修手机端点一下就跳到底部。
-   原来的判断是"整块选人区必须完整可见"——可手机上一个动作的选人区（4 个人 + 说明）
-   往往比整屏还高，这个条件永远不成立，于是每次都把选人区的顶推到吸顶条下面，
-   页面就从卡片头部一路滑到卡片底部，学生刚点的动作反而看不见了。
-   现在的规则：只要选人区的开头已经在屏幕里，就一动不动；确实看不见，
-   就把整张卡片顶到吸顶条下面（而不是把选人区的底对齐底栏）。 */
-function revealTargets(){
-  requestAnimationFrame(()=>{
+/* v79：点了动作就把这张卡放到视线中间。
+   这一段前后试过三代：
+   v67 要求"整块选人区完整可见"——手机上一个动作展开后常比整屏还高，条件永远不成立，
+        于是每次都把选人区的顶推到吸顶条下面，页面从卡片头部一路滑到卡片底部；
+   v78 改成"只补看不见的那一段"——不再窜到底部，但落点仍是被动算出来的，
+        学生点完还是常看到半截卡片贴在屏幕边缘。
+   现在换成一个明确的目标：卡片落在吸顶条与推进栏之间那块可视区的正中间。
+   卡片比可视区还高时（手机上很常见）顶端对齐——标题和说明开头一定看得见，
+   再往下滑是学生自己的事。
+   说明区的展开有 0.22s 的高度动画，所以动画结束后再校一次位置。 */
+let focusToken=0;   // v79：每次摆位发一个号，后发的作废先发的
+function focusSelectedCard(){
+  const my=++focusToken;
+  let wanted=null;    // 上一次自己设定的落点
+  let tries=0;
+  /* 这里刻意不用平滑滚动。smooth 的动画时长由浏览器定，卡片高度又在展开后的
+     几十毫秒里还在变，两个变量叠在一起，落点就没法保证——之前"有时停在半截"就是这么来的。
+     直接对位：一帧之内卡片就在视线中间，落点算得准，也不会出现页面自己在滑的错觉。 */
+  const go=()=>{
+    if(my!==focusToken) return;   // 已经有更新的一次点击，这次作废
     const card=document.querySelector('.action.selected');
     if(!card) return;
-    const box=card.querySelector('.target-selector');
-    if(!box) return;
-    const r=box.getBoundingClientRect();
     const vh=window.innerHeight||document.documentElement.clientHeight||0;
-    const topPad=96, bottomPad=130;   // 吸顶 HUD 与底部推进栏的高度
+    const topPad=96, bottomPad=130;                       // 吸顶 HUD 与底部推进栏的高度
+    const avail=Math.max(220, vh-topPad-bottomPad);       // 真正能用来放卡片的高度
     const cur=window.scrollY||window.pageYOffset||0;
-    const bottomLine=vh-bottomPad-40;
+    // 学生自己滑走了就别抢：当前位置离上次设定的落点太远，说明手在他那边
+    if(wanted!==null && Math.abs(cur-wanted)>40) return;
+    const r=card.getBoundingClientRect();
     let target;
-    if(r.top>=topPad && r.top<=bottomLine) return;      // 开头已经露在视野里：不滚
-    if(r.top>bottomLine) target=cur+(r.top-bottomLine);  // 在屏幕下方：只把它拉到线下，不整卡上移
-    else target=cur+(r.top-topPad);                      // 被吸顶条盖住：拉回来
-    if(Math.abs(target-cur)<4) return;
-    try{ window.scrollTo({top:Math.max(0,target),behavior:'smooth'}); }
-    catch(_){ window.scrollTo(0,Math.max(0,target)); }
-  });
+    if(r.height>=avail-8) target=cur+r.top-topPad;                        // 比可视区高：顶端对齐
+    else                  target=cur+r.top-topPad-(avail-r.height)/2;     // 否则：可视区居中
+    const docH=Math.max(document.documentElement.scrollHeight||0, document.body.scrollHeight||0);
+    const maxY=Math.max(0, docH-vh);
+    target=Math.max(0, Math.min(target, maxY));
+    if(Math.abs(target-cur)<6){ wanted=target; return; }
+    wanted=target;
+    window.scrollTo(0,target);
+  };
+  requestAnimationFrame(go);
+  /* 卡片里的文字换行、说明区展开都会在几十毫秒内把高度定下来，
+     落点得跟着修正两次，否则手机上卡片顶会被吸顶条盖住一截。 */
+  const again=()=>{ go(); if(++tries<2) setTimeout(again, 260); };
+  setTimeout(again, 280);
 }
 function toggleTarget(id){
   if(state.ended) return;
