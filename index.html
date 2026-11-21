@@ -1450,7 +1450,7 @@
           <ul class="intro-warn-list">
             <li><span class="wi">⚠️</span><div><strong>别只靠一种动作</strong>单一策略会遇到瓶颈，需要组合使用。</div></li>
             <li><span class="wi">⚠️</span><div><strong>资源按人头算</strong>——定向动作带的人越多，占用的资源越多。只找关键的那两三个人，省下来的资源够你多走一步。</div></li>
-            <li><span class="wi">⚠️</span><div><strong>有些人的门槛比看上去高</strong>——他们的顾虑不会写在脸上。想少走弯路，先花一份资源做「私人约谈」。</div></li>
+            <li><span class="wi">⚠️</span><div><strong>有些人的门槛比看上去高</strong>——他们的顾虑不会写在脸上。想少走弯路，先花一份资源做「信息打探」。</div></li>
           </ul>
         </div>
 
@@ -2390,7 +2390,7 @@ function decayHint(s){ const d=statusInfo(s).decay; return d<0 ? ('每回合自�
 
 /* =========================================================
    v31：隐藏信息
-   一个还没被私人约谈过的人，你只知道他的公开身份（职位、部门、汇报线、
+   一个还没被打探过的人，你只知道他的公开身份（职位、部门、汇报线、
    以及他现在的态度），不知道他是不是关键阻力、也不知道他的偏好和隐藏目标。
    所以「谁更难推」这件事，不能出现在任何默认可见的文本或徽章里。
    ========================================================= */
@@ -2496,7 +2496,7 @@ const PRESSURE_RELIEF_ACTION = {
     }
     if(newTies.length) details.push('🤝 一起在场的人彼此熟了一些：'+newTies.join('、')+'。这类关系不来自汇报线，只来自"一起待过"。');
 
-    details.push('🔒 聚会不产出任何隐藏信息：想知道谁在真正挡路、他在意什么，只能靠「私人约谈」。');
+    details.push('🔒 聚会不产出任何隐藏信息：想知道谁在真正挡路、他在意什么，只能靠「信息打探」。');
 
     return {
       story:'你组织了一场非正式聚会，'+n+' 个人到场。酒过三巡，气氛松了下来。',
@@ -2542,46 +2542,66 @@ const ACTIONS=[
     // 首次使用——信号清晰
     return affectAll(7,'总部公开支持了这次变革，信号清晰。','政治');
   }},
-  {id:'interview',label:'私人约谈',weeks:1,cooldown:2,need:2,min:1,type:'对话',reqCred:3,disrupt:0,adkar:'AW',desc:'一对一坐下来，摸清顾虑、识别非正式关系。这是唯一能解锁对方真实想法与隐藏目标的动作——只谈一个人时对方最愿意说实话，同时谈两个就会明显变浅。注意：对同一人重复约谈超过 2 次会显得烦人。',cooldownReason:'私人约谈是低成本的信息收集方式，可以频繁进行。但每次约谈都需要时间来消化信息和建立信任。',run(ids){
-    ids.forEach(id=>{ state.revealed[id]=true; });
-    // 统计本轮被重复访谈（第3次及以上）的对象
-    const overused = [];
-    ids.forEach(id=>{
-      state.interviewCount[id] = (state.interviewCount[id] || 0) + 1;
-      if(state.interviewCount[id] >= 3) overused.push(id);
-    });
-    // 有对象被重复访谈——惩罚模式
-    if(overused.length > 0){
-      const hitNames = [];
-      overused.forEach(id=>{
-        const p = state.people[id];
-        if(p && p.status < 4){
-          const oldScore = p.score;
-          p.score = Math.max(0, p.score - 4);
-          if(p.score !== oldScore){ updateStatus(p); hitNames.push(p.name); }
-        }
-      });
-      state.credibility = Math.max(0, state.credibility - 1);
-      // 对首次或二次的对象仍给正常效果，仅降重复者分数
-      const normalIds = ids.filter(id => !overused.includes(id));
-      const res = normalIds.length
-        ? affectTargets(normalIds, Math.round(12*focusMul(normalIds.length)), '部分对象的对话仍然有收获。', true, '对话')
-        : {story:'这一轮的访谈几乎没有新信息。', details:[]};
-      res.details.unshift(
-        `⚠️ 重复访谈反感：${overused.map(i=>state.people[i].name).join('、')} 已被你访谈 ≥ 3 次。他们开始觉得你「只会聊，不落地」。`,
-        `影响：${hitNames.length ? hitNames.join('、') + ' 分数 -4；' : ''}你的可信度 -1。`
-      );
-      return res;
-    }
-    const res=affectTargets(ids, Math.round(8*focusMul(ids.length)), '通过深度对话，你获得了信任，并看清了他们的真实动机。', true, '对话');
-    res.details.unshift(`🔓 已解锁：${ids.map(i=>state.people[i].name).join('、')} 的隐藏偏好与目标（查看节点详情）。`);
-    if(ids.length===1){
-      res.details.unshift('🕯 一对一：对方没有旁人要顾，话说得比平时深。');
-    } else {
-      res.details.unshift('👥 同时约了两个人：彼此都在留面子，深度打了折扣——想挖到真东西，一次只谈一个。');
-    }
-    return res;
-  }},
+  /* v92：把「私人约谈」拆成两件事。
+     原来一张卡同时干三件事——摸清底细、解锁隐藏目标、还顺手推 12 分，
+     而且是全场最便宜的一张（1 周、1 资源、冷却 2）。所有机器人开局第一手都是它，
+     不是因为学生聪明，是因为设计上有一张卡把「调研」和「说服」混成了同一次谈话。
+     拆开之后：打探只给信息（1 分），劝说只给推力（不吃偏好）。
+     打探的价值不再是「解锁劝说」，而是「让你发现这个人该用哪把工具」。 */
+  {id:'recon',label:'信息打探',weeks:1,cooldown:1,need:2,min:1,type:'对话',reqCred:3,disrupt:0,adkar:'AW',
+   desc:'坐下来问，不劝。摸清他到底在担心什么、吃哪一套、跟谁真正走得近。这是全场唯一能解锁隐藏信息的动作——他真正的目标、台面下的关系、以及他现在到底站在哪一格（精确到分）。它几乎不推人：一次只值 1 分。只谈一个人时才问得出真话；同时问两个，你只能听到场面话。',
+   cooldownReason:'摸底可以频繁做，但连着找同一个人问，他会觉得你只调研不表态。',
+   run(ids){
+     const deep = ids.length===1;
+     ids.forEach(id=>{
+       state.revealed[id]=true;
+       if(deep) state.deepReveal[id]=true;
+     });
+     /* 反复找同一个人问，他会开始烦——只摸底不表态，是最消耗信任的一种接触 */
+     const overused=[];
+     ids.forEach(id=>{
+       state.reconCount[id]=(state.reconCount[id]||0)+1;
+       if(state.reconCount[id]>=3) overused.push(id);
+     });
+     const r = affectTargets(ids, 1, '你只是听，没有推。信息拿到了，人还没动。', false, '对话');
+     r.details.unshift(`🔓 已解锁：${ids.map(i=>state.people[i].name).join('、')} 的动作偏好与当前档位（查看节点详情）。`);
+     if(deep){
+       r.details.unshift('🕯 一对一：没有旁人要顾，他把真正的顾虑说出来了——隐藏目标、台面下的关系，也一并看清。');
+     } else {
+       r.details.unshift('👥 同时问两个人：彼此都在留面子，你只听到愿意公开的那部分——隐藏目标和台面下的关系，还是没摸到。想挖到真东西，一次只谈一个。');
+     }
+     if(overused.length){
+       state.credibility=Math.max(0,state.credibility-1);
+       r.details.push(`⚠️ ${overused.map(i=>state.people[i].name).join('、')} 已经被你找过 3 次以上。他们开始觉得你「只问不做」——可信度 -1。`);
+     }
+     return r;
+   }},
+  {id:'persuade',label:'私下劝说',weeks:1,cooldown:2,need:2,min:1,type:'对话',reqCred:3,disrupt:0,adkar:'AW',
+   desc:'坐下来劝，不问。这是一张万能牌：对任何人、任何阶段都推得动，推力不小，而且不需要你先摸清他的底。代价是它永远不是最优解——你不知道他吃哪套，就只能硬劝。真正划算的，是先「信息打探」问出来，再换那把对他最对路的工具。',
+   cooldownReason:'反复劝同一个人，从「关心」会变成「纠缠」。',
+   run(ids){
+     const id=ids[0]; const p=state.people[id];
+     const before=p.status;
+     state.persuadeCount[id]=(state.persuadeCount[id]||0)+1;
+     if(state.persuadeCount[id]>=3){
+       state.credibility=Math.max(0,state.credibility-1);
+       p.score=Math.max(0,p.score-4); updateStatus(p);
+       const r=affectTargets(ids, 4, '他又听了一遍，但这次开始走神了。', false, '劝说');
+       r.details.unshift(`⚠️ 这是你第 ${state.persuadeCount[id]} 次劝${p.name}。他已经听过了——再劝下去是纠缠，不是说服（${p.name} -4，可信度 -1）。`);
+       return r;
+     }
+     /* v92：一次能谈一到两个人——谈一个最透，谈两个各打点折（focusMul）。
+        它不吃偏好、也不看档位：你不知道他吃哪套，就只能硬劝。 */
+     const r=affectTargets(ids, Math.round(8*focusMul(ids.length)), '你把话讲透了：为什么变、对他有什么好处、下一步要他做什么。', true, '对话');
+     if(!state.revealed[id]){
+       r.details.push('💡 你是盲劝：不知道他吃哪套、也不知道他卡在哪一格。劝得动，但偏好那 25% 白丢了——先做一次「信息打探」，还能顺便看出该不该换一把更省力的工具。');
+     }
+     const delta=(STATUS_LABELS[p.status]!==STATUS_LABELS[before])?`（${STATUS_LABELS[before]}→${statusText(p.status)}）`:'';
+     r.details.unshift(ids.length===1
+       ? `🕯 一对一劝说：${p.name}${delta}`
+       : `👥 一次劝了 ${ids.length} 个人：${ids.map(i=>state.people[i].name).join('、')}。每个人分到的时间少，效果打了折。`);
+     return r;
+   }},
   /* v81：新增「小组讨论」。
      原来开局能"点名推人"的动作只有约谈（冷却 2）和外部培训（冷却 4）两个，
      约谈一进冷却，学生就只剩外部培训可点——而外部培训在那个阶段又常常不是最匹配的动作，
@@ -2589,7 +2609,7 @@ const ACTIONS=[
      共识会补的是这一段：2-3 个人一起谈，比约谈多一个人、比培训早一步，
      代价是屋里有硬骨头时会当场顶撞。 */
   {id:'huddle',label:'小组讨论',weeks:2,cooldown:3,need:3,min:2,type:'对话',reqCred:5,disrupt:2,adkar:'AW',
-   desc:'把 2-3 个关键人物叫到一间屋里，把数据、问题和下一步当面摊开。一对一是摸底，小会是造势——同一件事当着几个人的面讲，分量比挨个讲重得多。风险在选人：屋里有硬骨头时，他会当众顶回来，这一下不但推不动他，还会把屋里其他人一起拖住。',
+   desc:'把 2-3 个关键人物叫到一间屋里，把数据、问题和下一步当面摊开。一对一打探是摸底，小会是当众摊牌——同一件事当着几个人的面讲，分量比挨个讲重得多。风险在选人：屋里有硬骨头时，他会当众顶回来，这一下不但推不动他，还会把屋里其他人一起拖住。',
    cooldownReason:'小组讨论靠的是「把话说透」的场合感。一周开三次，就没人当回事了。',
    run(ids){
      const details=[];
@@ -2968,14 +2988,16 @@ let currentRoleId = 'integrator';
    v77：总部背书从「验证」挪回「造势」——它给的是正当性，不是证据。
    验证段只留「用事实说服」的两件事：自己先做（示范）、小范围跑通（试点）。
    把背书摆在验证里，会让学生以为「找领导站台也算跑通一次」，那正是变革管理里最常见的误区。
+   v92：段名「造势」改为「沟通」——这一段做的其实是三件事：问清楚（打探）、说清楚（劝说）、
+   让更多人同时听见（小会、聚会、通报），叫「沟通」比叫「造势」更贴机制。
    v86：再挪到「制度」——背书借的是正式权力，和奖惩、汇报关系是同一类东西；
    留在造势里，它会被当成「又一个拉人的动作」，而不是「把这件事变成组织安排」。
    这不是四个抽屉，而是一条有先后的推进线；跳步是变革失败的头号死法。
    （en 字段只作内部对照，不渲染到界面。） */
 const ACTION_GROUPS = [
-  { key:'unfreeze', label:'🔥 造势', en:'Urgency & Coalition',
-    hint:'第 1–2 步：先解决「为什么非变不可」和「谁跟我一起」。这两步没做够就往下走，后面每一步都在还债',
-    ids:['interview','huddle','team-building','broadcast'] },
+  { key:'unfreeze', label:'💬 沟通', en:'Urgency & Coalition',
+    hint:'第 1–2 步：先解决「为什么非变不可」和「谁跟我一起」。先问清楚，再开口劝——这两步没做够就往下走，后面每一步都在还债',
+    ids:['recon','persuade','huddle','team-building','broadcast'] },
   { key:'mobilize', label:'🧪 验证', en:'Validate & Demonstrate',
     hint:'第 3–4 步：先在自己身上、在小范围里把这件事跑通一次——讲一百遍，不如让人看见一次',
     ids:['exemplify','pilot','showcase'] },
@@ -3060,7 +3082,10 @@ function initState(){
     revealed:{pm:true},       // 访谈解锁集合
     usedActions:new Set(),    // 本局使用过的动作 id
     actionUseCount:{},        // v17.7：动作累积使用次数 {actionId: count}
-    interviewCount:{},        // v17.7：对每个对象的访谈次数 {personId: count}
+    interviewCount:{},        // v17.7：对每个对象的访谈次数 {personId: count}（v92 起不再使用，保留兼容）
+    reconCount:{},            // v92：对每个对象做过几次信息打探
+    persuadeCount:{},         // v92：对每个对象做过几次私下劝说
+    deepReveal:{},            // v92：只有一对一打探才挖得到的深层信息（隐藏目标、台面下的关系）
     lastActionId:null,        // v17.7：上一轮的动作 id（用于检测连用同类）
     activeActionId:null,      // v48：本回合正在执行的动作
     fitHit:0, fitMiss:0,      // v48：档位匹配对/错的累计次数
@@ -3180,7 +3205,11 @@ function preferenceMultiplier(personId, actionType){
    键是内部 5 个数值槽：0/1/2 都属于「初步理解」，3 是「有限认同」，4 是「完全配合」。
    ========================================================= */
 const STAGE_FIT={
-  interview:          {0:1.00, 1:1.00, 2:1.00, 3:0.80, 4:0.60},
+  recon:              {0:1.00, 1:1.00, 2:1.00, 3:1.00, 4:1.00},
+  /* v92：劝说是「万能牌」——不需要先摸清对方，对谁都能推。
+     但它并不最优：不知道他吃哪套，偏好加成那 25% 就白丢了；
+     已经点头的人更劝不动——他不是没被说服，是不需要再听一遍。 */
+  persuade:           {0:1.00, 1:1.00, 2:1.00, 3:0.80, 4:0.60},
   huddle:             {0:1.10, 1:1.10, 2:1.00, 3:0.70, 4:0.50},
   'team-building':    {0:1.00, 1:1.00, 2:1.05, 3:1.05, 4:0.95},
   training:           {0:0.65, 1:0.65, 2:0.75, 3:1.35, 4:0.70},
@@ -3191,7 +3220,7 @@ const STAGE_FIT={
   reorg:              {0:0.95, 1:0.95, 2:1.00, 3:1.10, 4:1.00}
 };
 const STAGE_FIT_LABEL={
-  interview:          '对他这个阶段，约谈是最对路的工具',
+  recon:              '他现在最需要的，是有人认真听他把话说完',
   huddle:             '他还没被拉进圈子，当面对质比私下聊更有推力',
   'team-building':    '社交场合对他一直有用',
   training:           '他现在最缺的是怎么上手，不是为什么',
@@ -3855,10 +3884,10 @@ function renderDetail(id, boxId){
   const softenInfo = state.softened[id] ? `<div class="small" style="margin-top:8px;color:var(--success)">⚡ 处于扩散影响圈（来自 ${state.people[state.softenedOrigin[id]]?.name||'—'}）：剩 ${state.softened[id]} 回合</div>` : '';
   const bridgeNote = isBridge(id) ? `<span class="chip good" style="margin-left:6px">🌉 桥梁节点（ties ${p.ties.length}）</span>` : '';
   let hiddenTiesSection = '';
-  if(state.revealed[id] && p.hidden_ties && p.hidden_ties.length > 0) {
+  if(state.revealed[id] && state.deepReveal && state.deepReveal[id] && p.hidden_ties && p.hidden_ties.length > 0) {
     const hiddenTiesNames = p.hidden_ties.map(t=>state.people[t]?.name).filter(Boolean).join('、');
     hiddenTiesSection = `<div class="small" style="margin-top:8px;padding:8px;background:rgba(217,119,6,.08);border-radius:6px;border-left:3px solid #d97706">
-      <strong style="color:#d97706">🔗 朋友关系（访谈后发现）：</strong>${hiddenTiesNames}
+      <strong style="color:#d97706">🔗 朋友关系（打探后发现）：</strong>${hiddenTiesNames}
     </div>`;
   }
   let hiddenSection = '';
@@ -3868,16 +3897,25 @@ function renderDetail(id, boxId){
       const sign = v>0?'+':'';
       return `<div class="pref-row"><span>对「${k}」类动作</span><span class="${cls}">${sign}${Math.round(v*100)}%</span></div>`;
     }).join('');
+    /* v92：偏好是「问一次就知道」的浅层信息；隐藏目标得一对一才问得出来。
+       同时问两个人，彼此都在留面子——你只拿到愿意公开的那部分。 */
+    /* 玩家自己的节点不用「打探」——那本来就是你自己的目标 */
+    const _deep = (id==='pm') || !!(state.deepReveal && state.deepReveal[id]);
+    const goalHtml = p.hidden_goal
+      ? (_deep
+          ? `<strong style="color:var(--s3)">💭 隐藏目标：</strong>${p.hidden_goal}`
+          : `<div style="color:var(--muted);margin-bottom:6px">🔒 隐藏目标：还没摸到——两个人一起谈，他只说了愿意公开的那部分。一次只打探一个人，才问得出来。</div>`)
+      : '';
     // pm 没有偏好表，也没有隐藏目标——跳过
     if(p.hidden_goal || prefRows){
       hiddenSection = `<div class="small" style="margin-top:10px;padding:8px;background:rgba(122,78,196,.08);border-radius:8px;border-left:3px solid var(--s3)">
-        ${p.hidden_goal?`<strong style="color:var(--s3)">💭 隐藏目标：</strong>${p.hidden_goal}`:''}
+        ${goalHtml}
         ${prefRows?`<div class="pref-table">${prefRows}</div>`:''}
       </div>`;
     }
   } else if(id!=='pm') {
     hiddenSection = `<div class="small" style="margin-top:10px;padding:8px;background:rgba(255,255,255,.04);border-radius:8px;border-left:3px solid var(--muted);color:var(--muted)">
-      🔒 隐藏目标与动作偏好：未知。请通过「私人约谈」解锁。
+      🔒 隐藏目标与动作偏好：未知。先做一次「信息打探」——一次只问一个人，才问得深。
     </div>`;
   }
   // v26：合作信任进度（没到 40 的先显示进度条数值）
@@ -3999,7 +4037,7 @@ function drawNetwork(svgId, forceView){
       edgeLine(parts[0],parts[1],'informal',trustOf(parts[0],parts[1]));
     });
     Object.entries(state.people).forEach(([id,p])=>{
-      if(!(p.hidden_ties && state.revealed[id])) return;
+      if(!(p.hidden_ties && state.revealed[id] && state.deepReveal && state.deepReveal[id])) return;
       p.hidden_ties.forEach(t=>edgeLine(id,t,'hidden'));
     });
   }
@@ -4483,7 +4521,7 @@ function buildActionCard(a, idx){
           <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">
             <span style="color:${barColor};letter-spacing:-1px;font-size:10px">${barBlocks}</span>
             <span style="color:var(--text);font-weight:600">${scoreLabel}</span>
-            ${(state.selectedAction===idx && a.need && !a.roleMode && !knowsSecret(id))?`<span style="color:var(--muted);font-weight:700" title="没约谈过：你不知道他会怎么反应">?</span>`:''}
+            ${(state.selectedAction===idx && a.need && !a.roleMode && !knowsSecret(id))?`<span style="color:var(--muted);font-weight:700" title="没打探过：你不知道他会怎么反应">?</span>`:''}
           </span>
         </button>`;
         }).join('');
@@ -4972,16 +5010,16 @@ function debrief(){
   if(H.length>=4){
     if(fAn>=0 && (fUn<0 || fAn<fUn)){
       out.push({tag:'顺序反了', k:'warn',
-        t:`你在第 ${fAn+1} 回合就动了制度类动作（调整奖惩／调整汇报关系），而造势${fUn<0?'整局一次都没做':'到第 '+(fUn+1)+' 回合才第一次出现'}。前两步是紧迫感和联盟——没做够就动制度，同一纸奖惩在员工眼里不是「改革」，是「新官上任」。顺序一错，后面每一步都在还债。`});
+        t:`你在第 ${fAn+1} 回合就动了制度类动作（调整奖惩／调整汇报关系），而沟通${fUn<0?'整局一次都没做':'到第 '+(fUn+1)+' 回合才第一次出现'}。前两步是紧迫感和联盟——没做够就动制度，同一纸奖惩在员工眼里不是「改革」，是「新官上任」。顺序一错，后面每一步都在还债。`});
     } else if(segN.unfreeze>0 && segN.mobilize>0 && segN.enable===0 && segN.anchor===0){
-      out.push({tag:'只造势不落地', k:'warn',
-        t:`力气全花在前两段（造势 ${segN.unfreeze} 次、验证 ${segN.mobilize} 次），赋能和制度一次没碰。紧迫感讲得再好，组织看不到一件做成的事也不会信——第 6 步「创造速赢」不是锦上添花，它是把口头承诺变成可验证证据的唯一办法。`});
+      out.push({tag:'只沟通不落地', k:'warn',
+        t:`力气全花在前两段（沟通 ${segN.unfreeze} 次、验证 ${segN.mobilize} 次），赋能和制度一次没碰。紧迫感讲得再好，组织看不到一件做成的事也不会信——第 6 步「创造速赢」不是锦上添花，它是把口头承诺变成可验证证据的唯一办法。`});
     } else if(segN.enable===0){
       out.push({tag:'没有速赢', k:'warn',
         t:`整局没有一次赋能类动作（试点／培训／内部培训／表彰）。这类动作负责把「我信你」变成「我看见了」——缺一个能拿出手的成果，观望的人会一直观望到时间用完。`});
     } else if(_touched.length>=3 && _missed.length===0){
       out.push({tag:'四段走齐', k:'good',
-        t:`四段你都走过了：造势 ${segN.unfreeze}、验证 ${segN.mobilize}、赋能 ${segN.enable}、制度 ${segN.anchor}。这条线不是流程表，是承重顺序——造势攒下的信用，用来付赋能和制度的账。`});
+        t:`四段你都走过了：沟通 ${segN.unfreeze}、验证 ${segN.mobilize}、赋能 ${segN.enable}、制度 ${segN.anchor}。这条线不是流程表，是承重顺序——沟通攒下的信用，用来付赋能和制度的账。`});
     } else if(_touched.length<=2 && _missed.length>=2){
       out.push({tag:'只走了半程', k:'tip',
         t:`你只走了「${_touched.map(f=>f.name).join('」和「')}」，没碰「${_missed.map(f=>f.name).join('」和「')}」。这是变革做一半最常见的形态：前半程靠个人魅力推得动，后半程要靠机制接住——接不住，人一走就回原样。`});
@@ -5000,7 +5038,7 @@ function debrief(){
   const _fitMiss=state.fitMiss||0, _fitHit=state.fitHit||0;
   if(_fitMiss>=3 && _fitMiss>_fitHit){
     out.push({tag:'工具用错位', k:'warn',
-      t:`你有 ${_fitMiss} 次把动作用在了还没到那一步的人身上，效果只给了六到八折（用对 ${_fitHit} 次）。最典型的两头：对还没认同的人做培训——他还不想学，教了也不会用；对已经完全配合的人反复约谈——他已经在做了，你还在摸他的顾虑。同一档位换一个动作，效果能差一倍。`});
+      t:`你有 ${_fitMiss} 次把动作用在了还没到那一步的人身上，效果只给了六到八折（用对 ${_fitHit} 次）。最典型的两头：对还没认同的人做培训——他还不想学，教了也不会用；对已经完全配合的人反复劝说——他已经在做了，你还在摸他的顾虑。同一档位换一个动作，效果能差一倍。`});
   } else if(_fitHit>=5 && _fitHit>=3*Math.max(1,_fitMiss)){
     out.push({tag:'工具对路', k:'good',
       t:`你有 ${_fitHit} 次把动作用在了对的人身上：对还没认同的人先谈，对刚认同的人给工具，对已经配合的人给荣誉。这局最值钱的不是动作本身，是时机——同一套动作换个顺序打，结果会完全不同。`});
@@ -5236,7 +5274,7 @@ function showModal(){
         : `${glyph(r.from)} ${STATUS_LABELS[r.from]} → ${glyph(r.to)} <b>${STATUS_LABELS[r.to]}</b>`;
       // v46：没约谈过的人，不显示说服度——结果可以观察（变化列），刻度得谈过才知道
       const scoreCell = (r.revealed===false)
-        ? `<span class="locked-score" title="没约谈过他：你知道他这轮动了，但不知道他站在哪一格。谈一次就解锁。">🔒 约谈解锁</span>`
+        ? `<span class="locked-score" title="没打探过他：你知道他这轮动了，但不知道他站在哪一格。谈一次就解锁。">🔒 打探解锁</span>`
         : `${r.scoreFrom} → ${r.scoreTo}`;
       return `<tr>
         <td>${r.name}</td>
@@ -5250,7 +5288,7 @@ function showModal(){
     const _decayTotal = Math.abs(decayed.reduce((s,r)=>s+r.delta,0));
     const _decayAvg = decayed.length ? Math.round(_decayTotal/decayed.length*10)/10 : 0;
     box.innerHTML='<strong>👤 这一步动了谁</strong>'+
-      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 50 / 85 升一档。没约谈过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
+      '<div class="small muted" style="margin:4px 0 8px">按影响大小排序。说服度 0-100，分三档，跨过 50 / 85 升一档。没打探过的人，你只能看出他「动了多少」，看不出他站在哪一格——精确到几分、他吃哪一套，得坐下来谈过才知道。</div>'+
       '<table class="impact-table"><thead><tr><th>人物</th><th>状态</th><th>说服度</th><th>变化</th><th>为什么</th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="5" style="color:var(--muted)">这一步没有直接改变任何人的状态</td></tr>')+'</tbody></table>'+
       /* v73：错配时只讲一件事——分数是涨了，但这一手不是他现在最需要的。
@@ -5669,10 +5707,10 @@ function toggleTarget(id){
   render();
 }
 
-/* v37：没约谈过的人，只说"动了多少档"，不给精确数字
+/* v37：没打探过的人，只说"动了多少档"，不给精确数字
    原则：结果可以观察，动机需要对话。分数是公开的（决策页就在显示），
    但"这一下到底推动了多少"只有坐下来谈过的人，你才量得准。 */
-/* v46：没约谈过的人，只给"动了多少"的定性，不给精确分数。
+/* v46：没打探过的人，只给"动了多少"的定性，不给精确分数。
    结果可以观察，刻度得谈过才知道。 */
 function gainText(id, amount){
   if(state.revealed && state.revealed[id]) return `+${amount} 分`;
