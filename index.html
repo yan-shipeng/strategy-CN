@@ -2260,24 +2260,33 @@ const ACTIONS=[
      不用请人、不用停活，把已经跑通的那个人怎么做成的讲清楚，讲给情况相似的人听。
      它与通报、表彰的分工：通报是把整体讲给全场（不点名），表彰是给一个人名分，
      案例分享是"谁做成了、怎么做的"讲给 2-3 个还没动的人（点名听众）。 */
-  {id:'showcase',label:'成功案例分享',weeks:1,cooldown:4,need:3,min:2,type:'示范',reqCred:4,disrupt:0,adkar:'AW',needConverted:1,
-   desc:'把一个已经跑通的人的做法整理出来，讲给 2-3 个情况相似、还没动的人听。不用请专家、不用停下手上的活——就是把「他是怎么做到的」讲清楚。前提是你手里真有一个做成了的人：没有案例，就没有东西可讲。',
+  {id:'showcase',label:'成功案例分享',weeks:1,cooldown:4,need:3,min:2,type:'示范',reqCred:4,disrupt:0,adkar:'AW',
+   desc:'把一个已经跑通的人的做法整理出来，讲给 2-3 个情况相似、还没动的人听。不用请专家、不用停下手上的活——就是把「他是怎么做到的」讲清楚。成色看手里有什么：有人做成，讲的是做法；只有人动心，讲的是想法；一个人都没动，讲的只能是愿景——后两种照样能点，但听众不傻。',
    cooldownReason:'同一个案例讲第三遍就没人信了。要等新的案例，或者换一批听众。',
    run(ids){
      const details=[];
      const convIds=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status===4);
-     const conv=convIds.length;
+     /* v84：案例的成色分四档——「有人做成」才算真案例，
+        只有「有人动心」只能讲半成品，一个人都没动就是画饼。
+        点错不拦，但要付代价：这是这一段的教具，不是一道关卡。 */
+     const awareIds=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status>=2);
+     const conv=convIds.length, aware=awareIds.length;
      let amount, story;
-     if(conv===0){
-       amount=2;
-       story='你讲了一个还不存在的案例，听众客气地点头。';
-       state.credibility=Math.max(0, state.credibility-1);
-     }else if(conv<3){
-       amount=6;
-       story='有人真的做成了，讲出来就比道理管用。';
-     }else{
+     if(conv>=3){
        amount=8;
        story='案例不止一个，听众开始对号入座。';
+     }else if(conv>=1){
+       amount=6;
+       story='有人真的做成了，讲出来就比道理管用。';
+     }else if(aware>=1){
+       amount=4;
+       story='你讲的还只是「有人开始动心」，不是「有人做成了」。';
+       state.credibility=Math.max(0, state.credibility-1);
+     }else{
+       amount=2;
+       story='你讲了一个谁都没见过的故事，听众客气地点头。';
+       state.credibility=Math.max(0, state.credibility-1);
+       state.pressure=Math.min(10, state.pressure+2);   // 自然回落 1，净 +1
      }
      const r=affectTargets(ids, Math.round(amount*focusMul(ids.length)), story, false, '示范');
      // 听众和某个已经转化的人有私交：熟人讲的案例更可信
@@ -2292,8 +2301,9 @@ const ACTIONS=[
        });
        details.push(`🤝 其中 ${warm} 个人跟案例主角本来就有私交，熟人讲的事更可信（每人再 +${bonus}）。`);
      }
-     if(conv===0) details.push('⚠️ 空案例：一个真正做成的人都没有，可信度 -1。先让一个人跑通，再来讲。');
-     else details.push(`📌 你手里有 ${conv} 个真实案例，讲的是「谁做成了、怎么做的」。`);
+     if(conv>=1) details.push(`📌 你手里有 ${conv} 个真实案例，讲的是「谁做成了、怎么做的」。`);
+     else if(aware>=1) details.push(`⚠️ 半成品：只有 ${aware} 个人到了「有点动心」，还没人做成。你讲的是想法，不是做法——听众会问「那到底成了没有」。可信度 -1。`);
+     else details.push('⚠️ 空案例：一个人都还没动，讲的只能是愿景。听众客气地点头，心里想的是「又是PPT」。可信度 -1、压力 +1——这一回合基本白花。');
      details.unshift(`🎤 讲给 ${ids.length} 个人听：${ids.map(id=>state.people[id].name).join('、')}。`);
      r.details=details.concat(r.details||[]);
      return r;
@@ -3769,11 +3779,10 @@ function renderActions(){
     const availCount = groupActions.filter(i=>{
       const a=ACTIONS[i];
       const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
-      /* v83：这里原来只算冷却/信誉/资源，把「没有讲师」「没有案例」这两种
-         真正点不动的卡也数成了可用——组头上写着 3/3，点进去一张是灰的。 */
+      /* v83：这里原来只算冷却/信誉/资源，把「没有讲师」这种真点不动的卡也数成可用。
+         v84：案例分享不再是硬条件（改成错选有代价），所以只保留讲师这一条。 */
       const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-      const noCase = a.needConverted && convertedCount()<a.needConverted;
-      return !(wait>0 || state.credibility<a.reqCred || state.resources<a.weeks || noTeacher || noCase);
+      return !(wait>0 || state.credibility<a.reqCred || state.resources<a.weeks || noTeacher);
     }).length;
     const groupWrap = document.createElement('div');
     groupWrap.className = 'action-group' + (isOpen?' open':'');
@@ -3825,11 +3834,7 @@ function buildActionCard(a, idx){
     // 只有冷却中或资源不足才真正禁用
     // v39：内部培训需要一位完全配合的讲师
     const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-    /* v83：案例分享要先有一个真做成的人，否则没有案例可讲。
-       这不是「底子门槛」——是动作本身的定义：没案例的分享就是画饼，
-       与其让学生花一回合买一个「空案例」，不如把卡片灰掉、把条件写在卡上。 */
-    const noCase = a.needConverted && convertedCount() < a.needConverted;
-    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher||noCase;
+    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher;
     const isDisabled=isHardDisabled; // credBad 仅作为视觉警告，不禁用卡片
     if(isHardDisabled) card.classList.add('disabled');
     else if(credBad) card.classList.add('cred-override'); // 新增：可信度不足但可强行
@@ -3912,8 +3917,8 @@ function buildActionCard(a, idx){
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,noCase?'还没有一个真做成的案例可以讲':'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
-          ⛔ ${noTeacher?'还没有讲师':(noCase?'还没有案例':(wait>0?'冷却'+wait+'轮':'资源数不足'))}
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
+          ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
         ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加压力">
@@ -3928,7 +3933,7 @@ function buildActionCard(a, idx){
         // v20: 渐进式信息展示 - 计算成功率估计
     const successHint = (() => {
       // v45：已经不可用时别再打"可执行"的绿标，两个徽章互相打脸
-      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,noCase?'还没有一个真做成的案例可以讲':'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
+      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
       if(credBad) return { label: '⚠️ 强行', cls: 'warn', tip: '可信度不足，强行执行将增加压力' };
       if(a.disrupt >= 3 && isEarlyChange()) return { label: '⚡ 高风险', cls: 'bad', tip: '早期使用高扰动动作会引发组织反弹' };
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
@@ -3949,6 +3954,13 @@ function buildActionCard(a, idx){
         <div class="chips" style="margin-top:6px">
           <span class="chip" title="执行此动作消耗的资源数">⏱ ${a.weeks} 资源</span>
           <span class="chip ${a.need===0?'good':''}" title="${a.roleMode==='teacher'?'先点讲师（必须完全配合），再点三位学员':(a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标')}">${a.roleMode==='teacher'?'🎓 1 讲师 + 3 学员':(a.need?'👤 '+tRangeText(a):'🌐 全体')}</span>
+          ${a.id==='showcase' ? (()=>{
+            const n=convertedCount();
+            const aw=Object.keys(state.people).filter(id=>id!=='pm'&&state.people[id].status>=2).length;
+            const tip = n>0 ? `手里有 ${n} 个真正做成的案例`
+              : (aw>0 ? `还没有做成的案例，只有 ${aw} 个人到了「有点动心」——讲得出想法，讲不出做法` : '一个人都还没动，讲了也是愿景');
+            return `<span class="chip ${n>0?'good':'warn'}" title="${tip}">🎤 案例 ${n}${n===0&&aw>0?' · 半成品 '+aw:''}</span>`;
+          })() : ''}
           ${credBad ? `<span class="chip warn" title="当前可信度${state.credibility}，需要${a.reqCred}">🔒 需信誉${a.reqCred}</span>` : ''}
           ${wait>0 ? `<span class="chip bad" title="冷却中">⏳ 冷却${wait}轮</span>` : ''}
         </div>
@@ -3983,7 +3995,7 @@ function buildActionCard(a, idx){
       /* v70：整张卡都算选中。
          原来点「查看详细参数」「ⓘ 说明」只展开、不选中，学生以为要「先点开看看、再点才选上」，
          白点两下。现在卡片上任何一处（除了人名）点下去都等于选它，说明区只是顺手摊开。 */
-      if(isHardDisabled){ whyDisabled(a, wait, noTeacher, noCase); return; }
+      if(isHardDisabled){ whyDisabled(a, wait, noTeacher); return; }
       const isDesc = !!e.target.closest('.desc-toggle');
       if(isDesc){
         if(!state.descOpen) state.descOpen=new Set();
@@ -4002,7 +4014,7 @@ function buildActionCard(a, idx){
     card.addEventListener('keydown',(e)=>{
       if(e.key==='Enter'||e.key===' '){
         e.preventDefault();
-        if(isHardDisabled) whyDisabled(a, wait, noTeacher, noCase); else chooseAction(idx);
+        if(isHardDisabled) whyDisabled(a, wait, noTeacher); else chooseAction(idx);
       }
     });
     return card;
@@ -4929,10 +4941,9 @@ function chooseAction(idx, opts){
 
 /* v67：不可用的动作被点到时，把卡在哪一步说出来。
    以前是直接 return，学生只会觉得"这张卡点不动"，却不知道为什么。 */
-function whyDisabled(a, wait, noTeacher, noCase){
+function whyDisabled(a, wait, noTeacher){
   const why=[];
   if(noTeacher) why.push('还没有完全配合的人可以当讲师');
-  if(noCase) why.push('还没有一个真做成的案例可以讲——先让一个人跑通');
   if(wait>0) why.push(`冷却中，还要等 ${wait} 回合`);
   if(state.resources<a.weeks) why.push(`资源不够：这个动作要 ${a.weeks}，你只剩 ${state.resources}`);
   cheatToast(`⛔ 「${a.label}」现在用不了 —— ${why.length?why.join('；'):'条件不满足'}`);
