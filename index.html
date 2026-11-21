@@ -1415,6 +1415,7 @@
           </div>
           <ul class="intro-warn-list">
             <li><span class="wi">⚠️</span><div><strong>别只靠一种动作</strong>单一策略会遇到瓶颈，需要组合使用。</div></li>
+            <li><span class="wi">⚠️</span><div><strong>资源按人头算</strong>——定向动作带的人越多，占用的资源越多。只找关键的那两三个人，省下来的资源够你多走一步。</div></li>
             <li><span class="wi">⚠️</span><div><strong>有些人的门槛比看上去高</strong>——他们的顾虑不会写在脸上。想少走弯路，先花一份资源做「私人约谈」。</div></li>
           </ul>
         </div>
@@ -1992,6 +1993,22 @@ function tCountOk(a,n){ return n>=tMin(a) && n<=tMax(a); }
 function tRangeText(a){
   return tMin(a)===tMax(a) ? `${a.need}人` : `${tMin(a)}–${tMax(a)}人`;
 }
+/* v85：多带一个人，多花一份资源。
+   定向动作（need>0）以前是固定价——带 2 个人和带 3 个人一样贵，
+   于是"顺手多拉一个人"在账上完全免费。现在以起步人数（min）为基准，
+   每多带 1 人 +1 资源；全体动作（need=0）和只能选 1 人的动作不受影响。 */
+function actionCost(a, n){
+  if(!a) return 0;
+  if(!a.need) return a.weeks;
+  const lo = tMin(a);
+  const k = (typeof n==='number' && n>0) ? Math.min(n, tMax(a)) : lo;
+  return a.weeks + Math.min(1, Math.max(0, k - lo));
+}
+function actionCostMin(a){ return actionCost(a, 0); }
+function actionCostNow(a){
+  const on = (state.selectedAction!==null && ACTIONS[state.selectedAction]===a);
+  return actionCost(a, on ? (state.selectedTargets||[]).length : 0);
+}
 
 /* 动作定义（v13 新增 baseAmount 用于文档化，效果仍在 run 内计算） */
 /* v16：新增「缓压」动作 */
@@ -2082,7 +2099,7 @@ const ACTIONS=[
        这件事被一个不用挑人的动作抹掉了。降到 6 之后它回到本位：把所有人往前推一截，但推不过 85 分那条线。 */
     return affectAll(6,'你亲身示范，组织开始观察你的真实行动。','示范');
   }},
-  {id:'ceo-endorse',label:'争取总部公开背书',weeks:2,cooldown:5,need:0,type:'政治',reqCred:2,disrupt:1,adkar:'DE',desc:'通过公开支持提升你的正当性。首次背书信号最强；反复求背书会消耗与CEO的政治资本。',cooldownReason:'总部的每次公开表态都会被组织内部反复解读。频繁的背书反而会削弱信号的可信度，让人觉得这是"作秀"而非真正的承诺。',run(ids){
+  {id:'ceo-endorse',label:'总部背书',weeks:2,cooldown:5,need:0,type:'政治',reqCred:2,disrupt:1,adkar:'DE',desc:'通过公开支持提升你的正当性。首次背书信号最强；反复求背书会消耗与CEO的政治资本。',cooldownReason:'总部的每次公开表态都会被组织内部反复解读。频繁的背书反而会削弱信号的可信度，让人觉得这是"作秀"而非真正的承诺。',run(ids){
     const useN = state.actionUseCount[this.id] || 1; // 本次包含在内
     // 第二次及以后使用——CEO耐心耗尽
     if(useN >= 2){
@@ -2195,10 +2212,21 @@ const ACTIONS=[
    }},
   {id:'broadcast',label:'进展通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,adkar:'AW',desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。它和公开表彰的分工——表彰是给具体的人一个名分（点名），通报是把整体走到哪了讲给所有人听（不点名）。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
+    /* v85：通报改成看「进展」的成色，而不是只看转化人数。
+       有人开始理解（status>=2）也是进展，只是很薄——能说「大家在讨论」，
+       说不了「谁做成了」，所以只值很小的分。真的一点进展都没有，就是空通报，
+       代价更重：组织会觉得你只会发邮件。 */
+    const awareCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status>=2).length;
+    if(convCount === 0 && awareCount === 0){
+      state.credibility = Math.max(0, state.credibility - 2);
+      const r = affectNonAdopters(1,'通报发出去了，但里面没有一件能拿出来说的事。','沟通');
+      r.details.unshift('⚠️ 空通报：没有一个做成的人，也没有一个人在认真讨论——收件人读完只觉得「又在喂PPT」。可信度 -2。');
+      return r;
+    }
     if(convCount === 0){
       state.credibility = Math.max(0, state.credibility - 1);
-      const r = affectNonAdopters(2,'通报发出去了，但里面没有一件能拿出来说的事。','沟通');
-      r.details.unshift('⚠️ 空通报：一个真正转化的案例都没有，收件人读完只觉得"又在喂PPT"。可信度 -1。');
+      const r = affectNonAdopters(2,'通报里能说的是「大家在讨论」，还说不了「谁做成了」。','沟通');
+      r.details.unshift(`⚠️ 只有理解、没有成果：${awareCount} 个人到了「有点动心」，但还没有一个真正做成的案例。可信度 -1，效果很小。`);
       return r;
     }
     /* v68：门槛从 3 个案例降到 2 个。
@@ -2456,7 +2484,7 @@ let currentRoleId = 'integrator';
 
 /* v40：动作按 Kotter 八步压成四段重排——造势 / 验证 / 赋能 / 制度。
    v73：段名和动作都按课上说法重排（原「动员」改为「验证」，原「固化」改为「制度」）。
-   v77：争取总部公开背书从「验证」挪回「造势」——它给的是正当性，不是证据。
+   v77：总部背书从「验证」挪回「造势」——它给的是正当性，不是证据。
    验证段只留「用事实说服」的两件事：自己先做（示范）、小范围跑通（试点）。
    把背书摆在验证里，会让学生以为「找领导站台也算跑通一次」，那正是变革管理里最常见的误区。
    这不是四个抽屉，而是一条有先后的推进线；跳步是变革失败的头号死法。
@@ -3767,7 +3795,7 @@ function renderActions(){
       const first = ACTION_GROUPS.find(g=>g.ids.map(id=>ACTIONS.findIndex(x=>x.id===id)).filter(i=>i>=0).some(i=>{
         const a=ACTIONS[i];
         const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
-        return !(wait>0 || state.resources<a.weeks);
+        return !(wait>0 || state.resources<actionCostMin(a));
       }));
       if(first) state.groupOpen[first.key]=true;
     }
@@ -3782,7 +3810,7 @@ function renderActions(){
       /* v83：这里原来只算冷却/信誉/资源，把「没有讲师」这种真点不动的卡也数成可用。
          v84：案例分享不再是硬条件（改成错选有代价），所以只保留讲师这一条。 */
       const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-      return !(wait>0 || state.credibility<a.reqCred || state.resources<a.weeks || noTeacher);
+      return !(wait>0 || state.credibility<a.reqCred || state.resources<actionCostMin(a) || noTeacher);
     }).length;
     const groupWrap = document.createElement('div');
     groupWrap.className = 'action-group' + (isOpen?' open':'');
@@ -3834,7 +3862,7 @@ function buildActionCard(a, idx){
     // 只有冷却中或资源不足才真正禁用
     // v39：内部培训需要一位完全配合的讲师
     const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher;
+    const isHardDisabled=wait>0||state.resources<actionCostMin(a)||noTeacher;
     const isDisabled=isHardDisabled; // credBad 仅作为视觉警告，不禁用卡片
     if(isHardDisabled) card.classList.add('disabled');
     else if(credBad) card.classList.add('cred-override'); // 新增：可信度不足但可强行
@@ -3912,12 +3940,12 @@ function buildActionCard(a, idx){
     const reasonChips = [];
     if(credBad) reasonChips.push('<span class="chip bad reason-chip">可信度不足（需'+a.reqCred+'）</span>');
     if(wait>0) reasonChips.push('<span class="chip bad reason-chip">还需等待'+wait+'轮</span>');
-    if(state.resources<a.weeks) reasonChips.push('<span class="chip bad reason-chip">资源不足（需 '+a.weeks+'）</span>');
+    if(state.resources<actionCostMin(a)) reasonChips.push('<span class="chip bad reason-chip">资源不足（需 '+actionCostMin(a)+'）</span>');
     if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有完全配合的人可以当讲师</span>');
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<actionCostMin(a)?'资源不足需 '+actionCostMin(a):''].filter(Boolean).join(' · ')}">
           ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
@@ -3933,7 +3961,7 @@ function buildActionCard(a, idx){
         // v20: 渐进式信息展示 - 计算成功率估计
     const successHint = (() => {
       // v45：已经不可用时别再打"可执行"的绿标，两个徽章互相打脸
-      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
+      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<actionCostMin(a)?'资源不足需 '+actionCostMin(a):''].filter(Boolean).join(' · ') };
       if(credBad) return { label: '⚠️ 强行', cls: 'warn', tip: '可信度不足，强行执行将增加压力' };
       if(a.disrupt >= 3 && isEarlyChange()) return { label: '⚡ 高风险', cls: 'bad', tip: '早期使用高扰动动作会引发组织反弹' };
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
@@ -3952,7 +3980,17 @@ function buildActionCard(a, idx){
         </div>
         <!-- v20: 核心信息行（始终可见） -->
         <div class="chips" style="margin-top:6px">
-          <span class="chip" title="执行此动作消耗的资源数">⏱ ${a.weeks} 资源</span>
+          ${(()=>{
+            /* v85：多人的定向动作按人头报价，未选人时显示区间 */
+            const multi = a.need && tMax(a)>tMin(a);
+            const sel = (state.selectedAction===idx);
+            const hi = actionCost(a, tMax(a));
+            const label = multi ? (sel ? `${actionCostNow(a)}` : `${actionCostMin(a)}–${hi}`) : `${a.weeks}`;
+            const tip = multi
+              ? `按人头算：带 ${tMin(a)} 人 ${actionCostMin(a)} 资源，带 ${tMax(a)} 人 ${hi} 资源——多带一个人，多占一份资源`
+              : '执行此动作消耗的资源数';
+            return `<span class="chip" title="${tip}">⏱ ${label} 资源</span>`;
+          })()}
           <span class="chip ${a.need===0?'good':''}" title="${a.roleMode==='teacher'?'先点讲师（必须完全配合），再点三位学员':(a.need?'需要指定 '+tRangeText(a)+' 目标人物':'此动作影响所有人物，无需选择目标')}">${a.roleMode==='teacher'?'🎓 1 讲师 + 3 学员':(a.need?'👤 '+tRangeText(a):'🌐 全体')}</span>
           ${a.id==='showcase' ? (()=>{
             const n=convertedCount();
@@ -4070,7 +4108,7 @@ function updateFlowBar(){
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
   const credOk=state.credibility>=a.reqCred;
   // v20: 可信度不足时仍允许执行（强行模式），但显示警告
-  const ready=(tCountOk(a,state.selectedTargets.length) && wait===0 && state.resources>=a.weeks);
+  const ready=(tCountOk(a,state.selectedTargets.length) && wait===0 && state.resources>=actionCostNow(a));
   btn.disabled=!ready;
   const needMore = a.need>0 ? Math.max(0, tMin(a)-state.selectedTargets.length) : 0;
   btn.textContent = ready
@@ -4082,7 +4120,13 @@ function updateFlowBar(){
   const warnings=[];
   if(a.need>0 && state.selectedTargets.length<tMin(a)) problems.push(`还需选${tMin(a)-state.selectedTargets.length}人（最少 ${tMin(a)} 人）`);
   if(wait>0) problems.push(`该动作还需等待${wait}轮`);
-  if(state.resources<a.weeks) problems.push(`资源不足（需 ${a.weeks}，剩 ${state.resources}）`);
+  if(state.resources<actionCostNow(a)){
+    const n=state.selectedTargets.length, c=actionCostNow(a);
+    const cheaper = a.need>0 && n-1>=tMin(a) && actionCost(a,n-1)<c;
+    problems.push(a.need>0
+      ? `资源不足（${n} 人需 ${c}，剩 ${state.resources}）${cheaper?'——少带一个人就能执行':''}`
+      : `资源不足（需 ${c}，剩 ${state.resources}）`);
+  }
   if(a.reqPressure && state.pressure < a.reqPressure) warnings.push(`⚠️ 当前压力为 ${state.pressure}，此动作需要压力 ≥ ${a.reqPressure} 才有实质效果（执行后会浪费资源）`);
   if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加压力 +${Math.min(3, a.reqCred-state.credibility)}`);
   if(problems.length){ say(h + ' · ' + problems.join('；'), 'warn'); }
@@ -4816,14 +4860,14 @@ function checkEnding(){
     state.ended = true; state.endingType = loseOrWin(cr); return true;
   }
   // v20 修复：死局检测——剩余资源不足以执行任何动作时，视为资源耗尽
-  const minCost = Math.min(...ACTIONS.map(a => a.weeks));
+  const minCost = Math.min(...ACTIONS.map(a => actionCostMin(a)));
   if(state.resources < minCost){
     state.ended = true; state.endingType = loseOrWin(cr); return true;
   }
   // v20 修复：所有可负担的动作均在冷却中时，也视为死局
   const affordableAndReady = ACTIONS.filter(a => {
     const wait = Math.max(0, (state.nextAvailable[a.id] || state.round) - state.round);
-    return state.resources >= a.weeks && wait === 0;
+    return state.resources >= actionCostMin(a) && wait === 0;
   });
   if(affordableAndReady.length === 0){
     state.ended = true; state.endingType = loseOrWin(cr); return true;
@@ -4945,7 +4989,7 @@ function whyDisabled(a, wait, noTeacher){
   const why=[];
   if(noTeacher) why.push('还没有完全配合的人可以当讲师');
   if(wait>0) why.push(`冷却中，还要等 ${wait} 回合`);
-  if(state.resources<a.weeks) why.push(`资源不够：这个动作要 ${a.weeks}，你只剩 ${state.resources}`);
+  if(state.resources<actionCostNow(a)) why.push(`资源不够：这个动作现在要 ${actionCostNow(a)}，你只剩 ${state.resources}`);
   cheatToast(`⛔ 「${a.label}」现在用不了 —— ${why.length?why.join('；'):'条件不满足'}`);
 }
 
@@ -5358,7 +5402,7 @@ function playActionCinematic(a, targetIds){
     '<div class="cine-inner">'+
       '<div class="cine-rule"></div>'+
       `<div class="cine-label">${a.label}</div>`+
-      `<div class="cine-sub">${a.need===0?'全员覆盖':`定向推动 ${n} 人`} · 消耗 ${a.weeks} 资源</div>`+
+      `<div class="cine-sub">${a.need===0?'全员覆盖':`定向推动 ${n} 人`} · 消耗 ${actionCost(a,n)} 资源</div>`+
       `<div class="cine-targets">${chips}</div>`+
       '<div class="cine-bar"><i></i></div>'+
     '</div>'+
@@ -5589,7 +5633,8 @@ function runTurn(){
   const credOk=state.credibility>=a.reqCred;
   // v20: 允许在可信度不足时强行执行，但承担额外压力代价
   const credOverride = !credOk && state.credibility >= 1; // 可信度至少为 1 才能强行
-  if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<a.weeks) return;
+  const turnCost=actionCost(a, state.selectedTargets.length);   // v85：按实际带的人数算
+  if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<turnCost) return;
   if(!credOk && !credOverride) return; // 完全无可信度时不允许
 
   // v51：先放节拍，再算账——过场结束才揭结果
@@ -5603,7 +5648,7 @@ function runTurn(){
   // v59：本回合的效果折扣（过线后才小于 1）
   const _postMul = postPassMul();
 
-  state.resources -= a.weeks;
+  state.resources -= turnCost;
   // v14.1 修复：冷却 N = 执行后 N 个回合内不可用（原实现下一回合就解锁，相当于 cooldown-1）
   state.nextAvailable[a.id] = state.round + a.cooldown + 1;
   state.usedActions.add(a.id);
@@ -5646,7 +5691,7 @@ function runTurn(){
     state.selectedAction=null; state.selectedTargets=[];
     // 构建反馈信息
     const sideEffects = [
-      { kind:'neg', text:`消耗 ${a.weeks} 资源（无效果），剩余 ${state.resources} / ${TOTAL_RESOURCES}` },
+      { kind:'neg', text:`消耗 ${turnCost} 资源（无效果），剩余 ${state.resources} / ${TOTAL_RESOURCES}` },
       { kind:'neutral', text:`冷却 ${a.cooldown} 回合` }
     ];
     state.lastImpact = { story: impact.story, details: impact.details||[], sideEffects, actionLabel: a.label, people: [], relations: [] };
@@ -5727,7 +5772,7 @@ function runTurn(){
       converted: deltaConverted
     },
     movers,
-    weeksUsed: a.weeks,
+    weeksUsed: turnCost,
     weeksLeft: state.resources,
     prediction: predictionText,
     milestones,
@@ -5753,7 +5798,7 @@ function runTurn(){
   if(dPress > 0) sideEffects.push({ kind:'neg', text:`压力 +${dPress}（现 ${after.pressure}）` });
   else if(dPress < 0) gains.push(`压力 -${Math.abs(dPress)}`);
   if(deltaConverted > 0) gains.push(`新增完全配合 +${deltaConverted} 人（累计 ${Object.entries(after.people).filter(([id,x])=>id!=='pm' && x.status===4).length}）`);
-  sideEffects.push({ kind:'neutral', text:`消耗 ${a.weeks} 资源，剩余 ${state.resources} / ${TOTAL_RESOURCES} 资源` });
+  sideEffects.push({ kind:'neutral', text:`消耗 ${turnCost} 资源${(a.need && tMax(a)>tMin(a))?`（${touched} 人，起步价 ${actionCostMin(a)}）`:''}，剩余 ${state.resources} / ${TOTAL_RESOURCES} 资源` });
   if(_postMul < 1) sideEffects.push({ kind:'neg', text:`过线疲劳：本回合每个动作效果 ${postPassMulText(_postMul)}（第 ${state.passFatigue} 个深推回合，最低 ${postPassMulText(SCORE_RULES.postFloor)}）` });
   sideEffects.push({ kind:'neutral', text:`本动作覆盖 ${touched} 人，冷却 ${a.cooldown} 回合` });
 
