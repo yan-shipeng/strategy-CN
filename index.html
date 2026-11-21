@@ -2145,6 +2145,36 @@ const ACTIONS=[
     }
     return res;
   }},
+  /* v81：新增「关键人共识会」。
+     原来开局能"点名推人"的动作只有约谈（冷却 2）和外部培训（冷却 4）两个，
+     约谈一进冷却，学生就只剩外部培训可点——而外部培训在那个阶段又常常不是最匹配的动作，
+     于是屏幕上出现「只有一张能点，点了还被告知不合适」的窘境。
+     共识会补的是这一段：2-3 个人一起谈，比约谈多一个人、比培训早一步，
+     代价是屋里有硬骨头时会当场顶撞。 */
+  {id:'huddle',label:'关键人共识会',weeks:2,cooldown:3,need:3,min:2,type:'对话',reqCred:5,disrupt:2,adkar:'AW',
+   desc:'把 2-3 个关键人物叫到一间屋里，把数据、问题和下一步当面摊开。一对一是摸底，小会是造势——同一件事当着几个人的面讲，分量比挨个讲重得多。代价是：屋里有硬骨头时，他会当场顶回来，其他人在旁边看着。',
+   cooldownReason:'共识会靠的是「把话说透」的场合感。一周开三次，就没人当回事了。',
+   run(ids){
+     const details=[];
+     const stubborn=ids.filter(id=>['union','ops','engineer'].includes(id) && state.people[id].status<=1);
+     let amount=6;
+     if(stubborn.length) amount=Math.round(amount*0.75);
+     const r=affectTargets(ids, Math.round(amount*focusMul(ids.length)), '几个人坐在一张桌子前，把问题摊开了。', true, '对话');
+     // 一起开过会的人之间会长出信任——这是「一起做事」的正当场景
+     const grown=[];
+     for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){
+       const g=seedTrust(ids[i],ids[j],6);
+       if(g>0) grown.push(`${state.people[ids[i]].name}↔${state.people[ids[j]].name} +${g}`);
+     }
+     if(stubborn.length){
+       state.pressure=Math.min(10, state.pressure+1);
+       details.push(`⚠️ ${stubborn.map(id=>state.people[id].name).join('、')} 当场顶了回来，屋里气氛僵了一下——压力 +1，这一轮的效果打了七五折。`);
+     }
+     if(grown.length) details.push(`🤝 一起开会也算「一起做事」：${grown.join('、')}（信任）。`);
+     details.unshift(`🪑 一张桌子 ${ids.length} 个人：${ids.map(id=>state.people[id].name).join('、')}。`);
+     r.details=details.concat(r.details||[]);
+     return r;
+   }},
   {id:'broadcast',label:'进展通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,adkar:'AW',desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。它和公开表彰的分工——表彰是给具体的人一个名分（点名），通报是把整体走到哪了讲给所有人听（不点名）。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
     const convCount = Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length;
     if(convCount === 0){
@@ -2362,7 +2392,7 @@ let currentRoleId = 'integrator';
 const ACTION_GROUPS = [
   { key:'unfreeze', label:'🔥 造势', en:'Urgency & Coalition',
     hint:'第 1–2 步：先解决「为什么非变不可」和「谁跟我一起」。这两步没做够就往下走，后面每一步都在还债',
-    ids:['interview','team-building','ceo-endorse','broadcast'] },
+    ids:['interview','huddle','team-building','ceo-endorse','broadcast'] },
   { key:'mobilize', label:'🧪 验证', en:'Validate & Demonstrate',
     hint:'第 3–4 步：先在自己身上、在小范围里把这件事跑通一次——讲一百遍，不如让人看见一次',
     ids:['exemplify','pilot'] },
@@ -2561,6 +2591,7 @@ function preferenceMultiplier(personId, actionType){
    ========================================================= */
 const STAGE_FIT={
   interview:          {0:1.00, 1:1.00, 2:1.00, 3:0.80, 4:0.60},
+  huddle:             {0:1.10, 1:1.10, 2:1.00, 3:0.70, 4:0.50},
   'team-building':    {0:1.00, 1:1.00, 2:1.05, 3:1.05, 4:0.95},
   training:           {0:0.65, 1:0.65, 2:0.75, 3:1.35, 4:0.70},
   'internal-training':{0:0.55, 1:0.55, 2:0.65, 3:1.30, 4:1.00},
@@ -2570,6 +2601,7 @@ const STAGE_FIT={
 };
 const STAGE_FIT_LABEL={
   interview:          '对他这个阶段，约谈是最对路的工具',
+  huddle:             '他还没被拉进圈子，当面对质比私下聊更有推力',
   'team-building':    '社交场合对他一直有用',
   training:           '他现在最缺的是怎么上手，不是为什么',
   'internal-training':'他刚认同，最需要有人带一遍',
@@ -5116,8 +5148,11 @@ function diagnose(){
   }
 
   // —— 3. 连续无转化
+  /* v81：前 3 回合本来就没人转化——约谈只是摸情况，第一脚往往要到第 3-4 回合才落地。
+     这时候跳出来说「你停滞了」，只会让学生以为自己走错了路。
+     改成跑满 4 回合才提，且只在确实一直没进展时才提。 */
   const noConv=state.history.slice(-3).every(h=>((h.deltas&&h.deltas.converted)||0)===0);
-  if(noConv && state.history.length>=3){
+  if(noConv && state.history.length>=4){
     out.push({k:'warn', tag:'停滞', w:80,
       t:`已经 ${Math.min(3,state.history.length)} 回合没有新增转化了。看看结果页的「这一步动了谁」：如果每个人都在涨分但没人升档，说明你在给已经快满的人加溢出的分，而该被推的人没被推到。`});
   }
