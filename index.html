@@ -2422,6 +2422,9 @@ function actionCost(a, n){
   if(!a.need) return a.weeks;
   const lo = tMin(a);
   const k = (typeof n==='number' && n>0) ? Math.min(n, tMax(a)) : lo;
+  /* v93：perHead——按人头计费。小组聚会 2/3/4 人 = 2/3/4 份资源。
+     其它定向动作仍然是「起步价 + 多带一人 +1」。 */
+  if(a.perHead) return a.weeks + Math.max(0, k - lo);
   return a.weeks + Math.min(1, Math.max(0, k - lo));
 }
 function actionCostMin(a){ return actionCost(a, 0); }
@@ -2435,73 +2438,95 @@ function actionCostNow(a){
 /* v17：缓压动作
    主要目的是主动降压力；当压力=0 时顺带带动还没认同的人
    type='沟通' 经同义词可命中 '对话' 偏好（区域GM+25%、HR+20%、销售+15%） */
-const PRESSURE_RELIEF_ACTION = {
-  id:'team-building',
-  label:'休闲聚会',
-  weeks:1,
+/* v93：把「小组讨论」和「休闲聚会」合成一张「小组聚会」。
+   这两张卡本来就是同一个动作的两个场合——都是把几个人凑到一块儿。
+   现在按人数分档，资源也按人头算：
+     2 人 = 深谈：推得最狠（7）、关系拉得最近（+8）、不降压、不会有人当众发难
+     3 人 = 小会：推 6、关系 +6、降压 1；屋里若有硬骨头，他会当众顶回来
+     4 人 = 热闹一场：推 5、关系 +10、降压 2；同样有当众风险，话题只能停在表面
+   硬骨头风险不写在卡面上——它藏在「人多」里：两个人是一对一，三个人以上才有人看着。 */
+const GATHERING_ACTION = {
+  id:'gathering',
+  label:'小组聚会',
+  weeks:2,
   cooldown:3,
   need:4,
   min:2,
+  perHead:true,
   type:'沟通',
-  adkar:'DE',
+  adkar:'AW',
   reqCred:5,
-  reqPressure:1,
-  disrupt:-1,
-  desc:'把几个人约到非正式场合——吃饭、看球、喝一杯。人越多越热闹，但每个人分到的时间越少、话越浅；它能让关系变软、压力下降，也会让一起在场的人彼此熟起来，但聊不出私人约谈那种深度。已经到「有限认同」以上的人，饭桌上推不动——它只能让他这轮不至于冷下去。',
-  cooldownReason:'非正式聚会是低成本的压力释放方式，但需要先建立足够的可信度才能让人愿意真实对话。频繁聚会会让人觉得你在搞小圈子。',
+  disrupt:1,
+  desc:'把 2-4 个人叫到一块儿——人少就是深谈，人多就是热闹一场。人越少，话越深、越推得动，两个人还能顺手把关系拉近；人越多，越能把场子松下来，也越容易有人当着大家的面给你难堪。资源按人头算，人越多越贵。',
+  cooldownReason:'聚会靠的是「一起待过」这件事的分量。一周办三场，就没人当回事了。',
   run(ids){
-    const details = [];
-    // reqPressure 检查：压力为 0 时动作无意义，给出教学反馈
-    if(state.pressure <= 0){
-      return {
-        story:'你张罗了一场聚会，但当前组织压力为零——大家并没有需要被"缓解"的焦虑，来的人只当是吃顿饭。',
-        details: ['⚠️ 本次聚会效果为零：它是一种"降压工具"，只有在压力积累后才有实质意义。在压力为零时使用，只是浪费了一份资源。', '💡 建议：等待压力自然积累（通常在使用高扰动动作后），或先推进其他变革动作再使用此工具。'],
-        noCredChange: true,
-        noEffect: true
-      };
-    }
-    const n = ids.length;
-    const pressureReduction = Math.min(2, state.pressure);
-    state.pressure -= pressureReduction;
-    details.push(`🌿 组织压力 -${pressureReduction}（现 ${state.pressure}）。非正式渠道让中层员工感受到了关心、而非任务指令。`);
+    const n=ids.length;
+    const details=[];
+    const push = n<=2 ? 8 : (n===3 ? 7 : 6);
+    const relief = n<=2 ? 0 : (n===3 ? 1 : 2);
+    const trustStep = n<=2 ? 8 : (n===3 ? 6 : 10);
+    details.unshift(`🪑 ${n} 个人在场：${ids.map(id=>state.people[id].name).join('、')}。`);
 
-    const per = Math.max(2, Math.round(5*focusMul(n)));
-    ids.forEach(id=>{
-      const p=state.people[id];
-      const before=p.status;
-      /* v68：已经进了「有限认同」以上的人，一顿饭吃不动他。
-         以前它对 11/12 个人都有效，1 个资源换 30 分 + 2 点降压，成了全场最划算的推人键；
-         现在它只对还没上道的人生效，对已经认同的人只剩「别让他这轮冷掉」这点作用。 */
-      const deep = p.status>=3, done = p.status>=4;
-      const give = done ? 0 : (deep ? 2 : per);
-      const r=applyGain(id, give, '沟通', 'direct');
-      const prefHint=describePrefHit(id,'沟通');
-      const delta = (STATUS_LABELS[p.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${statusText(p.status)}）` : '';
-      details.push(done
-        ? `${p.name}已经完全配合了——这顿饭对他只是维系，推不动，也不至于冷。`
-        : deep
-          ? `${p.name}已经在「${statusText(p.status)}」了——饭桌上只能松动一点点，真正推得动他的是别的东西。`
-          : `${p.name}在放松的场合里放下了戒备${prefHint}，${gainText(id, r.amount)}${delta}。`);
+    if(relief>0){
+      const cut=Math.min(relief, state.pressure);
+      state.pressure-=cut;
+      details.push(cut>0
+        ? `🌿 气氛松下来，组织压力 -${cut}（现 ${state.pressure}）。`
+        : `🌿 场子本来就不紧，这一聚没起到放气的作用。`);
+    }
+
+    /* 硬骨头：三个人以上才有「当众」这回事。两个人是一对一，他就算不满也不会翻脸。 */
+    const stubborn = (n>=3)
+      ? ids.filter(id=>['union','ops','engineer'].includes(id) && state.people[id].status===0)
+      : [];
+    if(stubborn.length){
+      state.pressure=Math.min(10, state.pressure+1);
+      state.credibility=Math.max(0,state.credibility-1);
+      stubborn.forEach(id=>{
+        const q=state.people[id], before=q.status;
+        q.score=Math.max(0,q.score-3); updateStatus(q);
+        state.touchedThisTurn.add(id);
+        const down=(STATUS_LABELS[q.status]!==STATUS_LABELS[before])?`（${STATUS_LABELS[before]}→${STATUS_LABELS[q.status]}）`:'';
+        details.push(`💥 ${q.name} 当着所有人的面顶了回来：「又是总部那一套。」被当众施压，他反而更抵触了（-3${down}）。`);
+      });
+      const others=ids.filter(id=>!stubborn.includes(id));
+      const r = others.length
+        ? affectTargets(others, Math.round(push*0.6), '有人当场顶了回来，剩下的人开始往后坐。', false, '沟通')
+        : {story:'屋里没人接话，这场聚会开成了僵局。', details:[]};
+      details.push('⚠️ 场面僵住：剩下的人只拿到六成的推动。压力 +1，可信度 -1。');
+      details.push('💡 人一多，就总有人要当众表态。想摸清谁是硬骨头，两个人单独聊；想把人凑齐，先确认屋里没有他。');
+      r.details=details.concat(r.details||[]);
+      return r;
+    }
+
+    /* 已经认同的人，人堆里推不动——他不是没被说服，是不需要再听一遍。
+       饭桌也好、小会也好，这一档只对他起到「别让他冷掉」的作用。 */
+    const deepIds = ids.filter(id=>state.people[id].status===3);
+    const doneIds = ids.filter(id=>state.people[id].status===4);
+    const liveIds = ids.filter(id=>state.people[id].status<3);
+    const r = liveIds.length
+      ? affectTargets(liveIds, push, '几个人坐在一起，话就摊开了。', true, '沟通')
+      : {story:'这一场聚会没推动任何人。', details:[]};
+    deepIds.forEach(id=>{
+      applyGain(id, 2, '沟通', 'direct');
+      details.push(`${state.people[id].name}已经在「${statusText(state.people[id].status)}」了——这种场合只能松动一点点，真正推得动他的是别的东西。`);
     });
-    if(n>=4) details.push('👥 一桌坐了 '+n+' 个人，话题只能停在表面——人多热闹，但每个人都只分到几分钟。');
-    else details.push('☕ 人不多，反而聊得开一些；但这不是访谈，你听到的仍是场面话。');
-
-    // 一起在场的人会彼此熟起来——哪怕他们平时根本不搭界
-    const newTies=[];
-    for(let i=0;i<ids.length;i++){
-      for(let j=i+1;j<ids.length;j++){
-        const d=seedTrust(ids[i],ids[j],10);
-        if(d>0) newTies.push(`${state.people[ids[i]].name}—${state.people[ids[j]].name}（信任 +${d}）`);
-      }
+    doneIds.forEach(id=>{
+      details.push(`${state.people[id].name}已经完全配合了——这场聚会对他只是维系，推不动，也不至于冷。`);
+    });
+    const grown=[];
+    for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){
+      const g=seedTrust(ids[i],ids[j],trustStep);
+      if(g>0) grown.push(`${state.people[ids[i]].name}↔${state.people[ids[j]].name} +${g}`);
     }
-    if(newTies.length) details.push('🤝 一起在场的人彼此熟了一些：'+newTies.join('、')+'。这类关系不来自汇报线，只来自"一起待过"。');
-
-    details.push('🔒 聚会不产出任何隐藏信息：想知道谁在真正挡路、他在意什么，只能靠「信息打探」。');
-
-    return {
-      story:'你组织了一场非正式聚会，'+n+' 个人到场。酒过三巡，气氛松了下来。',
-      details
-    };
+    if(grown.length) details.push(`🤝 一起待过就算「一起做事」：${grown.join('、')}（信任）。`);
+    details.push(n<=2
+      ? '🕯 就两个人，反而聊得深——但这不是摸底，听不到台面下的东西。'
+      : n===3
+        ? '👥 三个人，场面还算收得住；再多一个，话题就要往表面走了。'
+        : '🍻 一桌四个人，热闹是热闹，但每个人只分到几分钟——推得浅，关系长得快。');
+    r.details=details.concat(r.details||[]);
+    return r;
   }
 };
 
@@ -2600,54 +2625,6 @@ const ACTIONS=[
      r.details.unshift(ids.length===1
        ? `🕯 一对一劝说：${p.name}${delta}`
        : `👥 一次劝了 ${ids.length} 个人：${ids.map(i=>state.people[i].name).join('、')}。每个人分到的时间少，效果打了折。`);
-     return r;
-   }},
-  /* v81：新增「小组讨论」。
-     原来开局能"点名推人"的动作只有约谈（冷却 2）和外部培训（冷却 4）两个，
-     约谈一进冷却，学生就只剩外部培训可点——而外部培训在那个阶段又常常不是最匹配的动作，
-     于是屏幕上出现「只有一张能点，点了还被告知不合适」的窘境。
-     共识会补的是这一段：2-3 个人一起谈，比约谈多一个人、比培训早一步，
-     代价是屋里有硬骨头时会当场顶撞。 */
-  {id:'huddle',label:'小组讨论',weeks:2,cooldown:3,need:3,min:2,type:'对话',reqCred:5,disrupt:2,adkar:'AW',
-   desc:'把 2-3 个关键人物叫到一间屋里，把数据、问题和下一步当面摊开。一对一打探是摸底，小会是当众摊牌——同一件事当着几个人的面讲，分量比挨个讲重得多。风险在选人：屋里有硬骨头时，他会当众顶回来，这一下不但推不动他，还会把屋里其他人一起拖住。',
-   cooldownReason:'小组讨论靠的是「把话说透」的场合感。一周开三次，就没人当回事了。',
-   run(ids){
-     const details=[];
-     const stubborn=ids.filter(id=>['union','ops','engineer'].includes(id) && state.people[id].status===0);
-     /* v82：硬骨头在屋里不是「打个折」，而是把会开成反效果。
-        当众被压的人只会更抵触，剩下的人看着场面僵住，也跟着往后坐。
-        这是这个动作真正的教学点：选人比选动作重要。 */
-     if(stubborn.length){
-       state.pressure=Math.min(10, state.pressure+1);
-       state.credibility=Math.max(0, state.credibility-1);
-       const others=ids.filter(id=>!stubborn.includes(id));
-       const r = others.length
-         ? affectTargets(others, Math.round(5*focusMul(others.length)), '有人当场顶了回来，剩下的人开始往后坐。', false, '对话')
-         : {story:'屋里没人接话，这个会开成了僵局。', details:[]};
-       stubborn.forEach(id=>{
-         const p=state.people[id], before=p.status;
-         p.score=Math.max(0, p.score-3);
-         updateStatus(p);
-         const down=(STATUS_LABELS[p.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[p.status]}）` : '';
-         details.push(`💥 ${p.name} 当着所有人的面顶了回来：「又是总部那一套。」被当众施压，他反而更抵触了（-3${down}）。`);
-       });
-       if(others.length) details.push('⚠️ 场面僵住：剩下的人只拿到一半的推动——这会等于白开了一半。压力 +1，可信度 -1。');
-       else details.push('⚠️ 屋里没有别人能接话。压力 +1，可信度 -1。');
-       details.push('💡 硬骨头不该和还没动的人摆在一张桌子上：要么先一对一摸清楚，要么等手里有成果了再叫他。');
-       details.unshift(`🪑 一张桌子 ${ids.length} 个人：${ids.map(id=>state.people[id].name).join('、')}。`);
-       r.details=details.concat(r.details||[]);
-       return r;
-     }
-     const r=affectTargets(ids, Math.round(6*focusMul(ids.length)), '几个人坐在一张桌子前，把问题摊开了。', true, '对话');
-     // 一起开过会的人之间会长出信任——这是「一起做事」的正当场景
-     const grown=[];
-     for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){
-       const g=seedTrust(ids[i],ids[j],6);
-       if(g>0) grown.push(`${state.people[ids[i]].name}↔${state.people[ids[j]].name} +${g}`);
-     }
-     if(grown.length) details.push(`🤝 一起开会也算「一起做事」：${grown.join('、')}（信任）。`);
-     details.unshift(`🪑 一张桌子 ${ids.length} 个人：${ids.map(id=>state.people[id].name).join('、')}。`);
-     r.details=details.concat(r.details||[]);
      return r;
    }},
   {id:'broadcast',label:'进展通报',weeks:2,cooldown:3,need:0,type:'沟通',reqCred:5,disrupt:0,adkar:'AW',desc:'一封全员邮件加一次站会，把方向、进展和下一步一次说清。分水岭是有没有真东西可讲：一个转化案例都没有时，通报就是噪音，还会倒扣可信度；有了本土案例，同一封通报的分量完全不同。它和公开表彰的分工——表彰是给具体的人一个名分（点名），通报是把整体走到哪了讲给所有人听（不点名）。',cooldownReason:'通报成本低，但注意力是稀缺的。发得太密，大家就开始跳过你的消息。',run(ids){
@@ -2961,7 +2938,7 @@ const ACTIONS=[
      /* noCredChange：换人不该被算成「这次决策得到了认可」——它是代价，不是成绩 */
      return {story:`你把${p.name}调离了这个岗位。位置空出来了，但事情还得有人做。`, details:d, noCredChange:true};
    }},
-  PRESSURE_RELIEF_ACTION];
+  GATHERING_ACTION];
 
 /* =========================================================
    全局常量（v15）
@@ -2997,7 +2974,7 @@ let currentRoleId = 'integrator';
 const ACTION_GROUPS = [
   { key:'unfreeze', label:'💬 沟通', en:'Urgency & Coalition',
     hint:'第 1–2 步：先解决「为什么非变不可」和「谁跟我一起」。先问清楚，再开口劝——这两步没做够就往下走，后面每一步都在还债',
-    ids:['recon','persuade','huddle','team-building','broadcast'] },
+    ids:['recon','persuade','gathering','broadcast'] },
   { key:'mobilize', label:'🧪 验证', en:'Validate & Demonstrate',
     hint:'第 3–4 步：先在自己身上、在小范围里把这件事跑通一次——讲一百遍，不如让人看见一次',
     ids:['exemplify','pilot','showcase'] },
@@ -3210,8 +3187,9 @@ const STAGE_FIT={
      但它并不最优：不知道他吃哪套，偏好加成那 25% 就白丢了；
      已经点头的人更劝不动——他不是没被说服，是不需要再听一遍。 */
   persuade:           {0:1.00, 1:1.00, 2:1.00, 3:0.80, 4:0.60},
-  huddle:             {0:1.10, 1:1.10, 2:1.00, 3:0.70, 4:0.50},
-  'team-building':    {0:1.00, 1:1.00, 2:1.05, 3:1.05, 4:0.95},
+
+  /* v93：小组聚会按人数变，档位曲线只留一条中性的——它靠的是「人」，不是「他对哪套敏感」 */
+  gathering:          {0:1.00, 1:1.00, 2:1.00, 3:0.85, 4:0.70},
   training:           {0:0.65, 1:0.65, 2:0.75, 3:1.35, 4:0.70},
   'internal-training':{0:0.55, 1:0.55, 2:0.65, 3:1.30, 4:1.00},
   pilot:              {0:0.90, 1:0.90, 2:1.00, 3:1.30, 4:0.80},
@@ -3221,8 +3199,8 @@ const STAGE_FIT={
 };
 const STAGE_FIT_LABEL={
   recon:              '他现在最需要的，是有人认真听他把话说完',
-  huddle:             '他还没被拉进圈子，当面对质比私下聊更有推力',
-  'team-building':    '社交场合对他一直有用',
+
+  gathering:          '他缺的是有人陪他坐一会儿，不是又一场会',
   training:           '他现在最缺的是怎么上手，不是为什么',
   'internal-training':'他刚认同，最需要有人带一遍',
   pilot:              '他要的是低风险试一次',
@@ -4575,9 +4553,13 @@ function buildActionCard(a, idx){
             const multi = a.need && tMax(a)>tMin(a);
             const sel = (state.selectedAction===idx);
             const hi = actionCost(a, tMax(a));
-            const label = multi ? (sel ? `${actionCostNow(a)}` : `${actionCostMin(a)}–${hi}`) : `${a.weeks}`;
+            const label = multi
+              ? ((sel && (state.selectedTargets||[]).length) ? `${actionCostNow(a)}` : `${actionCostMin(a)}–${hi}`)
+              : `${a.weeks}`;
             const tip = multi
-              ? `按人头算：带 ${tMin(a)} 人 ${actionCostMin(a)} 资源，带 ${tMax(a)} 人 ${hi} 资源——多带一个人，多占一份资源`
+              ? (a.perHead
+                  ? `按人头算：带 ${tMin(a)} 人 ${actionCostMin(a)} 资源，带 ${tMax(a)} 人 ${hi} 资源——多带一个人，多占一份资源`
+                  : `起步价 ${actionCostMin(a)} 资源（${tMin(a)} 人），多带人最多再加 1 份，最多 ${hi} 资源`)
               : '执行此动作消耗的资源数';
             return `<span class="chip" title="${tip}">⏱ ${label} 资源</span>`;
           })()}
