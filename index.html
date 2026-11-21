@@ -2487,12 +2487,14 @@ let currentRoleId = 'integrator';
    v77：总部背书从「验证」挪回「造势」——它给的是正当性，不是证据。
    验证段只留「用事实说服」的两件事：自己先做（示范）、小范围跑通（试点）。
    把背书摆在验证里，会让学生以为「找领导站台也算跑通一次」，那正是变革管理里最常见的误区。
+   v86：再挪到「制度」——背书借的是正式权力，和奖惩、汇报关系是同一类东西；
+   留在造势里，它会被当成「又一个拉人的动作」，而不是「把这件事变成组织安排」。
    这不是四个抽屉，而是一条有先后的推进线；跳步是变革失败的头号死法。
    （en 字段只作内部对照，不渲染到界面。） */
 const ACTION_GROUPS = [
   { key:'unfreeze', label:'🔥 造势', en:'Urgency & Coalition',
     hint:'第 1–2 步：先解决「为什么非变不可」和「谁跟我一起」。这两步没做够就往下走，后面每一步都在还债',
-    ids:['interview','huddle','team-building','ceo-endorse','broadcast'] },
+    ids:['interview','huddle','team-building','broadcast'] },
   { key:'mobilize', label:'🧪 验证', en:'Validate & Demonstrate',
     hint:'第 3–4 步：先在自己身上、在小范围里把这件事跑通一次——讲一百遍，不如让人看见一次',
     ids:['exemplify','pilot','showcase'] },
@@ -2500,8 +2502,11 @@ const ACTION_GROUPS = [
     hint:'第 5–6 步：拆掉「不会做」和「做不成」的障碍，把已经跑通的成果变成能复制的东西',
     ids:['training','internal-training','honor'] },
   { key:'anchor',   label:'🏛 制度', en:'Consolidate & Anchor',
-    hint:'第 7–8 步：把新做法写进奖惩和汇报关系，让它不再依赖你个人去推',
-    ids:['incentive','reorg'] }
+    /* v86：总部背书从「造势」挪到「制度」——它借的是正式权力（position power），
+       不是关系。放在造势里，学生会把它当成"又一个拉人动作"；
+       放在制度里，它和奖惩、汇报关系站在一起：都是"让这件事变成组织安排"的手段。 */
+    hint:'第 7–8 步：把新做法变成正式安排——总部的公开表态、奖惩口径、汇报关系。让它不再依赖你个人去推',
+    ids:['ceo-endorse','incentive','reorg'] }
 ];
 
 /* v66：ADKAR 只作为内部数据留着（结局复盘要判断「是不是只在治意愿」），
