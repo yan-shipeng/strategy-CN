@@ -2145,15 +2145,15 @@ const ACTIONS=[
     }
     return res;
   }},
-  /* v81：新增「关键人共识会」。
+  /* v81：新增「小组讨论」。
      原来开局能"点名推人"的动作只有约谈（冷却 2）和外部培训（冷却 4）两个，
      约谈一进冷却，学生就只剩外部培训可点——而外部培训在那个阶段又常常不是最匹配的动作，
      于是屏幕上出现「只有一张能点，点了还被告知不合适」的窘境。
      共识会补的是这一段：2-3 个人一起谈，比约谈多一个人、比培训早一步，
      代价是屋里有硬骨头时会当场顶撞。 */
-  {id:'huddle',label:'关键人共识会',weeks:2,cooldown:3,need:3,min:2,type:'对话',reqCred:5,disrupt:2,adkar:'AW',
+  {id:'huddle',label:'小组讨论',weeks:2,cooldown:3,need:3,min:2,type:'对话',reqCred:5,disrupt:2,adkar:'AW',
    desc:'把 2-3 个关键人物叫到一间屋里，把数据、问题和下一步当面摊开。一对一是摸底，小会是造势——同一件事当着几个人的面讲，分量比挨个讲重得多。风险在选人：屋里有硬骨头时，他会当众顶回来，这一下不但推不动他，还会把屋里其他人一起拖住。',
-   cooldownReason:'共识会靠的是「把话说透」的场合感。一周开三次，就没人当回事了。',
+   cooldownReason:'小组讨论靠的是「把话说透」的场合感。一周开三次，就没人当回事了。',
    run(ids){
      const details=[];
      const stubborn=ids.filter(id=>['union','ops','engineer'].includes(id) && state.people[id].status===0);
@@ -2254,6 +2254,50 @@ const ACTIONS=[
      return {story:`你让 ${t.name} 给 ${students.map(i=>state.people[i].name).join('、')} 讲了一堂课。`, details};
    }},
   {id:'pilot',label:'小规模试点',weeks:3,cooldown:5,need:3,type:'试点',reqCred:6,disrupt:2,adkar:'AB',desc:'把抽象的变革要求变成可以看得见、摸得着的实际成果。最能说服那些"眼见为实"的人。',cooldownReason:'试点需要充分的时间来观察效果和收集反馈。过于频繁的试点会导致组织疲劳，也难以区分不同试点的真实效果。',run(ids){ return affectTargets(ids,16,'试点成功了，示范效应开始显现。',true,'试点'); }},
+  /* v83：新增「成功案例分享」。
+     验证段原来只有两件事：自己先做（示范）、小范围跑通（试点）——都是「造」证据，
+     缺一件「把证据递到别人眼前」的事。案例分享补的就是这一环：
+     不用请人、不用停活，把已经跑通的那个人怎么做成的讲清楚，讲给情况相似的人听。
+     它与通报、表彰的分工：通报是把整体讲给全场（不点名），表彰是给一个人名分，
+     案例分享是"谁做成了、怎么做的"讲给 2-3 个还没动的人（点名听众）。 */
+  {id:'showcase',label:'成功案例分享',weeks:1,cooldown:4,need:3,min:2,type:'示范',reqCred:4,disrupt:0,adkar:'AW',needConverted:1,
+   desc:'把一个已经跑通的人的做法整理出来，讲给 2-3 个情况相似、还没动的人听。不用请专家、不用停下手上的活——就是把「他是怎么做到的」讲清楚。前提是你手里真有一个做成了的人：没有案例，就没有东西可讲。',
+   cooldownReason:'同一个案例讲第三遍就没人信了。要等新的案例，或者换一批听众。',
+   run(ids){
+     const details=[];
+     const convIds=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status===4);
+     const conv=convIds.length;
+     let amount, story;
+     if(conv===0){
+       amount=2;
+       story='你讲了一个还不存在的案例，听众客气地点头。';
+       state.credibility=Math.max(0, state.credibility-1);
+     }else if(conv<3){
+       amount=6;
+       story='有人真的做成了，讲出来就比道理管用。';
+     }else{
+       amount=8;
+       story='案例不止一个，听众开始对号入座。';
+     }
+     const r=affectTargets(ids, Math.round(amount*focusMul(ids.length)), story, false, '示范');
+     // 听众和某个已经转化的人有私交：熟人讲的案例更可信
+     let warm=0;
+     ids.forEach(id=>{
+       if(convIds.some(c=>isInformalPair(c,id))) warm++;
+     });
+     if(warm>0){
+       const bonus=warm*2;
+       ids.forEach(id=>{
+         if(convIds.some(c=>isInformalPair(c,id))) applyGain(id, bonus, '示范', 'spread');
+       });
+       details.push(`🤝 其中 ${warm} 个人跟案例主角本来就有私交，熟人讲的事更可信（每人再 +${bonus}）。`);
+     }
+     if(conv===0) details.push('⚠️ 空案例：一个真正做成的人都没有，可信度 -1。先让一个人跑通，再来讲。');
+     else details.push(`📌 你手里有 ${conv} 个真实案例，讲的是「谁做成了、怎么做的」。`);
+     details.unshift(`🎤 讲给 ${ids.length} 个人听：${ids.map(id=>state.people[id].name).join('、')}。`);
+     r.details=details.concat(r.details||[]);
+     return r;
+   }},
   {id:'honor',label:'公开表彰',weeks:2,cooldown:3,need:1,type:'政治',reqCred:7,disrupt:1,adkar:'RE',desc:'公开表彰一个有实际成果的人，同时把他的故事讲给他身边两个还没动的人听。表彰必须有火候：对象还没到「有限认同」就上台，会被当成捧杀，全组织都会质疑你的判断。',cooldownReason:'表彰是稀缺资源，给多了就不值钱。每次都要有分量。',run(ids){
     const p=state.people[ids[0]];
     if(!p) return {story:'没有可表彰的对象。', details:[], noEffect:true};
@@ -2413,7 +2457,7 @@ const ACTION_GROUPS = [
     ids:['interview','huddle','team-building','ceo-endorse','broadcast'] },
   { key:'mobilize', label:'🧪 验证', en:'Validate & Demonstrate',
     hint:'第 3–4 步：先在自己身上、在小范围里把这件事跑通一次——讲一百遍，不如让人看见一次',
-    ids:['exemplify','pilot'] },
+    ids:['exemplify','pilot','showcase'] },
   { key:'enable',   label:'🚀 赋能', en:'Empower & Quick Wins',
     hint:'第 5–6 步：拆掉「不会做」和「做不成」的障碍，把已经跑通的成果变成能复制的东西',
     ids:['training','internal-training','honor'] },
@@ -2614,6 +2658,7 @@ const STAGE_FIT={
   training:           {0:0.65, 1:0.65, 2:0.75, 3:1.35, 4:0.70},
   'internal-training':{0:0.55, 1:0.55, 2:0.65, 3:1.30, 4:1.00},
   pilot:              {0:0.90, 1:0.90, 2:1.00, 3:1.30, 4:0.80},
+  showcase:           {0:1.10, 1:1.10, 2:1.00, 3:0.75, 4:0.50},
   honor:              {0:0.60, 1:0.60, 2:0.75, 3:1.25, 4:1.35},
   reorg:              {0:0.95, 1:0.95, 2:1.00, 3:1.10, 4:1.00}
 };
@@ -2624,6 +2669,7 @@ const STAGE_FIT_LABEL={
   training:           '他现在最缺的是怎么上手，不是为什么',
   'internal-training':'他刚认同，最需要有人带一遍',
   pilot:              '他要的是低风险试一次',
+  showcase:           '他要的是「别人也这么干成了」的证据',
   honor:              '他已经在做，缺的是被看见',
   reorg:              '换掉他头上的人，对他一直有效'
 };
@@ -3723,7 +3769,11 @@ function renderActions(){
     const availCount = groupActions.filter(i=>{
       const a=ACTIONS[i];
       const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
-      return !(wait>0 || state.credibility<a.reqCred || state.resources<a.weeks);
+      /* v83：这里原来只算冷却/信誉/资源，把「没有讲师」「没有案例」这两种
+         真正点不动的卡也数成了可用——组头上写着 3/3，点进去一张是灰的。 */
+      const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
+      const noCase = a.needConverted && convertedCount()<a.needConverted;
+      return !(wait>0 || state.credibility<a.reqCred || state.resources<a.weeks || noTeacher || noCase);
     }).length;
     const groupWrap = document.createElement('div');
     groupWrap.className = 'action-group' + (isOpen?' open':'');
@@ -3775,7 +3825,11 @@ function buildActionCard(a, idx){
     // 只有冷却中或资源不足才真正禁用
     // v39：内部培训需要一位完全配合的讲师
     const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher;
+    /* v83：案例分享要先有一个真做成的人，否则没有案例可讲。
+       这不是「底子门槛」——是动作本身的定义：没案例的分享就是画饼，
+       与其让学生花一回合买一个「空案例」，不如把卡片灰掉、把条件写在卡上。 */
+    const noCase = a.needConverted && convertedCount() < a.needConverted;
+    const isHardDisabled=wait>0||state.resources<a.weeks||noTeacher||noCase;
     const isDisabled=isHardDisabled; // credBad 仅作为视觉警告，不禁用卡片
     if(isHardDisabled) card.classList.add('disabled');
     else if(credBad) card.classList.add('cred-override'); // 新增：可信度不足但可强行
@@ -3858,8 +3912,8 @@ function buildActionCard(a, idx){
 
     // v14：头部可见的禁用原因简要提示
     const headerBadge = isHardDisabled
-      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
-          ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
+      ? `<span class="disabled-badge" title="${[noTeacher?'还没有完全配合的人可以当讲师':'' ,noCase?'还没有一个真做成的案例可以讲':'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ')}">
+          ⛔ ${noTeacher?'还没有讲师':(noCase?'还没有案例':(wait>0?'冷却'+wait+'轮':'资源数不足'))}
         </span>`
       : credBad
         ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加压力">
@@ -3874,7 +3928,7 @@ function buildActionCard(a, idx){
         // v20: 渐进式信息展示 - 计算成功率估计
     const successHint = (() => {
       // v45：已经不可用时别再打"可执行"的绿标，两个徽章互相打脸
-      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
+      if(isHardDisabled) return { label: '⛔ 不可用', cls: 'bad', tip: [noTeacher?'还没有完全配合的人可以当讲师':'' ,noCase?'还没有一个真做成的案例可以讲':'',wait>0?'冷却中还需'+wait+'轮':'',state.resources<a.weeks?'资源不足需 '+a.weeks:''].filter(Boolean).join(' · ') };
       if(credBad) return { label: '⚠️ 强行', cls: 'warn', tip: '可信度不足，强行执行将增加压力' };
       if(a.disrupt >= 3 && isEarlyChange()) return { label: '⚡ 高风险', cls: 'bad', tip: '早期使用高扰动动作会引发组织反弹' };
       return { label: '✓ 可执行', cls: 'good', tip: '当前条件满足，可以执行此动作' };
@@ -3929,7 +3983,7 @@ function buildActionCard(a, idx){
       /* v70：整张卡都算选中。
          原来点「查看详细参数」「ⓘ 说明」只展开、不选中，学生以为要「先点开看看、再点才选上」，
          白点两下。现在卡片上任何一处（除了人名）点下去都等于选它，说明区只是顺手摊开。 */
-      if(isHardDisabled){ whyDisabled(a, wait, noTeacher); return; }
+      if(isHardDisabled){ whyDisabled(a, wait, noTeacher, noCase); return; }
       const isDesc = !!e.target.closest('.desc-toggle');
       if(isDesc){
         if(!state.descOpen) state.descOpen=new Set();
@@ -3948,7 +4002,7 @@ function buildActionCard(a, idx){
     card.addEventListener('keydown',(e)=>{
       if(e.key==='Enter'||e.key===' '){
         e.preventDefault();
-        if(isHardDisabled) whyDisabled(a, wait, noTeacher); else chooseAction(idx);
+        if(isHardDisabled) whyDisabled(a, wait, noTeacher, noCase); else chooseAction(idx);
       }
     });
     return card;
@@ -4875,9 +4929,10 @@ function chooseAction(idx, opts){
 
 /* v67：不可用的动作被点到时，把卡在哪一步说出来。
    以前是直接 return，学生只会觉得"这张卡点不动"，却不知道为什么。 */
-function whyDisabled(a, wait, noTeacher){
+function whyDisabled(a, wait, noTeacher, noCase){
   const why=[];
   if(noTeacher) why.push('还没有完全配合的人可以当讲师');
+  if(noCase) why.push('还没有一个真做成的案例可以讲——先让一个人跑通');
   if(wait>0) why.push(`冷却中，还要等 ${wait} 回合`);
   if(state.resources<a.weeks) why.push(`资源不够：这个动作要 ${a.weeks}，你只剩 ${state.resources}`);
   cheatToast(`⛔ 「${a.label}」现在用不了 —— ${why.length?why.join('；'):'条件不满足'}`);
