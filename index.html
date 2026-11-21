@@ -2152,23 +2152,41 @@ const ACTIONS=[
      共识会补的是这一段：2-3 个人一起谈，比约谈多一个人、比培训早一步，
      代价是屋里有硬骨头时会当场顶撞。 */
   {id:'huddle',label:'关键人共识会',weeks:2,cooldown:3,need:3,min:2,type:'对话',reqCred:5,disrupt:2,adkar:'AW',
-   desc:'把 2-3 个关键人物叫到一间屋里，把数据、问题和下一步当面摊开。一对一是摸底，小会是造势——同一件事当着几个人的面讲，分量比挨个讲重得多。代价是：屋里有硬骨头时，他会当场顶回来，其他人在旁边看着。',
+   desc:'把 2-3 个关键人物叫到一间屋里，把数据、问题和下一步当面摊开。一对一是摸底，小会是造势——同一件事当着几个人的面讲，分量比挨个讲重得多。风险在选人：屋里有硬骨头时，他会当众顶回来，这一下不但推不动他，还会把屋里其他人一起拖住。',
    cooldownReason:'共识会靠的是「把话说透」的场合感。一周开三次，就没人当回事了。',
    run(ids){
      const details=[];
-     const stubborn=ids.filter(id=>['union','ops','engineer'].includes(id) && state.people[id].status<=1);
-     let amount=6;
-     if(stubborn.length) amount=Math.round(amount*0.75);
-     const r=affectTargets(ids, Math.round(amount*focusMul(ids.length)), '几个人坐在一张桌子前，把问题摊开了。', true, '对话');
+     const stubborn=ids.filter(id=>['union','ops','engineer'].includes(id) && state.people[id].status===0);
+     /* v82：硬骨头在屋里不是「打个折」，而是把会开成反效果。
+        当众被压的人只会更抵触，剩下的人看着场面僵住，也跟着往后坐。
+        这是这个动作真正的教学点：选人比选动作重要。 */
+     if(stubborn.length){
+       state.pressure=Math.min(10, state.pressure+1);
+       state.credibility=Math.max(0, state.credibility-1);
+       const others=ids.filter(id=>!stubborn.includes(id));
+       const r = others.length
+         ? affectTargets(others, Math.round(5*focusMul(others.length)), '有人当场顶了回来，剩下的人开始往后坐。', false, '对话')
+         : {story:'屋里没人接话，这个会开成了僵局。', details:[]};
+       stubborn.forEach(id=>{
+         const p=state.people[id], before=p.status;
+         p.score=Math.max(0, p.score-3);
+         updateStatus(p);
+         const down=(STATUS_LABELS[p.status]!==STATUS_LABELS[before]) ? `（${STATUS_LABELS[before]}→${STATUS_LABELS[p.status]}）` : '';
+         details.push(`💥 ${p.name} 当着所有人的面顶了回来：「又是总部那一套。」被当众施压，他反而更抵触了（-3${down}）。`);
+       });
+       if(others.length) details.push('⚠️ 场面僵住：剩下的人只拿到一半的推动——这会等于白开了一半。压力 +1，可信度 -1。');
+       else details.push('⚠️ 屋里没有别人能接话。压力 +1，可信度 -1。');
+       details.push('💡 硬骨头不该和还没动的人摆在一张桌子上：要么先一对一摸清楚，要么等手里有成果了再叫他。');
+       details.unshift(`🪑 一张桌子 ${ids.length} 个人：${ids.map(id=>state.people[id].name).join('、')}。`);
+       r.details=details.concat(r.details||[]);
+       return r;
+     }
+     const r=affectTargets(ids, Math.round(6*focusMul(ids.length)), '几个人坐在一张桌子前，把问题摊开了。', true, '对话');
      // 一起开过会的人之间会长出信任——这是「一起做事」的正当场景
      const grown=[];
      for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){
        const g=seedTrust(ids[i],ids[j],6);
        if(g>0) grown.push(`${state.people[ids[i]].name}↔${state.people[ids[j]].name} +${g}`);
-     }
-     if(stubborn.length){
-       state.pressure=Math.min(10, state.pressure+1);
-       details.push(`⚠️ ${stubborn.map(id=>state.people[id].name).join('、')} 当场顶了回来，屋里气氛僵了一下——压力 +1，这一轮的效果打了七五折。`);
      }
      if(grown.length) details.push(`🤝 一起开会也算「一起做事」：${grown.join('、')}（信任）。`);
      details.unshift(`🪑 一张桌子 ${ids.length} 个人：${ids.map(id=>state.people[id].name).join('、')}。`);
@@ -4617,9 +4635,6 @@ function showModal(){
     const conv = convertedCount(), total = passTotal();
     const now = scoreBreakdown();
     const need = Math.ceil(total * 0.5);
-    /* v73：用 ceil——封顶分可能落在半个人上（32 + 6×6 = 68 > 66），
-       floor 会把它算成 11 人，学生按这个数去推，永远差一分。 */
-    const capPeople = Math.min(total, need + Math.ceil((SCORE_RULES.outcomeMax - SCORE_RULES.passBase) / SCORE_RULES.perExtra));
     pc.innerHTML =
       `<div class="pc-title">🎯 你已经跨过 50% 达标线（${conv}/${total} 人完全配合）</div>`+
       '<div class="pc-sub">这一局到这儿就能交了。<b>两条路都算成绩，但账不一样，先看清楚再点：</b></div>'+
@@ -4627,12 +4642,13 @@ function showModal(){
         `<li><b class="pc-good">✅ 收工</b>：按现在结算 <b>${now.total} 分</b>`+
         `（成果 ${now.parts.outcome} ＋ 效率 ${now.parts.efficiency} ＋ 节奏 ${now.parts.pacing} ＋ 组织 ${now.parts.org} ＋ 里程碑 ${now.parts.milestone}）。`+
         '剩下的资源、信誉、压力都还留得住。</li>'+
-        `<li><b class="pc-warn">🔧 继续</b>：成果分每多 1 人 +${SCORE_RULES.perExtra}，封顶 ${SCORE_RULES.outcomeMax} 分（${capPeople} 人封顶，你现在 ${conv} 人，还能再加 ${Math.max(0, capPeople - conv)} 人）。`+
-        `<b>但过线之后每个动作开始打折</b>：第 1 个深推回合效果 ${postPassMulText(SCORE_RULES.postRate)}，之后每回合再乘一次，最低 ${postPassMulText(SCORE_RULES.postFloor)}——`+
-        '越往后推一个人越费动作，那 +5 分会越来越贵。</li>'+
+        `<li><b class="pc-warn">🔧 继续</b>：<b>还能多拿什么</b>——每多推 1 人，成果分 +${SCORE_RULES.perExtra}；`+
+        `组织分按完全配合的比例算，人越多越高（现在是 ${conv}/${total} 人）。`+
+        '<b>要付什么</b>——过线之后每个动作开始打折：第 1 个深推回合效果 '+postPassMulText(SCORE_RULES.postRate)+
+        `，之后每回合再乘一次，最低 ${postPassMulText(SCORE_RULES.postFloor)}，越往后推一个人越费动作；`+
+        '每多走一轮还要再烧一份资源，效率分跟着掉。</li>'+
         `<li>节奏分已经<b>定格在 ${now.parts.pacing}/${SCORE_RULES.pacingMax}</b>（你在第 ${state.passRound} 回合过的线），之后不再扣——过线之后考的不是速度，是余量。`+
-        '每多走一轮还要再烧一份资源，效率分跟着掉；压力继续累积，'+
-        '<b>一旦超线，已经拿到的达标会直接变成反弹</b>，一分都不算。</li>'+
+        '压力继续累积，<b>一旦超线，已经拿到的达标会直接变成反弹</b>，一分都不算。</li>'+
       '</ul>'+
       '<div class="pc-note">没有标准答案。唯一的判断依据是：这个组织还剩多少余量。</div>'+
       '<div class="pc-btns">'+
@@ -4804,7 +4820,7 @@ function updatePassBanner(){
   if(t) t.textContent = pushing ? `🔧 继续推进中 · 已达 ${conv}/${total}` : `🎯 已过 50% 达标线 · ${conv}/${total}`;
   if(s) s.textContent = pushing
     ? `第 ${state.passRound} 回合过的线，之后又走了 ${state.passFatigue} 回合。本回合动作效果 ${postPassMulText(mul)}（最低 ${postPassMulText(SCORE_RULES.postFloor)}）；节奏分定格 ${sc.parts.pacing}/${SCORE_RULES.pacingMax}；按现在结算约 ${sc.total} 分。压力超线会变成反弹，资源耗尽按实际渗透率结算。`
-    : `这一局已经可以交了：按现在结算约 ${sc.total} 分。继续推的话，成果分每多 1 人 +${SCORE_RULES.perExtra}（封顶 ${SCORE_RULES.outcomeMax}），但过线后每个动作逐回合打折（最低 ${postPassMulText(SCORE_RULES.postFloor)}），推一个人会越来越费动作；节奏分不再变。`;
+    : `这一局已经可以交了：按现在结算约 ${sc.total} 分。继续推的话，每多 1 人成果分 +${SCORE_RULES.perExtra}，组织分也随完全配合比例往上走；但要付的代价是过线后每个动作逐回合打折（最低 ${postPassMulText(SCORE_RULES.postFloor)}），每多走一轮再烧一份资源，压力继续累积，超线就变成反弹。`;
   if(stopBtn){
     stopBtn.textContent = pushing ? '✅ 就此收手 · 按现状结算' : '✅ 收工 · 按达标结算';
     stopBtn.style.display = '';
