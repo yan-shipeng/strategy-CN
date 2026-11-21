@@ -3695,9 +3695,13 @@ function renderActions(){
     // v42：点开一组就把其他组收起；点当前组则收起自己
     const toggleGroup = ()=>{
       const willOpen = state.groupOpen[group.key] !== true;
+      const tBefore = header.getBoundingClientRect().top;   // 点击前标题在屏幕上的位置
       ACTION_GROUPS.forEach(g=>{ state.groupOpen[g.key] = false; });
       state.groupOpen[group.key] = willOpen;
       render();
+      /* v80：展开时把标题摆到吸顶条下面（视线从这一组开头往下看）；
+         收起时页面会变短，标题会被顶跑，这里把它按回原来的位置。 */
+      placeGroupHeader(group.key, willOpen ? 96 : tBefore);
     };
     header.addEventListener('click', toggleGroup);
     header.addEventListener('keydown',(e)=>{
@@ -4841,9 +4845,40 @@ function whyDisabled(a, wait, noTeacher){
    卡片比可视区还高时（手机上很常见）顶端对齐——标题和说明开头一定看得见，
    再往下滑是学生自己的事。
    说明区的展开有 0.22s 的高度动画，所以动画结束后再校一次位置。 */
+/* v80：点开一组之后，把这一组的标题摆到吸顶条下面，视线从这一组的开头往下看。
+   原来只调 render()：浏览器重建整张动作列表后找不到锚点，scrollY 基本不动，
+   可别的组一收起、整页变短，被点的那组标题就被顶到屏幕上方外面去了——
+   手机上看到的是这组最后一张卡，学生以为"展开后直接跳到了底部"。
+   只在这一组是"被展开"时摆位；点它自己收起时不抢镜头。 */
+let groupFocusToken=0;
+/* wantTop：想让这组的标题落在视口的哪个高度。
+   展开时传吸顶条的位置（96）——视线从这一组开头往下看；
+   收起时传它原来在屏幕上的位置——页面变短了，但标题别乱跑。 */
+function placeGroupHeader(key, wantTop){
+  const my=++groupFocusToken;
+  focusToken++;                 // 作废可能还在排队的卡片摆位
+  const want=(typeof wantTop==='number')?wantTop:96;
+  const go=()=>{
+    if(my!==groupFocusToken) return;
+    const h=document.querySelector(`.action-group-header[data-gkey="${key}"]`);
+    if(!h) return;
+    const vh=window.innerHeight||document.documentElement.clientHeight||0;
+    const cur=window.scrollY||window.pageYOffset||0;
+    const r=h.getBoundingClientRect();
+    if(Math.abs(r.top-want)<=4) return;            // 已经在目标位置：不动
+    let target=cur+r.top-want;
+    const docH=Math.max(document.documentElement.scrollHeight||0, document.body.scrollHeight||0);
+    target=Math.max(0, Math.min(target, Math.max(0, docH-vh)));
+    window.scrollTo(0,target);
+  };
+  requestAnimationFrame(go);
+  setTimeout(go, 280);   // 组内卡片展开、文字换行会把高度定下来，再校一次
+}
+
 let focusToken=0;   // v79：每次摆位发一个号，后发的作废先发的
 function focusSelectedCard(){
   const my=++focusToken;
+  groupFocusToken++;   // v80：点了卡片，就把可能还在排队的「组首摆位」作废
   let wanted=null;    // 上一次自己设定的落点
   let tries=0;
   /* 这里刻意不用平滑滚动。smooth 的动画时长由浏览器定，卡片高度又在展开后的
