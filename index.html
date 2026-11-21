@@ -2708,7 +2708,7 @@ const ACTIONS=[
      不用请人、不用停活，把已经跑通的那个人怎么做成的讲清楚，讲给情况相似的人听。
      它与通报、表彰的分工：通报是把整体讲给全场（不点名），表彰是给一个人名分，
      案例分享是"谁做成了、怎么做的"讲给 2-3 个还没动的人（点名听众）。 */
-  {id:'showcase',label:'成功案例分享',weeks:1,cooldown:4,need:3,min:2,type:'示范',reqCred:4,disrupt:0,adkar:'AW',
+  {id:'showcase',label:'成功案例分享',weeks:2,cooldown:4,need:3,min:2,type:'示范',reqCred:4,disrupt:0,adkar:'AW',
    desc:'把一个已经跑通的人的做法整理出来，讲给 2-3 个情况相似、还没动的人听。不用请专家、不用停下手上的活——就是把「他是怎么做到的」讲清楚。成色看手里有什么：有人做成，讲的是做法；只有人动心，讲的是想法；一个人都没动，讲的只能是愿景——后两种照样能点，但听众不傻。',
    cooldownReason:'同一个案例讲第三遍就没人信了。要等新的案例，或者换一批听众。',
    run(ids){
@@ -2720,7 +2720,7 @@ const ACTIONS=[
      const awareIds=Object.keys(state.people).filter(id=>id!=='pm' && state.people[id].status>=2);
      const conv=convIds.length, aware=awareIds.length;
      let amount, story;
-     if(conv>=3){
+    if(conv>=3){
        amount=8;
        story='案例不止一个，听众开始对号入座。';
      }else if(conv>=1){
