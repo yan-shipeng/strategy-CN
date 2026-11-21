@@ -1316,10 +1316,52 @@
       @media (prefers-reduced-motion: reduce){
         .cine-scan,.cine-rings i,.cele-p{animation-duration:.01s!important;animation-iteration-count:1!important}
       }
+      /* ═══════════════════════════════════════════════════
+         v87 开场重做：背景层次 + 标题逐字 + 数字滚动
+         背景的「人网」由 #introCanvas 绘制（见下方脚本）
+         ═══════════════════════════════════════════════════ */
+      #screen-intro::before{
+        content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+        background:
+          radial-gradient(1100px 720px at 74% 38%,rgba(13,139,150,.20),transparent 62%),
+          radial-gradient(820px 620px at 8% 94%,rgba(6,90,99,.26),transparent 72%);
+      }
+      #screen-intro::after{
+        content:'';position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.42;
+        background-image:
+          linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),
+          linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);
+        background-size:64px 64px;
+        -webkit-mask-image:radial-gradient(120% 92% at 50% 40%,#000 26%,transparent 76%);
+        mask-image:radial-gradient(120% 92% at 50% 40%,#000 26%,transparent 76%);
+      }
+      /* 翻到第 2 页之后，人网退到很后面——第 2 页文字是居中的，会撞上节点 */
+      #screen-intro.intro-other::before{opacity:.42}
+      .intro-stamp{
+        position:absolute;top:22px;right:26px;z-index:2;pointer-events:none;
+        font-size:10px;letter-spacing:.24em;color:rgba(143,170,181,.5);
+        display:flex;align-items:center;gap:10px;white-space:nowrap;
+      }
+      .intro-stamp::before{content:'';width:26px;height:1px;background:rgba(13,139,150,.7)}
+      @media (max-width:700px){ .intro-stamp{display:none} }
+
+      /* 标题逐字：由脚本逐帧驱动（CSS 动画在后台标签页会被挂起，开场就废了） */
+      .intro-h1 .ch{display:inline-block;will-change:opacity,transform,filter}
+
+      /* 宽屏：文字靠左，右半屏留给「人网」 */
+      @media (min-width:1200px){
+        #iSlide1{
+          max-width:none;
+          padding:64px 0 40px max(6vw,56px);
+          align-items:flex-start;
+        }
+        #iSlide1 > *{width:100%;max-width:600px}
+      }
     </style>
 
     <section class="screen" id="screen-intro">
       <canvas id="introCanvas"></canvas>
+      <div class="intro-stamp" aria-hidden="true">Case 04 · 组织整合 · 机密</div>
 
       <div class="intro-slides">
 
@@ -1333,9 +1375,9 @@
             你的任务：在 <strong><span class="js-res-total">60</span> 个资源</strong>内让他们真正接受变革。
           </p>
           <div class="intro-stats">
-            <div class="intro-stat"><span class="intro-stat-num js-res-total">60</span><span class="intro-stat-label">可用资源</span></div>
-            <div class="intro-stat"><span class="intro-stat-num">12</span><span class="intro-stat-label">关键人物</span></div>
-            <div class="intro-stat"><span class="intro-stat-num">≥50%</span><span class="intro-stat-label">转化目标</span></div>
+            <div class="intro-stat"><span class="intro-stat-num js-res-total" data-count="60">60</span><span class="intro-stat-label">可用资源</span></div>
+            <div class="intro-stat"><span class="intro-stat-num" data-count="12">12</span><span class="intro-stat-label">关键人物</span></div>
+            <div class="intro-stat"><span class="intro-stat-num" data-count="50" data-prefix="≥" data-suffix="%">≥50%</span><span class="intro-stat-label">转化目标</span></div>
           </div>
 
           <!-- ── Name input embedded in slide 1 ── -->
@@ -1580,86 +1622,472 @@
       }
     })();
 
-    /* ── Particle canvas ── */
+    /* ═══════════════════════════════════════════════════════════
+       开场动画 v87：把「社会网络」先演一遍
+       一束光从「你」这个节点出发，沿正式关系逐跳点亮 12 位关键人物，
+       名字随点亮浮出；约 2.8 秒后整体压暗，标题从光晕里升起。
+       宽屏时人网占右半屏，文字靠左；窄屏时人网退成背景（低透明度）。
+       #nocine / prefers-reduced-motion 时直接画最终一帧，不做动画。
+       ═══════════════════════════════════════════════════════════ */
     (function(){
       const canvas = document.getElementById('introCanvas');
-      if(!canvas) return;
+      const host   = document.getElementById('screen-intro');
+      if(!canvas || !host) return;
       const ctx = canvas.getContext('2d');
-      let W, H, particles=[], raf;
-      const N = 55;
 
-      function resize(){
-        W = canvas.width  = canvas.offsetWidth  || window.innerWidth;
-        H = canvas.height = canvas.offsetHeight || window.innerHeight;
+      const HOP  = 400;    // 每跳间隔
+      const LEAD = 340;    // 从「你」出发之前的静场
+      const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
+
+      function skipCine(){
+        try{ return !!window.__noCine || /(^|#|&)nocine/.test(location.hash||''); }catch(_){ return false; }
       }
 
-      function mkParticle(){
-        return {
-          x: Math.random()*W, y: Math.random()*H,
-          r: Math.random()*1.6+.4,
-          vx:(Math.random()-.5)*.35, vy:(Math.random()-.5)*.35,
-          a: Math.random()*.6+.1
-        };
+      let W=0, H=0, raf=null, t0=0, settleT=0, revealed=false, active=false, ready=false, tries=0;
+      let nodes=[], edges=[], byId={}, maxHop=0, bx0=0, bx1=0, wide=false;
+      let stage={x:0,y:0,w:0,h:0};
+      let revealTimer=null, watchdog=null;
+
+      /* ── 读人物网络（PEOPLE 在后面的脚本里，所以要延迟到用时才取） ── */
+      function buildGraph(){
+        const P = (typeof PEOPLE !== 'undefined') ? PEOPLE : null;
+        if(!P) return false;
+        const ids = Object.keys(P).filter(id => typeof P[id].x === 'number');
+        if(!ids.length) return false;
+
+        nodes = ids.map((id,i)=>({
+          id,
+          name: String(P[id].name||'').replace(/^当地/, ''),
+          gx: P[id].x, gy: P[id].y,
+          x:0, y:0, r:6, fs:11,
+          hop: Infinity, parent:null, litAt: Infinity, seed: i*1.7
+        }));
+        byId = {};
+        nodes.forEach(n=>{ byId[n.id]=n; });
+
+        // 邻接表要按无向建：PEOPLE 里的 ties 是单向写的，
+        // 顺着箭头走会漏掉「只被别人指向」的人（比如工会、骨干工人）。
+        const adj = {};
+        nodes.forEach(n=>{ adj[n.id] = []; });
+        nodes.forEach(n=>{
+          (P[n.id].ties||[]).forEach(t=>{
+            if(!adj[t]) return;
+            adj[n.id].push(t);
+            adj[t].push(n.id);
+          });
+        });
+
+        // 从「你」开始做广度优先，得到每一跳
+        const root = byId['pm'] || nodes[0];
+        root.hop = 0; root.litAt = LEAD;
+        const q = [root];
+        while(q.length){
+          const cur = q.shift();
+          adj[cur.id].forEach(t=>{
+            const nb = byId[t];
+            if(!nb || nb.hop !== Infinity) return;
+            nb.hop = cur.hop + 1;
+            nb.parent = cur.id;
+            nb.litAt = LEAD + nb.hop*HOP;
+            q.push(nb);
+          });
+        }
+        // 兜底：万一还有人没连上，最后一跳一起点亮
+        const lastHop = Math.max.apply(null, nodes.map(n=> n.hop===Infinity ? 0 : n.hop));
+        nodes.forEach(n=>{
+          if(n.litAt === Infinity){ n.hop = lastHop+1; n.litAt = LEAD + n.hop*HOP; }
+        });
+
+        // 边去重
+        const seen = {};
+        edges = [];
+        nodes.forEach(n=>{
+          (P[n.id].ties||[]).forEach(t=>{
+            if(!byId[t]) return;
+            const key = [n.id,t].sort().join('|');
+            if(seen[key]) return;
+            seen[key] = 1;
+            edges.push({a:n.id, b:t});
+          });
+        });
+
+        maxHop = Math.max.apply(null, nodes.map(n=>n.hop));
+        settleT = LEAD + (maxHop+1)*HOP + 240;
+        return true;
       }
 
-      function init(){
-        resize();
-        particles = Array.from({length:N}, mkParticle);
+      /* ── 布局：把 0–340 × 0–300 的图缩放到舞台里 ── */
+      function layout(){
+        const rect = canvas.getBoundingClientRect();
+        W = Math.max(1, Math.round(rect.width  || window.innerWidth));
+        H = Math.max(1, Math.round(rect.height || window.innerHeight));
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width  = Math.round(W*dpr);
+        canvas.height = Math.round(H*dpr);
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+
+        wide = W >= 1200;
+        if(wide){
+          const x0 = Math.max(W*0.50, 690);
+          stage = { x:x0, y:64, w:W-x0, h:H-176 };
+        } else {
+          stage = { x:0, y:0, w:W, h:H };
+        }
+
+        const xs = nodes.map(n=>n.gx), ys = nodes.map(n=>n.gy);
+        bx0 = Math.min.apply(null, xs); bx1 = Math.max.apply(null, xs);
+        const by0 = Math.min.apply(null, ys), by1 = Math.max.apply(null, ys);
+        const bw = Math.max(1, bx1-bx0), bh = Math.max(1, by1-by0);
+
+        const padX = wide ? 46 : Math.min(52, W*0.10);
+        const padY = wide ? 34 : Math.min(60, H*0.07);
+        const gs = Math.min((stage.w-2*padX)/bw, (stage.h-2*padY)/bh);
+        const offX = stage.x + (stage.w - bw*gs)/2 - bx0*gs;
+        const offY = stage.y + (stage.h - bh*gs)/2 - by0*gs;
+
+        nodes.forEach(n=>{
+          n.x = offX + n.gx*gs;
+          n.y = offY + n.gy*gs;
+          n.r  = clamp(gs*3.5, 4.2, 10);
+          n.fs = clamp(gs*5.0, 10, 14);
+        });
       }
 
-      function draw(){
+      /* ── 绘制一帧：el = 从开场算起的毫秒数 ── */
+      function draw(el){
         ctx.clearRect(0,0,W,H);
-        // draw connections
-        for(let i=0;i<particles.length;i++){
-          for(let j=i+1;j<particles.length;j++){
-            const dx=particles[i].x-particles[j].x;
-            const dy=particles[i].y-particles[j].y;
-            const d=Math.sqrt(dx*dx+dy*dy);
-            if(d<120){
-              ctx.beginPath();
-              ctx.strokeStyle=`rgba(13,139,150,${.18*(1-d/120)})`;
-              ctx.lineWidth=.8;
-              ctx.moveTo(particles[i].x,particles[i].y);
-              ctx.lineTo(particles[j].x,particles[j].y);
-              ctx.stroke();
+        const rise = clamp(el/900, 0, 1);
+        const post = clamp((el-settleT)/1000, 0, 1);
+        const gdim = 1 - 0.40*post;          // 亮完整体压暗，给文字让位
+        const dim  = wide ? 1 : 0.32;        // 窄屏当背景，别抢字
+
+        // 背景光晕
+        const cx = wide ? stage.x + stage.w*0.52 : W*0.5;
+        const cy = wide ? stage.y + stage.h*0.44 : H*0.40;
+        const bg = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*0.62);
+        bg.addColorStop(0,   'rgba(13,139,150,'+(0.16*rise).toFixed(3)+')');
+        bg.addColorStop(0.45,'rgba(8,70,80,'   +(0.10*rise).toFixed(3)+')');
+        bg.addColorStop(1,   'rgba(6,17,26,0)');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0,0,W,H);
+
+        // 边
+        for(let i=0;i<edges.length;i++){
+          const e = edges[i], A = byId[e.a], B = byId[e.b];
+          if(!A || !B) continue;
+          const tl = Math.max(A.litAt, B.litAt);
+          let a = 0.20;
+          if(el > tl) a += 0.55*Math.exp(-(el-tl)/620);
+          a *= rise*(1-0.22*post)*dim;
+          if(a <= 0.004) continue;
+          ctx.strokeStyle = 'rgba(64,190,210,'+a.toFixed(3)+')';
+          ctx.lineWidth = a > 0.30 ? 1.9 : 1.15;
+          ctx.beginPath();
+          ctx.moveTo(A.x,A.y);
+          ctx.lineTo(B.x,B.y);
+          ctx.stroke();
+        }
+
+        // 逐跳传播的光点
+        for(let i=0;i<nodes.length;i++){
+          const n = nodes[i];
+          if(!n.parent || n.litAt === Infinity) continue;
+          if(el < n.litAt-HOP || el > n.litAt+60) continue;
+          const A = byId[n.parent];
+          if(!A) continue;
+          const p = clamp((el-(n.litAt-HOP))/HOP, 0, 1);
+          const k = 1-Math.pow(1-p,2);
+          const px = A.x+(n.x-A.x)*k, py = A.y+(n.y-A.y)*k;
+          const rr = Math.max(1.4, n.r*0.40)*4;
+          const gg = ctx.createRadialGradient(px,py,0,px,py,rr);
+          gg.addColorStop(0,'rgba(196,246,255,'+(0.95*rise*dim).toFixed(3)+')');
+          gg.addColorStop(1,'rgba(62,207,220,0)');
+          ctx.fillStyle = gg;
+          ctx.beginPath(); ctx.arc(px,py,rr,0,6.2832); ctx.fill();
+        }
+
+        // 静下来之后：隔一会儿有一束光沿某条边慢慢流过
+        if(post > 0 && edges.length){
+          const AMB = 2400, idx = Math.floor(el/AMB)%edges.length, ph = (el%AMB)/AMB;
+          if(ph < 0.62){
+            const e = edges[idx], A = byId[e.a], B = byId[e.b];
+            if(A && B){
+              const p = ph/0.62;
+              const px = A.x+(B.x-A.x)*p, py = A.y+(B.y-A.y)*p;
+              const aa = 0.5*Math.sin(Math.PI*p)*post*dim;
+              const gg = ctx.createRadialGradient(px,py,0,px,py,15);
+              gg.addColorStop(0,'rgba(196,246,255,'+aa.toFixed(3)+')');
+              gg.addColorStop(1,'rgba(62,207,220,0)');
+              ctx.fillStyle = gg;
+              ctx.beginPath(); ctx.arc(px,py,15,0,6.2832); ctx.fill();
             }
           }
         }
-        // draw dots
-        particles.forEach(p=>{
-          ctx.beginPath();
-          ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-          ctx.fillStyle=`rgba(13,200,220,${p.a})`;
+
+        // 节点
+        const midX = (bx0+bx1)/2 + 6;
+        for(let i=0;i<nodes.length;i++){
+          const n = nodes[i];
+          const age = el - n.litAt;
+          const lv = age <= 0 ? 0 : 1-Math.exp(-age/230);
+          const flash = (age >= 0 && age < 820) ? (1-age/820) : 0;
+          const breath = 0.5+0.5*Math.sin(el/1500 + n.seed);
+          const isMe = (n.id === 'pm');
+
+          let a = (0.10 + 0.90*lv)*(0.86 + 0.14*breath);
+          a *= rise*gdim*dim;
+          const r = n.r*(1+0.5*flash)*(isMe?1.35:1);
+
+          if(lv > 0.02){
+            const hr = r*3.4;
+            const hg = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,hr);
+            hg.addColorStop(0,'rgba(62,207,220,'+(0.28*lv*gdim*dim).toFixed(3)+')');
+            hg.addColorStop(1,'rgba(62,207,220,0)');
+            ctx.fillStyle = hg;
+            ctx.beginPath(); ctx.arc(n.x,n.y,hr,0,6.2832); ctx.fill();
+          }
+
+          if(isMe){
+            ctx.beginPath(); ctx.arc(n.x,n.y,r+5.5,0,6.2832);
+            ctx.strokeStyle = 'rgba(62,207,220,'+(0.42*rise*gdim*dim).toFixed(3)+')';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+
+          const cr = Math.round(118+(70-118)*lv);
+          const cg = Math.round(158+(214-158)*lv);
+          const cb = Math.round(174+(228-174)*lv);
+          ctx.beginPath(); ctx.arc(n.x,n.y,r,0,6.2832);
+          ctx.fillStyle = 'rgba('+cr+','+cg+','+cb+','+a.toFixed(3)+')';
           ctx.fill();
+
+          if(lv < 0.6){
+            ctx.beginPath(); ctx.arc(n.x,n.y,r+3.5,0,6.2832);
+            ctx.strokeStyle = 'rgba(120,170,185,'+(0.18*(1-lv)*rise*dim).toFixed(3)+')';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+          if(flash > 0.01){
+            ctx.beginPath(); ctx.arc(n.x,n.y,r*(1+1.9*(1-flash)),0,6.2832);
+            ctx.strokeStyle = 'rgba(160,240,255,'+(0.55*flash*dim).toFixed(3)+')';
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+          }
+
+          // 名字：点亮之后浮出来，压暗时也留一点
+          // 窄屏不画——会和正文、输入框叠在一起，糊成一团
+          if(wide && lv > 0.25){
+            const la = lv*(1-0.52*post)*dim;
+            const right = n.gx < midX;
+            ctx.font = '600 '+n.fs.toFixed(1)+'px -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+            ctx.textAlign = right ? 'left' : 'right';
+            ctx.textBaseline = 'middle';
+            const tx = right ? n.x+r+7 : n.x-r-7;
+            ctx.shadowColor = 'rgba(3,12,18,.9)';
+            ctx.shadowBlur = 6;
+            ctx.fillStyle = 'rgba(214,240,246,'+la.toFixed(3)+')';
+            ctx.fillText(n.name, tx, n.y+0.5);
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
+          }
+        }
+      }
+
+      /* ── 标题逐字拆开（em 整块保留，别破坏渐变字） ── */
+      function splitTitle(){
+        const h = document.querySelector('#iSlide1 .intro-h1');
+        if(!h || h.getAttribute('data-split') === '1') return;
+        const frag = document.createDocumentFragment();
+        Array.prototype.slice.call(h.childNodes).forEach(node=>{
+          if(node.nodeType === 3){
+            const txt = node.textContent;
+            for(let k=0;k<txt.length;k++){
+              const ch = txt.charAt(k);
+              if(ch === ' '){ frag.appendChild(document.createTextNode(' ')); continue; }
+              const sp = document.createElement('span');
+              sp.className = 'ch';
+              sp.textContent = ch;
+              frag.appendChild(sp);
+            }
+          } else if(node.nodeType === 1 && node.tagName === 'BR'){
+            frag.appendChild(node.cloneNode());
+          } else if(node.nodeType === 1){
+            const sp = document.createElement('span');
+            sp.className = 'ch';
+            sp.appendChild(node.cloneNode(true));
+            frag.appendChild(sp);
+          }
+        });
+        h.innerHTML = '';
+        h.appendChild(frag);
+        h.setAttribute('data-split','1');
+      }
+
+      function countUp(node, to, dur, pre, suf){
+        const s = performance.now();
+        (function step(){
+          const k = clamp((performance.now()-s)/dur, 0, 1);
+          const e = 1-Math.pow(1-k,3);
+          node.textContent = pre + Math.round(to*e) + suf;
+          if(k < 1) requestAnimationFrame(step);
+          else node.textContent = pre + to + suf;
+        })();
+      }
+
+      /* ── 标题/副文案落位：逐帧用 JS 写样式 ── */
+      let revItems = null;
+
+      function collectTargets(){
+        const st = document.getElementById('iSlide1');
+        if(!st) return [];
+        const out = [];
+        Array.prototype.forEach.call(st.querySelectorAll('.intro-h1 .ch'), (el,k)=>{
+          out.push({ el, delay:k*26, dur:620, y:22, blur:7, s:.97 });
+        });
+        ['.intro-eyebrow','.intro-lead','.intro-stats','.intro-name-block'].forEach((sel,k)=>{
+          const el = st.querySelector(sel);
+          if(el) out.push({ el, delay:40+k*95, dur:540, y:18, blur:0, s:1 });
+        });
+        return out;
+      }
+
+      function paint(items, t){
+        for(let i=0;i<items.length;i++){
+          const it = items[i];
+          const k = clamp((t-it.delay)/it.dur, 0, 1);
+          const e = 1-Math.pow(1-k,5);
+          it.el.style.opacity = String(e);
+          const ty = it.y*(1-e);
+          it.el.style.transform = 'translateY('+ty.toFixed(2)+'px)'+(it.s!==1?(' scale('+(it.s+(1-it.s)*e).toFixed(3)+')'):'');
+          it.el.style.filter = it.blur && e < 1 ? ('blur('+(it.blur*(1-e)).toFixed(2)+'px)') : '';
+        }
+      }
+
+      function hideTargets(){
+        if(!revItems) revItems = collectTargets();
+        paint(revItems, 0);
+      }
+
+      function settleTargets(){
+        if(!revItems) return;
+        revItems.forEach(it=>{ it.el.style.opacity=''; it.el.style.transform=''; it.el.style.filter=''; });
+      }
+
+      function runReveal(){
+        if(!revItems) revItems = collectTargets();
+        const items = revItems;
+        const total = items.reduce((m,it)=>Math.max(m, it.delay+it.dur), 0);
+        const st = performance.now();
+        (function step(){
+          const t = performance.now()-st;
+          paint(items, t);
+          if(t < total) requestAnimationFrame(step);
+          else settleTargets();
+        })();
+      }
+
+      function reveal(){
+        if(revealed) return;
+        revealed = true;
+        host.classList.add('intro-lit');
+        if(!skipCine() && !reduceMotion) runReveal();
+        else settleTargets();
+        const st = document.getElementById('iSlide1');
+        if(!st) return;
+        const nums = st.querySelectorAll('[data-count]');
+        Array.prototype.forEach.call(nums, (node,k)=>{
+          const to = parseInt(node.getAttribute('data-count'), 10);
+          if(isNaN(to)) return;
+          const pre = node.getAttribute('data-prefix') || '';
+          const suf = node.getAttribute('data-suffix') || '';
+          if(skipCine() || reduceMotion){ node.textContent = pre+to+suf; return; }
+          setTimeout(()=>countUp(node, to, 760, pre, suf), 240+k*120);
         });
       }
 
       function tick(){
-        particles.forEach(p=>{
-          p.x+=p.vx; p.y+=p.vy;
-          if(p.x<0||p.x>W) p.vx*=-1;
-          if(p.y<0||p.y>H) p.vy*=-1;
-        });
-        draw();
+        if(!active) return;
+        draw(performance.now()-t0);
         raf = requestAnimationFrame(tick);
       }
 
-      // only run when intro screen is visible
-      function checkVisibility(){
-        const intro = document.getElementById('screen-intro');
-        if(intro && intro.classList.contains('active')){
-          if(!raf){ init(); tick(); }
-        } else {
-          if(raf){ cancelAnimationFrame(raf); raf=null; }
+      function activate(){
+        if(active) return;
+        if(!ready){
+          ready = buildGraph();
+          if(ready) splitTitle();
+          else if(tries++ < 12){ setTimeout(activate, 120); return; }   // PEOPLE 还没定义
         }
+        if(!ready){ host.classList.add('intro-lit'); return; }          // 兜底：动画不上，文字照常显示
+        layout();
+        active = true;
+        revealed = false;
+        host.classList.remove('intro-lit');
+        host.classList.add('intro-anim');
+
+        if(skipCine() || reduceMotion){
+          host.classList.remove('intro-anim');
+          t0 = performance.now()-settleT-1200;
+          draw(settleT+1400);
+          settleTargets();
+          reveal();
+          return;
+        }
+        hideTargets();
+        t0 = performance.now();
+        clearTimeout(revealTimer);
+        clearTimeout(watchdog);
+        revealTimer = setTimeout(reveal, Math.max(900, settleT-980));
+        watchdog    = setTimeout(()=>{ if(!revealed) reveal(); }, settleT+1800);  // 兜底：标题不能卡在隐藏态
+        if(!raf) raf = requestAnimationFrame(tick);
       }
 
-      // observe class changes on screen-intro
-      const obs = new MutationObserver(checkVisibility);
-      const intro = document.getElementById('screen-intro');
-      if(intro) obs.observe(intro,{attributes:true,attributeFilter:['class']});
-      window.addEventListener('resize',()=>{ resize(); });
-      checkVisibility();
+      function deactivate(){
+        if(!active) return;
+        active = false;
+        if(raf){ cancelAnimationFrame(raf); raf = null; }
+        clearTimeout(revealTimer);
+        clearTimeout(watchdog);
+        settleTargets();   // 离开时也要让文字是可见的
+        if(!revealed) reveal();
+      }
+
+      const obs = new MutationObserver(()=>{
+        const on = host.classList.contains('active');
+        if(on) activate();
+        else deactivate();
+      });
+      obs.observe(host,{attributes:true,attributeFilter:['class']});
+
+      window.addEventListener('resize', ()=>{
+        if(!ready || !W) return;
+        layout();
+        if(!active) draw(settleT+1400);
+      });
+
+      /* 画布的明暗用逐帧写样式做，别用 CSS transition——
+         后台标签页/录屏时 CSS 过渡会被挂起，翻页后人网就压不下去 */
+      function fadeCanvas(to){
+        // 直接给值：翻页本身有 280ms 的转场盖住，画布再做一个 0.5s 的补间看不出来，
+        // 反而在录屏/后台标签页里容易卡在起点。
+        canvas.style.opacity = String(to);
+      }
+
+      /* 只有第 1 页需要人网在场；翻页后压到很淡，别和居中的正文打架 */
+      const slidesEl = document.querySelector('.intro-slides');
+      if(slidesEl){
+        const markSlide = ()=>{
+          const cur = slidesEl.querySelector('.intro-slide.active');
+          const other = !!(cur && cur.id !== 'iSlide1');
+          host.classList.toggle('intro-other', other);
+          fadeCanvas(other ? 0.16 : 1);
+        };
+        new MutationObserver(markSlide).observe(slidesEl,{attributes:true,subtree:true,attributeFilter:['class']});
+        markSlide();
+      }
+
+      if(host.classList.contains('active')) setTimeout(activate, 0);
     })();
     </script>
 
