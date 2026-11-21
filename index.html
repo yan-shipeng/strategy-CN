@@ -1337,13 +1337,6 @@
       }
       /* 翻到第 2 页之后，人网退到很后面——第 2 页文字是居中的，会撞上节点 */
       #screen-intro.intro-other::before{opacity:.42}
-      .intro-stamp{
-        position:absolute;top:22px;right:26px;z-index:2;pointer-events:none;
-        font-size:10px;letter-spacing:.24em;color:rgba(143,170,181,.5);
-        display:flex;align-items:center;gap:10px;white-space:nowrap;
-      }
-      .intro-stamp::before{content:'';width:26px;height:1px;background:rgba(13,139,150,.7)}
-      @media (max-width:700px){ .intro-stamp{display:none} }
 
       /* 标题逐字：由脚本逐帧驱动（CSS 动画在后台标签页会被挂起，开场就废了） */
       .intro-h1 .ch{display:inline-block;will-change:opacity,transform,filter}
@@ -1361,7 +1354,6 @@
 
     <section class="screen" id="screen-intro">
       <canvas id="introCanvas"></canvas>
-      <div class="intro-stamp" aria-hidden="true">Case 04 · 组织整合 · 机密</div>
 
       <div class="intro-slides">
 
