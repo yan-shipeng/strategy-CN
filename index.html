@@ -2827,9 +2827,14 @@ const ACTIONS=[
         '⚠️ 没有成果垫底的制度：可信度 -2、压力 +2，效果只兑现了一半。',
         '💡 制度是放大器，不是发动机：先让三四个人真的走通，同一纸文件的分量会完全不同。'
       );
+      state.ruleAnchor = 4;
+      r.details.push('🏛 制度锚定：接下来 4 个回合，已经动起来的人不会自然回冷——这是制度第一次替你盯着。');
       return r;
     }
-    return affectAll(12,'奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','规则');
+    state.ruleAnchor = 4;
+    const r2 = affectAll(12,'奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','规则');
+    r2.details.push('🏛 制度锚定：接下来 4 个回合，已经动起来的人不会自然回冷。制度开始替你盯着，而不是靠你天天去谈。');
+    return r2;
   }},
   {id:'reorg',label:'调整汇报关系',weeks:2,cooldown:6,need:1,type:'规则',reqCred:6,disrupt:2,adkar:'RE',
    desc:'把某个人的汇报线改到已经认同变革的上级名下。组织结构本身就是杠杆：换了汇报对象，信息流向、资源分配和压力传导都会跟着改道。',
@@ -2868,6 +2873,7 @@ const ACTIONS=[
          amount:Math.round(p.score-scoreBefore), from:Math.round(scoreBefore), to:Math.round(p.score),
          prev:prevStatus, now:p.status, locked:false});
      }catch(_){}
+     state.ruleAnchor = 4;
      return {
        story:`你把${p.name}的汇报线从${oldBoss?oldBoss.name:'原上级'}改到了${bossLabel}名下。`,
        details:[
@@ -2876,7 +2882,8 @@ const ACTIONS=[
            ? `📈 ${p.name} 说服度 +${Math.round(p.score-scoreBefore)}（现 ${Math.round(p.score)}）。${note}`
            : `📈 ${p.name} 动了——具体到哪一格，得谈过才知道。${note}`,
          `⚠️ 动组织结构的代价：压力 +2（现 ${state.pressure}），这类动作短期内不宜重复。`,
-         `💡 网络图上这条线已经改道——信息以后沿着新的汇报线流动。再推动${q.name}时，${p.name}受到的影响会更直接。`
+         `💡 网络图上这条线已经改道——信息以后沿着新的汇报线流动。再推动${q.name}时，${p.name}受到的影响会更直接。`,
+         `🏛 制度锚定：接下来 4 个回合，已经动起来的人不会自然回冷。`
        ]
      };
    }},
@@ -3011,6 +3018,8 @@ function initState(){
     roleId: role.id,
     credibility:role.startCred,
     pressure:role.startPressure,
+    /* v91：制度锚定剩余回合数——奖惩/汇报关系之后，已经动起来的人不再自然回冷 */
+    ruleAnchor:0,
     consecutiveSuccesses:0,
     aggressiveIndex:0,
     conservativeIndex:0,
@@ -3314,9 +3323,14 @@ function broadLockRate(){
   const id=state.activeActionId;
   return (id && BROAD_LOCK_RATE[id]) ? BROAD_LOCK_RATE[id] : 0.30;
 }
-function thresholdLock(personId, gainedAmount, viaDirectOrSpread){
+function thresholdLock(personId, gainedAmount, viaDirectOrSpread, actionType){
   // 从 50 → 85 的最后跳必须来自定向或扩散
   const p=state.people[personId];
+  /* v91：制度不看你现在到哪一档，只看你签不签字。
+     奖惩、汇报关系这类「规则」型动作不吃 50 分锁——这正是纯制度路线唯一的活路：
+     它推不动还没开始的人（对最冷的人只有四折），但一旦人动起来了，它能一直推到底。
+     通报、表彰这些「沟通」型动作照旧被锁，它们靠的是共识，不是权限。 */
+  if(actionType==='规则') return gainedAmount;
   if(p.score>=50 && !viaDirectOrSpread){
     return Math.round(gainedAmount * broadLockRate());
   }
@@ -3375,7 +3389,7 @@ function applyGain(personId, rawAmount, actionType, mode){
   // 阈值锁（针对广覆盖）
   const viaDirectOrSpread = (mode==='direct' || mode==='spread');
   const preLock = Math.round(amount);
-  amount = thresholdLock(personId, preLock, viaDirectOrSpread);
+  amount = thresholdLock(personId, preLock, viaDirectOrSpread, actionType);
   const prev = p.status;
   const scoreBefore = p.score;
   p.score = clamp(p.score + amount, 0, 100);
@@ -3425,6 +3439,10 @@ function decayUntouched(){
     // 这样前段最难、越往后越省力，符合变革扩散的 S 曲线；也让 60 个资源真的够用。
     if(p.status>=4) return;
     if(p.status>=3) return;
+    /* v91：制度锚定窗口。已经动起来（初步理解中段）的人不再自己冷——
+       因为奖惩、汇报线已经把「做了有好处、不做有成本」写进流程，他没理由再往回退。
+       但还没开始的人（status 0）照旧掉分：制度保得住已经启动的，保不住还没启动的。 */
+    if(state.ruleAnchor>0 && p.status>=1) return;
     const decay = p.status===0 ? 2 : 1;
     const prev=p.status;
     let newScore = p.score - decay;
@@ -3619,8 +3637,10 @@ function applyConsequences(action, impact){
     state.consecutiveSuccesses = 0;
   }
   else if(state.credibility < action.reqCred){
-    state.credibility = Math.max(1, state.credibility-1);
-    notes.push('可信度不足，这次动作的说服力被削弱。');
+    /* v91：信誉不足时不是「不能做」，是「做了不算数」。
+       可信度不涨（成功本该 +1，所以这是净亏 1），但也不倒扣——
+       倒扣会变成死亡螺旋：越没信誉越推不动，越推不动越没信誉。代价交给压力去收。 */
+    notes.push(`信誉不够（建议 ${action.reqCred}）：这次动作换不来任何认可，可信度原地不动（本该 +1）。`);
     state.consecutiveSuccesses = 0;
   }
   else if(impact.fail){
@@ -4294,6 +4314,17 @@ function renderNetView(){
    ========================================================= */
 function renderActions(){
   const box=el('actionList'); box.innerHTML='';
+  /* v91：制度锚定提示——只在窗口期内出现，提醒学生「这段时间制度在替你盯着」 */
+  if(state.ruleAnchor>0){
+    const anc=document.createElement('div');
+    anc.className='log-item'; anc.id='anchorBanner';
+    anc.style.cssText='margin-bottom:10px;border-left:3px solid #7fd1a8;background:rgba(127,209,168,.08)';
+    anc.innerHTML='🏛 <strong>制度锚定还剩 '+state.ruleAnchor+' 个回合</strong>'+
+      '<div class="small" style="margin-top:4px;line-height:1.65;color:var(--text)">'+
+      '奖惩、汇报关系已经把「做了有好处、不做有成本」写进流程——这段窗口里，<b>已经动起来的人不会自然回冷</b>。'+
+      '但还没开始的人照样在冷：制度保得住已经启动的，保不住还没启动的。</div>';
+    box.appendChild(anc);
+  }
   // v27：当前局面一行提示（只在有风险时出现）
   const sitBox=el('situationLine');
   if(sitBox){
@@ -4330,7 +4361,8 @@ function renderActions(){
       /* v83：这里原来只算冷却/信誉/资源，把「没有讲师」这种真点不动的卡也数成可用。
          v84：案例分享不再是硬条件（改成错选有代价），所以只保留讲师这一条。 */
       const noTeacher = a.roleMode==='teacher' && !Object.keys(state.people).some(id=>id!=='pm'&&state.people[id]&&state.people[id].status===4);
-      return !(wait>0 || state.credibility<a.reqCred || state.resources<actionCostMin(a) || noTeacher);
+      /* v91：信誉不再是闸门，只是价格——所以不计入「可用」数 */
+      return !(wait>0 || state.resources<actionCostMin(a) || noTeacher);
     }).length;
     const groupWrap = document.createElement('div');
     groupWrap.className = 'action-group' + (isOpen?' open':'');
@@ -4458,7 +4490,7 @@ function buildActionCard(a, idx){
       })()}</div></div>` : '';
 
     const reasonChips = [];
-    if(credBad) reasonChips.push('<span class="chip bad reason-chip">可信度不足（需'+a.reqCred+'）</span>');
+    if(credBad) reasonChips.push('<span class="chip warn reason-chip">信誉 '+state.credibility+'/'+a.reqCred+' · 压力 +'+Math.min(3,Math.ceil((a.reqCred-state.credibility)/2))+'</span>');
     if(wait>0) reasonChips.push('<span class="chip bad reason-chip">还需等待'+wait+'轮</span>');
     if(state.resources<actionCostMin(a)) reasonChips.push('<span class="chip bad reason-chip">资源不足（需 '+actionCostMin(a)+'）</span>');
     if(noTeacher) reasonChips.push('<span class="chip bad reason-chip">还没有完全配合的人可以当讲师</span>');
@@ -4469,8 +4501,8 @@ function buildActionCard(a, idx){
           ⛔ ${noTeacher?'还没有讲师':(wait>0?'冷却'+wait+'轮':'资源数不足')}
         </span>`
       : credBad
-        ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="可信度不足（需${a.reqCred}，当前${state.credibility}），强行执行将增加压力">
-            ⚠️ 强行可执行
+        ? `<span class="disabled-badge" style="background:rgba(224,138,58,.15);color:#e08a3a;border-color:rgba(224,138,58,.4)" title="信誉不足（建议 ${a.reqCred}，当前 ${state.credibility}）：照样能做，但这次换不来认可，压力 +${Math.min(3,Math.ceil((a.reqCred-state.credibility)/2))}">
+            💳 信誉不足 · 有代价
           </span>`
         : '';
     
@@ -4519,7 +4551,7 @@ function buildActionCard(a, idx){
               : (aw>0 ? `还没有做成的案例，只有 ${aw} 个人到了「有点动心」——讲得出想法，讲不出做法` : '一个人都还没动，讲了也是愿景');
             return `<span class="chip ${n>0?'good':'warn'}" title="${tip}">🎤 案例 ${n}${n===0&&aw>0?' · 半成品 '+aw:''}</span>`;
           })() : ''}
-          ${credBad ? `<span class="chip warn" title="当前可信度${state.credibility}，需要${a.reqCred}">🔒 需信誉${a.reqCred}</span>` : ''}
+          ${credBad ? `<span class="chip warn" title="当前信誉 ${state.credibility}，建议 ${a.reqCred}：不足也能做，代价是压力 +${Math.min(3,Math.ceil((a.reqCred-state.credibility)/2))}、这次换不来认可">💳 信誉 ${state.credibility}/${a.reqCred}</span>` : ''}
           ${wait>0 ? `<span class="chip bad" title="冷却中">⏳ 冷却${wait}轮</span>` : ''}
         </div>
         <div class="action-desc small muted">${a.desc}</div>
@@ -4533,7 +4565,7 @@ function buildActionCard(a, idx){
       ${(()=>{
         const params = `<div class="chips" style="margin-top:6px">
           <span class="chip" ${cooldownTitle} ${cooldownCursor}>冷却${a.cooldown}轮</span>
-          <span class="chip">需可信度${a.reqCred}</span>
+          <span class="chip">建议信誉${a.reqCred}</span>
           <span class="chip ${a.disrupt>=3?'warn':''}">扰动${a.disrupt}</span>
           ${reasonChips.join('')}
         </div>`;
@@ -4648,7 +4680,7 @@ function updateFlowBar(){
       : `资源不足（需 ${c}，剩 ${state.resources}）`);
   }
   if(a.reqPressure && state.pressure < a.reqPressure) warnings.push(`⚠️ 当前压力为 ${state.pressure}，此动作需要压力 ≥ ${a.reqPressure} 才有实质效果（执行后会浪费资源）`);
-  if(!credOk) warnings.push(`⚠️ 可信度不足（需${a.reqCred}，有${state.credibility}）——强行执行将增加压力 +${Math.min(3, a.reqCred-state.credibility)}`);
+  if(!credOk) warnings.push(`💳 信誉不足（${state.credibility}/${a.reqCred}）——照样能执行，代价是压力 +${Math.min(3, Math.ceil((a.reqCred-state.credibility)/2))}，这次也换不来认可`);
   if(problems.length){ say(h + ' · ' + problems.join('；'), 'warn'); }
   else if(warnings.length){ say(h + ' · ' + warnings.join('；') + '，确认强行执行', 'warn'); }
   else { say(h + ' · 点下面的按钮执行'); }
@@ -6175,10 +6207,11 @@ function runTurn(){
   const wait=Math.max(0,(state.nextAvailable[a.id]||state.round)-state.round);
   const credOk=state.credibility>=a.reqCred;
   // v20: 允许在可信度不足时强行执行，但承担额外压力代价
-  const credOverride = !credOk && state.credibility >= 1; // 可信度至少为 1 才能强行
+  /* v91：信誉不再是闸门。哪怕信誉见底，动作也做得了——只是要付代价（压力涨、换不来认可）。 */
+  const credOverride = !credOk;
   const turnCost=actionCost(a, state.selectedTargets.length);   // v85：按实际带的人数算
   if(!tCountOk(a,state.selectedTargets.length) || wait>0 || state.resources<turnCost) return;
-  if(!credOk && !credOverride) return; // 完全无可信度时不允许
+  /* v91：这里原来有一道「可信度 0 就不许动」的硬闸门，已撤掉。信誉只影响代价，不影响能不能做。 */
 
   // v51：先放节拍，再算账——过场结束才揭结果
   playActionCinematic(a, state.selectedTargets);
@@ -6191,6 +6224,9 @@ function runTurn(){
   // v59：本回合的效果折扣（过线后才小于 1）
   const _postMul = postPassMul();
 
+  /* v91：制度锚定的窗口按「动作次数」计，不是按回合数——学生做一次动作算一个回合。
+     在动作真正执行前扣，这样本回合刚设的锚定完整生效，下一回合才开始倒数。 */
+  if(state.ruleAnchor>0) state.ruleAnchor--;
   state.resources -= turnCost;
   // v14.1 修复：冷却 N = 执行后 N 个回合内不可用（原实现下一回合就解锁，相当于 cooldown-1）
   state.nextAvailable[a.id] = state.round + a.cooldown + 1;
@@ -6207,10 +6243,12 @@ function runTurn(){
   const credOverridePenalty = [];
   if(credOverride){
     const credGap = a.reqCred - state.credibility;
-    const extraPressure = Math.min(3, credGap); // 差距每 1 点增加 1 压力，最多 +3
+    /* v91：代价要「疼但不到爆炸」。原来 1 点差距 = 1 点压力，信誉差 3 点就把人直接推到反弹线上；
+       改成两点差距算 1 点压力，最多 +3——差得越多越贵，但不会一按就翻车。 */
+    const extraPressure = Math.min(3, Math.ceil(credGap/2));
     state.pressure = Math.min(10, state.pressure + extraPressure);
-    credOverridePenalty.push(`⚠️ 强行执行（可信度 ${state.credibility}/${a.reqCred}）：组织感知到你并没有足够的信用基础就强行推进。压力 +${extraPressure}（现 ${state.pressure}）。`);
-    credOverridePenalty.push(`💡 建议：先通过「亲身示范」、「小规模试点」等动作提升可信度至 ${a.reqCred} 再执行此动作，效果会明显更好。`);
+    credOverridePenalty.push(`💳 信誉不足（${state.credibility}/${a.reqCred}）：你还是把这件事推下去了，但组织看得见你没有那个信用基础。压力 +${extraPressure}（现 ${state.pressure}），而且这次动作换不来任何认可。`);
+    credOverridePenalty.push(`💡 这不是「不许做」，是「做得更贵」。想让它便宜，先用「亲身示范」「小范围试点」把信誉垫到 ${a.reqCred}。`);
   }
 
   state.activeActionId = a.id;   // v48：供 applyGain 判断档位匹配
