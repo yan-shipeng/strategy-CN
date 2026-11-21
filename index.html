@@ -120,10 +120,6 @@
     .node.s3 circle.bg{fill:var(--s3-light);stroke:var(--s3);stroke-width:3.5}
     .node.s3 text.glyph{fill:var(--s3)}
     .node.s4 circle.bg{fill:var(--s4);stroke:var(--s4-light);stroke-width:3}
-    /* v89：靠制度压出来的「服从」——外圈加一道金色虚线，名字后面挂「·服从」
-       底圈的虚线纹是所有人共有的装饰，压不住信息，所以另起一层 */
-    .node.via-rule text.label{fill:#e8c069}
-    .node.via-rule .via-rule-ring{opacity:.95}
     .node.s4 text.glyph{fill:#ffffff}
 
     .node.selected circle.bg{stroke:var(--primary);stroke-width:4;filter:drop-shadow(0 6px 14px rgba(13,139,150,.35))}
@@ -2827,22 +2823,13 @@ const ACTIONS=[
       state.credibility = Math.max(0, state.credibility - 2);
       state.pressure = Math.min(10, state.pressure + 2);
       const r = affectAll(5,'奖惩口径改了，但组织里还没有一个能拿出来说的例子——大家只当是又一次「上面又要考核了」。','规则');
-      const forced = forceCompliance(Object.keys(state.people), 1);
       r.details.unshift(
         '⚠️ 没有成果垫底的制度：可信度 -2、压力 +2，效果只兑现了一半。',
         '💡 制度是放大器，不是发动机：先让三四个人真的走通，同一纸文件的分量会完全不同。'
       );
-      if(forced.length){
-        r.details.push(`🪜 硬推：${forced.join('、')}当场点头了——但那是因为「不做有成本」，不是因为他被说服了（可信度 -1、压力 +1）。`);
-      }
       return r;
     }
-    const r2 = affectAll(12,'奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','规则');
-    const forced2 = forceCompliance(Object.keys(state.people), 2);
-    if(forced2.length){
-      r2.details.push(`🪜 硬推：${forced2.join('、')}直接进入了完全配合——他们服从了，但没有一个是被你说服的（每人：可信度 -1、压力 +1）。`);
-    }
-    return r2;
+    return affectAll(12,'奖惩制度开始产生效果。这个制度改变突破了后期的阈值锁限制，成为终极推动力。','规则');
   }},
   {id:'reorg',label:'调整汇报关系',weeks:2,cooldown:6,need:1,type:'规则',reqCred:6,disrupt:2,adkar:'RE',
    desc:'把某个人的汇报线改到已经认同变革的上级名下。组织结构本身就是杠杆：换了汇报对象，信息流向、资源分配和压力传导都会跟着改道。',
@@ -2881,12 +2868,6 @@ const ACTIONS=[
          amount:Math.round(p.score-scoreBefore), from:Math.round(scoreBefore), to:Math.round(p.score),
          prev:prevStatus, now:p.status, locked:false});
      }catch(_){}
-     /* v89：接进一个已经走通的上级名下，被调动的人会直接服从——
-        结构本身就是压力：新上级的考核、节奏、资源分配都摆在那儿。 */
-     let forcedHere=[];
-     if(q.status>=3 && p.status<4 && p.status>=1){
-       forcedHere = forceCompliance([id], 1);
-     }
      return {
        story:`你把${p.name}的汇报线从${oldBoss?oldBoss.name:'原上级'}改到了${bossLabel}名下。`,
        details:[
@@ -2894,13 +2875,64 @@ const ACTIONS=[
          state.revealed[id]
            ? `📈 ${p.name} 说服度 +${Math.round(p.score-scoreBefore)}（现 ${Math.round(p.score)}）。${note}`
            : `📈 ${p.name} 动了——具体到哪一格，得谈过才知道。${note}`,
-         ...(forcedHere.length
-           ? [`🪜 ${p.name}换了汇报线，当场就「配合」了——这是结构压出来的服从，不是认同（可信度 -1、压力 +1）。`]
-           : []),
          `⚠️ 动组织结构的代价：压力 +2（现 ${state.pressure}），这类动作短期内不宜重复。`,
          `💡 网络图上这条线已经改道——信息以后沿着新的汇报线流动。再推动${q.name}时，${p.name}受到的影响会更直接。`
        ]
      };
+   }},
+  /* v90：制度组的第四张卡——人事权。
+     前三张都是「加法」（合法性、激励、结构），这张是唯一的「减法」。 */
+  {id:'replace',label:'调整班子',weeks:2,cooldown:4,need:1,min:1,max:1,type:'规则',reqCred:5,disrupt:2,adkar:'RE',
+   desc:'把人从场上拿掉。前三张制度卡都是往人身上加东西——加合法性、加激励、加结构；这张是减法：不劝、不压，直接换人。它不会让过线变容易，因为分母永远是 12：你只是少了一个可以转化的人。它唯一的价值，是拆掉一个正在拖累邻居的人。',
+   cooldownReason:'人事变动不能连着做。刚换完又换，剩下的人先想的是「什么时候轮到我」，不是「我该做什么」。',
+   run(ids){
+     const id=ids[0]; const p=state.people[id];
+     if(!p || p.removed) return {story:'这个人已经不在场上了。',details:['换掉的人不能再换一次。'],fail:true};
+     const n=replacedCount();
+     if(n>=REPLACE_CAP){
+       return {story:`你已经换掉三个人了。再换，这局就不是变革，是清洗。`,
+         details:[
+           `🚫 换人上限 ${REPLACE_CAP} 人：换到第四个，剩下的人只会学会一件事——不表态最安全。`,
+           `💡 前三个已经够你拆掉传染源了。剩下的人，得靠你自己去谈。`
+         ],fail:true};
+     }
+     const cost=REPLACE_COST[n];
+     const near=(p.ties||[]).filter(t=>t!==id&&t!=='pm'&&state.people[t]&&!state.people[t].removed);
+     const nearSet=new Set(near);
+     const far=Object.keys(state.people).filter(k=>k!=='pm'&&k!==id&&!nearSet.has(k)&&!state.people[k].removed);
+     const beforeStatus=p.status, beforeScore=p.score;
+     /* 离场：人还在数据里（结局页要点名），但不再参与任何计算 */
+     p.removed=true; p.removedRound=state.round; p.score=0; p.status=0;
+     state.credibility=Math.max(0,state.credibility-cost.cred);
+     state.pressure=Math.min(10,state.pressure+cost.pres);
+     if(cost.res) state.resources=Math.max(0,state.resources-cost.res);
+     const nearHit=[], farHit=[];
+     const hit=(t,amt,mode)=>{
+       const q=state.people[t]; const b=q.score, prev=q.status;
+       q.score=Math.max(0,q.score-amt); updateStatus(q);
+       state.touchedThisTurn.add(t);
+       if(q.score===b) return 0;
+       try{
+         state.turnEvents.push({id:t, mode, actionType:'规则', base:-amt, pref:1, soft:1,
+           amount:Math.round(q.score-b), from:Math.round(b), to:Math.round(q.score),
+           prev, now:q.status, locked:false});
+       }catch(_){}
+       return Math.round(b-q.score);
+     };
+     near.forEach(t=>{ const d=hit(t,cost.near,'ruleNear'); if(d) nearHit.push(`${state.people[t].name} −${d}`); });
+     far.forEach(t=>{ const d=hit(t,cost.far,'ruleFar'); if(d) farHit.push(`${state.people[t].name} −${d}`); });
+     const d=[
+       `🪑 ${p.name} 离场（原状态：${STATUS_LABELS[beforeStatus]}，说服度 ${Math.round(beforeScore)}）。他不再参与这一局。`,
+       `⚠️ 代价：可信度 −${cost.cred}（现 ${state.credibility}）、压力 +${cost.pres}（现 ${state.pressure}）${cost.res?`、额外 ${cost.res} 份资源`:''}。`,
+       nearHit.length ? `😰 离他最近的人先慌了：${nearHit.join('、')}。他们想的是「下一个会不会是我」。` : '',
+       farHit.length ? `🗣 隔得远的人也听说了：${farHit.join('、')}。` : '',
+       `📐 分母还是 12：你少了一个能转化的人，过线门槛一点没降。换人只对「拆掉传染源」有用，不是提分手段。`
+     ].filter(Boolean);
+     if(n+1>=REPLACE_CAP){
+       d.push('🚨 再换一个就到上限了。到那时候，剩下的人只会做一件事：不表态。');
+     }
+     /* noCredChange：换人不该被算成「这次决策得到了认可」——它是代价，不是成绩 */
+     return {story:`你把${p.name}调离了这个岗位。位置空出来了，但事情还得有人做。`, details:d, noCredChange:true};
    }},
   PRESSURE_RELIEF_ACTION];
 
@@ -2947,8 +2979,8 @@ const ACTION_GROUPS = [
     /* v86：总部背书从「造势」挪到「制度」——它借的是正式权力（position power），
        不是关系。放在造势里，学生会把它当成"又一个拉人动作"；
        放在制度里，它和奖惩、汇报关系站在一起：都是"让这件事变成组织安排"的手段。 */
-    hint:'第 7–8 步：把新做法变成正式安排——总部的公开表态、奖惩口径、汇报关系。让它不再依赖你个人去推',
-    ids:['ceo-endorse','incentive','reorg'] }
+    hint:'第 7–8 步：把新做法变成正式安排——总部的公开表态、奖惩口径、汇报关系、人事安排。让它不再依赖你个人去推',
+    ids:['ceo-endorse','incentive','reorg','replace'] }
 ];
 
 /* v66：ADKAR 只作为内部数据留着（结局复盘要判断「是不是只在治意愿」），
@@ -3093,7 +3125,9 @@ function updateStatus(p){
     else p.status=0;
   }
 }
-function convertedCount(){ return Object.entries(state.people).filter(([id,p])=>id!=='pm' && p.status===4).length; }
+/* v90：被换掉的人不在场，不算转化；但分母（total）仍是全体 12 人——
+   这就是「换人不降门槛」的实现方式：人还是那么多人，只是有一个不在场了。 */
+function convertedCount(){ return Object.entries(state.people).filter(([id,p])=>id!=='pm' && !p.removed && p.status===4).length; }
 /* v73：取消「底子」硬门槛（原 v68 的 unlockGate）。
    动作不再因为「还没攒够人」而点不动——代价改成执行时结算：可信度掉、压力涨、效果打折。
    理由：门槛把学生挡在动作外面，他学不到"用早了会怎样"；代价能让他学到。
@@ -3289,40 +3323,30 @@ function thresholdLock(personId, gainedAmount, viaDirectOrSpread){
   return gainedAmount;
 }
 
-/* v89：制度动作的「强制服从」。
-   硬权力（改奖惩、动汇报关系）不需要说服，它能把还没被说服的人直接推过线——
-   但拿到的是服从，不是认同。每推一个人：可信度 -1、压力 +1，并在人身上留 viaRule 标记。
-   计分上不另设分项：代价已经落在压力和信任里，结局页会点明「这几个人是服从的」。 */
-function forceCompliance(ids, maxN){
-  const pool = (ids||[]).filter(id=>{
-    const p=state.people[id];
-    // 至少「听说过」（status>=1）才推得动；完全没听过的人，一纸文件也压不出反应
-    return p && id!=='pm' && p.status>=1 && p.status<4;
-  }).sort((a,b)=>state.people[b].score-state.people[a].score);
-  const list = pool.slice(0, Math.max(0, maxN||0));
-  const done = [];
-  list.forEach(id=>{
-    const p=state.people[id];
-    const before=p.score, prev=p.status;
-    p.score=85; p.viaRule=true; updateStatus(p);
-    state.touchedThisTurn.add(id);
-    // 代价要压过这一回合本身的「认可 +1」，否则硬推等于免费
-    state.credibility=Math.max(0, state.credibility-2);
-    state.pressure=Math.min(10, state.pressure+2);
-    try{
-      state.turnEvents.push({id, mode:'rule', actionType:'规则', base:85-before, pref:1, soft:1,
-        amount:Math.round(p.score-before), from:Math.round(before), to:Math.round(p.score),
-        prev, now:p.status, locked:false});
-    }catch(_){}
-    done.push(p.name);
-  });
-  return done;
+/* v90：人事权——把人从场上拿掉。
+   这是唯一「减法」型的制度动作：前三张卡都是往人身上加东西（合法性、激励、结构），
+   这张是把人移出去。被换掉的人不再在场，但分母永远是 12——
+   你少了一个可以转化的人，过线门槛一点没降。所以换人永远不会让事情变容易，
+   它唯一的价值是拆掉一个正在拖累邻居的人（死硬派每回合给周围人泼冷水）。
+   代价递增：换到第三个，剩下的人已经不是在怕，是在恨。 */
+const REPLACE_COST = [
+  {cred:2, pres:2, near:4, far:1, res:0},
+  {cred:4, pres:3, near:6, far:2, res:0},
+  {cred:6, pres:4, near:8, far:3, res:1}
+];
+const REPLACE_CAP = 3;
+function replacedList(){
+  return Object.entries(state.people)
+    .filter(([id,p])=>id!=='pm'&&p.removed)
+    .map(([id,p])=>p.name);
 }
-function forcedCount(){ return Object.entries(state.people).filter(([id,p])=>id!=='pm'&&p.status===4&&p.viaRule).length; }
+function replacedCount(){ return replacedList().length; }
 
 function applyGain(personId, rawAmount, actionType, mode){
   // mode: 'direct' | 'broad' | 'spread'
   const p=state.people[personId];
+  /* v90：离场的人不再接受任何推动——他在这一局里已经不存在了 */
+  if(!p || p.removed) return { prev: p?p.status:0, now: p?p.status:0, amount:0, newlyConverted:false };
   let amount = rawAmount;
   const baseAmount = rawAmount;
   // 偏好
@@ -3921,6 +3945,8 @@ function drawNetwork(svgId, forceView){
   function edgeLine(a,b,kind,trust){
     const p=state.people[a], q=state.people[b];
     if(!p||!q) return;
+    /* v90：离场的人不连边 */
+    if(p.removed||q.removed) return;
     const key=[a,b].sort().join('-');
     if(drawn.has(key)) return;
     drawn.add(key);
@@ -3966,17 +3992,19 @@ function drawNetwork(svgId, forceView){
 
   // 节点
   Object.entries(state.people).forEach(([id,p])=>{
+    /* v90：已经离场的人不再画在图上——位置空着，人没了 */
+    if(p.removed) return;
     const nodeG=document.createElementNS('http://www.w3.org/2000/svg','g');
     const isFocused=state.focusedNode===id||state.selectedTargets.includes(id);
     const isFaded=state.selectedAction!==null && state.selectedTargets.length===0 && !isFocused;
     const isDim = view==='informal' && id!=='pm' && !informalNodes.has(id);
     const isInfluenced=!!state.softened[id];
     const factionClass = p.faction==='总部'?'faction-hq':p.faction==='当地'?'faction-local':p.faction==='外部'?'faction-external':'';
-    nodeG.setAttribute('class',`node s${p.status} ${factionClass} ${isFocused?'selected':''} ${isFaded?'faded':''} ${isInfluenced?'influenced':''} ${isDim?'dim':''} ${p.viaRule?'via-rule':''}`);
+    nodeG.setAttribute('class',`node s${p.status} ${factionClass} ${isFocused?'selected':''} ${isFaded?'faded':''} ${isInfluenced?'influenced':''} ${isDim?'dim':''}`);
     nodeG.setAttribute('data-id',id);
     nodeG.setAttribute('tabindex','0');
     nodeG.setAttribute('role','button');
-    nodeG.setAttribute('aria-label',`${p.name}：${statusLabelFor(id,p.status)}${p.viaRule?'（服从，不是认同）':''}${isBridge(id)?'，桥梁节点':''}${isInfluenced?'，处于扩散圈':''}`);
+    nodeG.setAttribute('aria-label',`${p.name}：${statusLabelFor(id,p.status)}${isBridge(id)?'，桥梁节点':''}${isInfluenced?'，处于扩散圈':''}`);
 
     const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
     circle.setAttribute('class','bg');
@@ -4074,25 +4102,12 @@ function drawNetwork(svgId, forceView){
       nodeG.appendChild(stubbornText);
     }
 
-    /* v89：服从的人——金色虚线外圈，和「被说服」的人分开看 */
-    if(p.viaRule){
-      const vr=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      vr.setAttribute('cx',p.x); vr.setAttribute('cy',p.y); vr.setAttribute('r','31');
-      vr.setAttribute('fill','none');
-      vr.setAttribute('stroke','#e8c069');
-      vr.setAttribute('stroke-width','2');
-      vr.setAttribute('stroke-dasharray','4 3');
-      vr.setAttribute('pointer-events','none');
-      vr.setAttribute('class','via-rule-ring');
-      nodeG.appendChild(vr);
-    }
-
     const text=document.createElementNS('http://www.w3.org/2000/svg','text');
     text.setAttribute('class','label');
     text.setAttribute('x',p.x);
     text.setAttribute('y',p.y+44);
     text.setAttribute('text-anchor','middle');
-    text.textContent = p.viaRule ? p.name+'·服从' : p.name;
+    text.textContent = p.name;
     nodeG.appendChild(text);
 
     // 拖拽（带阈值）+ 触摸
@@ -4192,8 +4207,6 @@ function updateNodePosition(svgId, personId){
     if(pmText){ pmText.setAttribute('x',p.x); pmText.setAttribute('y',p.y+5); }
     if(statusRing){ statusRing.setAttribute('cx',p.x+17); statusRing.setAttribute('cy',p.y+17); }
     if(statusGlyph){ statusGlyph.setAttribute('x',p.x+17); statusGlyph.setAttribute('y',p.y+17); }
-    const vrRing = nodeG.querySelector('circle.via-rule-ring');
-    if(vrRing){ vrRing.setAttribute('cx',p.x); vrRing.setAttribute('cy',p.y); }
   }
   // 更新关联边
   p.ties.forEach(t=>{
@@ -4243,19 +4256,21 @@ function renderLegend(){
     edgeItems += `<div class="legend-item"><svg class="legend-svg" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="var(--success)" stroke-width="2.4" stroke-dasharray="4 3"/></svg><span>完全配合者向邻居扩散</span></div>`;
     edgeItems += `<div class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(61,138,58,.4)"></span>扩散影响圈（本轮推动效果放大）</div>`;
   }
-  /* v89：只要场上有人是「服从」，图例就把这条读法摆出来 */
-  let forcedItem='';
+  /* v90：场上有人离场时，图例点一句「图上少的人去哪了」 */
+  let replacedItem='';
   try{
-    if(forcedCount()>0){
-      forcedItem = `<div class="legend-item" style="grid-column:1/-1">
+    const _rn=replacedCount();
+    if(_rn>0){
+      replacedItem = `<div class="legend-item" style="grid-column:1/-1">
         <svg class="legend-svg" viewBox="-14 -14 28 28" aria-hidden="true">
-          <circle cx="0" cy="0" r="11" fill="none" stroke="#e8c069" stroke-width="2" stroke-dasharray="4 3"></circle>
+          <circle cx="0" cy="0" r="11" fill="none" stroke="#8a8f98" stroke-width="1.6" stroke-dasharray="3 3" opacity=".7"></circle>
+          <line x1="-6" y1="-6" x2="6" y2="6" stroke="#8a8f98" stroke-width="1.6" opacity=".7"></line>
         </svg>
-        <span>金色虚线圈 = <b style="color:#e8c069">服从</b>（靠制度压过线的，不是被说服的）</span>
+        <span>已离场 <b>${_rn}</b> 人（被换掉的不在图上，但分母仍是 12）</span>
       </div>`;
     }
   }catch(_){}
-  box.innerHTML = statusItems + forcedItem + edgeItems;
+  box.innerHTML = statusItems + replacedItem + edgeItems;
 }
 
 /* v36：网络视图切换 */
@@ -5045,10 +5060,10 @@ function renderEndingScreen(){
     const sb = document.createElement('div');
     sb.className = 'log-item score-box'; sb.id = 'scoreBox';
     const cls = (v)=> v<0 ? 'sp-item neg' : 'sp-item';
-    /* v89：这一局有几个人是「服从」，在积分卡上就点一句——细节在下面单独一块 */
-    const _forcedEarly = forcedCount();
-    const forcedLine = _forcedEarly>0
-      ? `<div class="small" style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(232,192,105,.35);color:#e8c069;font-weight:700">🪜 这 ${sc.conv} 个人里有 ${_forcedEarly} 个是「服从」，不是「认同」——靠制度压过线的。</div>`
+    /* v90：换掉了人，就在积分卡上点一句——细节在下面单独一块 */
+    const _replacedEarly = replacedCount();
+    const replacedLine = _replacedEarly>0
+      ? `<div class="small" style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(138,143,152,.35);color:var(--muted);font-weight:700">🪑 你换掉了 ${_replacedEarly} 个人。分母仍是 12——少了一个能转化的人，门槛没降。</div>`
       : '';
     sb.innerHTML =
       '<div class="score-head">'+
@@ -5073,17 +5088,17 @@ function renderEndingScreen(){
         `<div class="${cls(sc.parts.milestone)}"><b>${sc.parts.milestone}</b><span>里程碑分 · ${sc.ms} 个关键节点 × ${SCORE_RULES.perMilestone}（满分 ${SCORE_RULES.milestoneCap}）</span></div>`+
       '</div>'+
       '<div class="small muted" style="margin-top:12px;line-height:1.7">总分 100 分：成果 66（达标即 32，每多推 1 人 +6）＋ 效率 8（剩余资源）＋ 节奏 7（多快到达标线，基准 12 回合）＋ 组织 15 ＋ 里程碑 4。分数不是排名，是把几件事分开看：<b>推过去了几个人</b>（成果）、<b>花了多少资源</b>（效率）、<b>多快到线</b>（节奏）、<b>留下的是什么组织</b>（组织分）。过线之后每多走一回合，所有动作的效果都会打折（每回合 ×0.92，最低 ×0.55）——所以继续推分数还能再高一点，但边际收益掉得很快：多推一个人要花的动作越来越多。用高压换来的转化会在组织分里被扣回去，所以"赢了但压力拉满"的一局，总分通常不好看。</div>'+
-      forcedLine;
+      replacedLine;
     wrap.appendChild(sb);
-    /* v89：把「服从」和「认同」分开报——这是这一局最该被记住的一件事 */
-    const _forced = forcedCount();
-    if(_forced>0){
-      const fd=document.createElement('div'); fd.className='log-item'; fd.id='forcedBox';
-      fd.innerHTML='🪜 <strong>其中 '+_forced+' 个人是「服从」，不是「认同」</strong>'+
+    /* v90：把「换掉了谁」单独报——这是这一局最该被追问的一件事 */
+    const _replaced = replacedCount();
+    if(_replaced>0){
+      const fd=document.createElement('div'); fd.className='log-item'; fd.id='replacedBox';
+      fd.innerHTML='🪑 <strong>你换掉了 '+_replaced+' 个人：'+replacedList().join('、')+'</strong>'+
         '<div class="small" style="margin-top:6px;line-height:1.7;color:var(--text)">'+
-        '他们是靠改奖惩、动汇报关系压过来的——人到位了，心没到位。这种配合经不起一次政策松动：'+
-        '你一走、预算一砍、KPI 一换，他们会第一个退回去。制度能让你过线，但过线之后真正要做的，'+
-        '是把这些人从「不得不」变成「愿意」。</div>';
+        '他们不在场了，但分母还是 12——你少了一个可以转化的人，过线门槛一点没降。'+
+        '换人真正的价值只有一个：拆掉一个正在给邻居泼冷水的人。如果那个人只是「还没轮到推」，换掉他就是纯亏。'+
+        '剩下的人看到的也不是「变革有力」，而是「不表态最安全」。这一局里有多少人从此不再说话，你永远不会知道。</div>';
       wrap.appendChild(fd);
     }
   }catch(_){}
@@ -5372,7 +5387,7 @@ function checkEnding(){
       try{ state.passScore = scoreBreakdown().total; }catch(_){ state.passScore = 0; }
     }
     // 全员转化：已经没有更多可推的人，直接收场
-    const _ids = Object.keys(state.people).filter(id=>id!=='pm');
+    const _ids = Object.keys(state.people).filter(id=>id!=='pm' && !state.people[id].removed);
     if(_ids.length && convertedCount() >= _ids.length){
       state.ended = true; state.endingType = 'win-excellent'; return true;
     }
@@ -5600,6 +5615,8 @@ function toggleTarget(id){
   const pos=arr.indexOf(id);
   if(pos>=0){ arr.splice(pos,1); state.targetHint=''; if(arr.length) state.focusedNode=arr[arr.length-1]; render(); return; }
   const p=state.people[id];
+  /* v90：已经离场的人不能再被选为目标 */
+  if(!p || p.removed){ state.targetHint='这个人已经不在场上了。'; render(); return; }
   // v39：内部培训——第一个点的是讲师，必须已经转化；完全配合的人不占学员名额
   if(a.roleMode==='teacher'){
     if(arr.length===0){
@@ -5648,6 +5665,8 @@ function buildPeopleImpact(before, after){
   const rows=[];
   Object.keys(after.people).forEach(id=>{
     if(id==='pm') return;
+    /* v90：离场的人不进「这一步动了谁」——他不是被说服或退回去的，他是走了 */
+    if(state.people[id] && state.people[id].removed) return;
     const b=before.people[id], a=after.people[id];
     if(!b||!a) return;
     const dScore=Math.round(a.score-b.score);
@@ -5668,6 +5687,8 @@ function buildPeopleImpact(before, after){
     }
     if(modes.spread) reasons.push('网络扩散');
     if(modes.broad) reasons.push('广覆盖');
+    if(modes.ruleNear) reasons.push('离被换掉的人最近，最先慌');
+    if(modes.ruleFar) reasons.push('听说了这件事，也跟着收手');
     if(modes.action) reasons.push('动作直接作用');
     if(modes.decay) reasons.push('自然衰减');
     if(!reasons.length) reasons.push('动作直接作用');
@@ -6111,7 +6132,7 @@ function postPassMulText(m){ return '×' + (Math.round(m*100)/100).toFixed(2).re
 function roundsUsed(){ return Math.max(1, state.round - 1); }
 function scoreBreakdown(){
   const ids = Object.keys(state.people).filter(id=>id!=='pm');
-  const conv = ids.filter(id=>state.people[id].status===4).length;
+  const conv = ids.filter(id=>!state.people[id].removed && state.people[id].status===4).length;
   const need = Math.ceil(ids.length * 0.5);
   const rounds = roundsUsed();
   /* v59：节奏分定格在过线那一刻；没到线的人才按总回合算 */
@@ -6244,13 +6265,18 @@ function runTurn(){
 
   const movers = [];
   Object.keys(after.people).forEach(id=>{
+    /* v90：离场的人不算「掉档」——他是被换掉的，不是被说服退回去的 */
+    if(state.people[id].removed) return;
     if(STATUS_LABELS[after.people[id].status] !== STATUS_LABELS[before.people[id].status]){
       movers.push(`${state.people[id].name}：${STATUS_LABELS[before.people[id].status]} → ${STATUS_LABELS[after.people[id].status]}`);
     }
   });
 
   const milestones = detectMilestones(before, after);
-  const deltaConverted = Object.values(after.people).filter(x=>x.status===4).length - Object.values(before.people).filter(x=>x.status===4).length;
+  /* v90：离场的人不算转化，也不算掉档 */
+  const _liveIds = Object.keys(after.people).filter(id=>!state.people[id].removed);
+  const deltaConverted = _liveIds.filter(id=>after.people[id].status===4).length
+                       - _liveIds.filter(id=>before.people[id].status===4).length;
   /* v16：里程碑奖励 - 首次转化 */
   if(deltaConverted > 0 && !state.firstConversionTriggered){
     state.firstConversionTriggered = true;
