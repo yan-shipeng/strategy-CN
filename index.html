@@ -637,9 +637,14 @@
     .net-collapsed .net-toggle .chev{transform:rotate(-90deg)}
 
     /* v61：推进栏在所有阶段都贴着底部导航之上 */
+    /* v116：手机端把推进栏和标签栏做成一个连续的整体——同底色、去掉各自的阴影，
+       只留一条主色细线作分界，视觉上不再是上下两块 */
     body.sim-active .decision-footer{
       bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px));
       padding:6px 12px;z-index:1200;
+      background:#06111a;
+      border-top:2px solid var(--primary);
+      box-shadow:none;
     }
     /* v62：手机端按钮居中占满一行，提示在上方一行居中 */
     /* v64：提示与按钮贴紧，中间不留缝 */
@@ -2091,7 +2096,7 @@
 
     <section class="screen" id="screen-task">
       <div class="hero">
-        <h2>任务回顾 <span id="currentRoleBadge" class="badge" style="margin-left:8px;background:var(--primary-light);color:var(--primary);font-weight:600">🎛️ 整合负责人</span></h2>
+        <h2>任务回顾 <span id="currentRoleBadge" class="badge" style="margin-left:8px;background:var(--primary-light);color:var(--primary);font-weight:600;white-space:nowrap">🎛️ 整合负责人</span></h2>
         <p id="roleBriefingText" style="margin:8px 0">你是中国制造业集团的海外整合负责人。公司刚完成欧洲并购，希望在 60 个资源内推动新的治理和协同方式落地。</p>
         <div class="small" id="roleGoalText" style="padding:8px 12px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:4px"><strong>你的目标：</strong>在 60 个资源内让 ≥50% 的关键人物真正进入「完全配合」状态。过了 50% 就算达标——收工还是继续推，你自己判断。</div>
         <div class="badges" style="margin-top:12px"><span class="badge">先理解任务</span><span class="badge">再看社会网络</span><span class="badge">然后做决策</span></div>
