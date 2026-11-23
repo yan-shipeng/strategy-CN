@@ -620,6 +620,12 @@
     #screen-decision > div[data-decision-grid]{gap:12px!important;grid-template-columns:minmax(0,1fr)!important}
     #screen-decision > div[data-decision-grid] > .panel{min-width:0}
     #screen-decision > div[data-decision-grid] .detail{overflow-wrap:break-word}
+    /* v121：网络页同病——英文版人物介绍溢出。布局轨道与 .detail 全局加固 */
+    #screen-network .layout{grid-template-columns:minmax(0,1fr)!important}
+    #screen-network .layout > *{min-width:0}
+    .detail{overflow-wrap:break-word;min-width:0;max-width:100%}
+    /* 英文标签（状态徽章/回冷提示）nowrap 过长时允许折行，不再撑破容器 */
+    html[lang="en"] .detail .status,html[lang="en"] .detail .decay-tag{white-space:normal}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:static!important;max-height:none!important;overflow:visible!important;order:2}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:300px!important}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2).net-collapsed .svg-wrapper,
