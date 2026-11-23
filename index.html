@@ -781,6 +781,14 @@
       #screen-intro.active{
         display:flex;
       }
+      /* v122：开场页语言切换按钮——固定右上角，顶栏风格 */
+      #langToggleIntro{
+        position:absolute;top:16px;right:16px;z-index:60;
+        padding:7px 15px;border-radius:999px;cursor:pointer;
+        border:1px solid rgba(255,255,255,.22);background:rgba(13,30,42,.85);color:#d8eef4;
+        font:600 13px 'Noto Sans SC',sans-serif;transition:all .18s ease;
+      }
+      #langToggleIntro:hover{border-color:#0d8b96;background:rgba(13,139,150,.3);color:#fff}
       /* particle canvas */
       #introCanvas{
         position:absolute;inset:0;width:100%;height:100%;
@@ -1371,6 +1379,8 @@
 
     <section class="screen" id="screen-intro">
       <canvas id="introCanvas"></canvas>
+      <!-- v122：开场页的语言切换（顶栏在开场是隐藏的，主按钮要进模拟才出现） -->
+      <button id="langToggleIntro" type="button" aria-label="Switch language / 切换语言">EN</button>
 
       <div class="intro-slides">
 
@@ -8080,6 +8090,8 @@ function applyLang(next, first){
   }
   const btn = document.getElementById('langToggleBtn');
   if(btn) btn.textContent = (lang === 'en') ? '中文' : 'EN';
+  const introBtn = document.getElementById('langToggleIntro');
+  if(introBtn) introBtn.textContent = (lang === 'en') ? '中文' : 'EN';
   /* v115：语言切换会改变标签栏按钮的字体与折行，高度可能变——复测量再定位推进栏 */
   try{ if(typeof syncTabbarMetrics === 'function') setTimeout(syncTabbarMetrics, 60); }catch(_){}
 }
@@ -8096,6 +8108,9 @@ function ensureButton(){
   /* v119：不浮动——放进顶栏操作区（没有则退回 body） */
   const host = document.getElementById('topbarActions');
   (host || document.body).appendChild(btn);
+  /* v122：开场页的同款按钮——点击走同一个切换，标签由 applyLang 统一刷新 */
+  const introBtn = document.getElementById('langToggleIntro');
+  if(introBtn) introBtn.addEventListener('click', () => applyLang(lang === 'en' ? 'zh' : 'en'));
 }
 
 /* ── public api ────────────────────────────────────────────────── */
@@ -8112,7 +8127,10 @@ function boot(){
   ensureButton();
   startObserver();
   if(lang === 'en') applyLang('en', true);
-  else { const btn = document.getElementById('langToggleBtn'); if(btn) btn.textContent = 'EN'; }
+  else {
+    const btn = document.getElementById('langToggleBtn'); if(btn) btn.textContent = 'EN';
+    const ib = document.getElementById('langToggleIntro'); if(ib) ib.textContent = 'EN';
+  }
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
