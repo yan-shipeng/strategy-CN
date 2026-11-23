@@ -597,16 +597,16 @@
     #tabsBar{
       position:fixed;left:0;right:0;bottom:0;z-index:800;
       display:flex!important;flex-wrap:nowrap;gap:2px;margin:0;
-      padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));
+      padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px));
       background:#06111a;
       border-top:1px solid var(--border);
       box-shadow:0 -8px 24px rgba(0,0,0,.45);
     }
     #tabsBar .btn{
-      flex:1 1 0;min-width:0;padding:7px 2px;
+      flex:1 1 0;min-width:0;padding:5px 2px;
       border:none;background:transparent;box-shadow:none;
-      font-size:11px;font-weight:600;color:var(--muted);
-      border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      font-size:10.5px;font-weight:600;color:var(--muted);
+      border-radius:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
     #tabsBar .btn.active{background:rgba(13,139,150,.2);color:#3ecfdc}
 
@@ -614,7 +614,7 @@
     #swipeHint{display:none!important}
 
     /* ── 决策页：动作列表优先，网络图可折叠 ── */
-    body.sim-active .app{padding-bottom:calc(var(--tabbar-h) + 104px + env(safe-area-inset-bottom,0px))}
+    body.sim-active .app{padding-bottom:calc(var(--tabbar-h) + 92px + env(safe-area-inset-bottom,0px))}
     /* v115：1fr 轨道的最小宽度是 auto，长内容（人物介绍里的长词/nowrap 标签）会把轨道
        撑出屏幕——minmax(0,1fr) 强制轨道不超过容器 */
     #screen-decision > div[data-decision-grid]{gap:12px!important;grid-template-columns:minmax(0,1fr)!important}
@@ -637,21 +637,22 @@
     .net-collapsed .net-toggle .chev{transform:rotate(-90deg)}
 
     /* v61：推进栏在所有阶段都贴着底部导航之上 */
-    /* v116：手机端把推进栏和标签栏做成一个连续的整体——同底色、去掉各自的阴影，
-       只留一条主色细线作分界，视觉上不再是上下两块 */
+    /* v116→v117：手机端把推进栏和标签栏做成一个连续的整体——同底色、去阴影去分界线。
+       v117：整体再瘦身——栏高、按钮高、字号都压一档 */
     body.sim-active .decision-footer{
       bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px));
-      padding:6px 12px;z-index:1200;
+      padding:4px 12px;z-index:1200;
       background:#06111a;
-      border-top:2px solid var(--primary);
+      border-top:none;
       box-shadow:none;
     }
     /* v62：手机端按钮居中占满一行，提示在上方一行居中 */
     /* v64：提示与按钮贴紧，中间不留缝 */
     .decision-footer-inner{gap:1px!important}
-    .decision-footer #runBtn{height:48px;width:100%;min-width:0;font-size:15px;border-radius:12px}
+    .decision-footer #runBtn{height:40px;width:100%;min-width:0;font-size:14px;border-radius:11px}
+    .decision-footer .fb-chip{font-size:11px;padding:2px 8px}
     /* v41：预判输入框已删；平时不占位，只在未选动作或有警告时冒一行小字 */
-    .decision-footer .hint-strip{font-size:11px;line-height:1.3;margin-bottom:0}
+    .decision-footer .hint-strip{font-size:10.5px;line-height:1.25;margin-bottom:0}
     .predict-box-footer{padding-right:0}
 
     /* ── 网络页：v61 起由全局推进栏接管，旧 CTA 不再显示 ── */
@@ -662,7 +663,7 @@
     .modal{padding:0;align-items:stretch}
     .modal-card{
       max-width:none;width:100%;max-height:100dvh;height:100dvh;
-      border-radius:0;padding:16px 14px calc(var(--tabbar-h) + 88px + env(safe-area-inset-bottom,0px));
+      border-radius:0;padding:16px 14px calc(var(--tabbar-h) + 76px + env(safe-area-inset-bottom,0px));
       display:flex;flex-direction:column;
     }
     #impactBody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
