@@ -6070,7 +6070,7 @@ function hideCinematic(){
   const d = document.getElementById('cine');
   if(!d) return;
   d.style.opacity = '0';
-  setTimeout(()=>{ if(d.parentNode) d.remove(); }, 200);
+  setTimeout(()=>{ if(d.parentNode) d.remove(); }, 120);
 }
 
 function playCelebration(names, cb){
@@ -6171,13 +6171,13 @@ function revealAfter(fn, newlyConverted){
   /* v124：轮询而不是一次定死——快进按钮会把 _cineStart 拨早，揭结果的时机要跟着提前 */
   (function tick(){
     const remain = CINE_MS + 80 - (Date.now() - _cineStart);
-    if(remain > 0){ setTimeout(tick, Math.min(remain, 150)); return; }
+    if(remain > 0){ setTimeout(tick, Math.min(remain, 50)); return; }
     hideCinematic();
     const names = (newlyConverted||[]).map(id=>state.people[id]?state.people[id].name:null).filter(Boolean);
     // _cineBusy 一直锁到结果真正落地，避免动画期间再触发一次执行
     const land = ()=>{ _cineBusy = false; fn(); };
-    if(names.length) setTimeout(()=>playCelebration(names, land), 150);
-    else setTimeout(land, 150);
+    if(names.length) setTimeout(()=>playCelebration(names, land), 60);
+    else setTimeout(land, 60);
   })();
 }
 
@@ -8906,9 +8906,9 @@ function playNetCinematic(a){
   const iBase = D0 + direct.length * D_STEP + 1350;
   const dBase = iBase + spread.length * 200 + 1250;
   /* v124：按本轮实际规模定片长；比基准长就把揭结果的时刻同步推后，别让动画没放完就切走 */
-  const life = dBase + decay.length * 170 + 950;
+  const life = dBase + decay.length * 170 + 600;
   if(life > NETCINE_MS){ try{ _cineStart += (life - NETCINE_MS); }catch(_){ } }
-  setTimeout(() => { d.classList.remove('on'); setTimeout(() => d.remove(), 340); }, life - 320);
+  setTimeout(() => { d.classList.remove('on'); setTimeout(() => d.remove(), 240); }, life - 320);
   /* 第一波：直接推动——从「你」直线出击（粗重、金亮、一击即中） */
   setTimeout(() => { if(d.parentNode) note('direct'); }, D0);
   direct.forEach((row, i) => {
@@ -10134,14 +10134,12 @@ function boot(){
   try{ netEntry('networkSvg'); netEntry('networkSvg2'); }catch(_){ }
   try{ setupKpi(); }catch(_){ }
   try{ setupRipple(); }catch(_){ }
-  try{ setupTilt(); }catch(_){ }
-  try{ setupGlass(); }catch(_){ }
+  /* v126：为流畅度关掉高成本低价值的花哨层——3D 卡片倾斜、全息扫描光泽、
+     全屏胶片颗粒/微尘、鼠标光晕、切屏擦除。保留：极光背景、网络光晕、KPI 脉冲、
+     按钮涟漪、开场星野、结局图表与回放、网络推进过场。 */
   try{ setupEndingFx(); }catch(_){ }
   try{ setupNetCinematic(); }catch(_){ }
-  try{ setupAtmosphere(); }catch(_){ }
   try{ setupStarfield(); }catch(_){ }
-  try{ setupCursorGlow(); }catch(_){ }
-  try{ setupWipe(); }catch(_){ }
   /* 网络页/决策页切换后 svg 可能重建，兜底巡检 */
   if(typeof showScreen === 'function'){
     const _ss = showScreen;
