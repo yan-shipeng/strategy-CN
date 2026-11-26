@@ -8905,9 +8905,14 @@ function playNetCinematic(a){
   const D0 = 550, D_STEP = 175;
   const iBase = D0 + direct.length * D_STEP + 1350;
   const dBase = iBase + spread.length * 200 + 1250;
-  /* v124：按本轮实际规模定片长；比基准长就把揭结果的时刻同步推后，别让动画没放完就切走 */
-  const life = dBase + decay.length * 170 + 600;
-  if(life > NETCINE_MS){ try{ _cineStart += (life - NETCINE_MS); }catch(_){ } }
+  /* v127：片长按「最后一个视觉元素自然消散」来定——直接/间接的浮字有 1.5s 生命周期，
+     冷却环约 1s。短回合不必等满 NETCINE_MS，长回合自动延长，把 _cineStart 同步拨准，
+     揭结果永远跟在动画真正结束之后 ~330ms（淡出 320ms + 80ms 节拍）。 */
+  const directLast = direct.length ? D0 + (direct.length - 1) * D_STEP + 1050 + 1500 : 0;
+  const spreadLast = spread.length ? iBase + (spread.length - 1) * 200 + 1000 + 1500 : 0;
+  const decayLast  = decay.length  ? dBase + (decay.length - 1) * 170 + 200 + 950 : 0;
+  const life = Math.max(directLast, spreadLast, decayLast, 2200) + 250;
+  try{ _cineStart += (life - NETCINE_MS); }catch(_){ }
   setTimeout(() => { d.classList.remove('on'); setTimeout(() => d.remove(), 240); }, life - 320);
   /* 第一波：直接推动——从「你」直线出击（粗重、金亮、一击即中） */
   setTimeout(() => { if(d.parentNode) note('direct'); }, D0);
