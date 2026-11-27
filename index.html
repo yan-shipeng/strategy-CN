@@ -8558,6 +8558,8 @@ css.textContent = [
   '.fx-netcine-skip:hover,.fx-netcine-skip:focus-visible{border-color:rgba(166,244,255,.8);color:#fff;background:rgba(13,139,150,.45);opacity:1}',
   '@keyframes fxNoteIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
   '@keyframes fxBigIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.35)}60%{opacity:1}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}',
+  /* v133：手机端结局图表改单列堆叠——原来固定两列 210+250px 超出屏幕，雷达图被挤出视口 */
+  '@media (max-width:768px){.fx-end-charts > div{grid-template-columns:1fr!important}.fx-end-charts canvas{max-width:100%}}',
   /* 减少动态：全停 */
   '@media (prefers-reduced-motion: reduce){.screen.active,.kpi .num.fx-pop,.fx-glass,.fx-holo,.svg-wrapper .node,.fx-ms,.fx-wipe i{animation:none!important}}'
 ].join('\n');
