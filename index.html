@@ -77,6 +77,14 @@
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:static;align-self:start}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{height:320px !important}
     #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{max-height:none !important;overflow:visible !important}
+    /* v132：桌面宽屏下右栏（网络图）吸顶跟随——滚动动作列表时网络永远在视线里。
+       窄屏/手机维持原样（单列自然排版）。 */
+    @media (min-width:1100px){
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){
+        position:sticky!important;top:60px;align-self:start;
+        max-height:calc(100vh - 80px);overflow-y:auto;overflow-x:hidden;
+      }
+    }
 
     .cards{display:grid;gap:12px}
     .card{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);transition:border-color .16s ease,background-color .16s ease}
