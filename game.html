@@ -189,14 +189,6 @@
     .node.faction-local circle.bg{stroke-width:2.5;stroke:#2d8659}
     .node.faction-external circle.bg{stroke-width:2.5;stroke:#d97706}
 
-    /* v140：悬停选人区/速览列表里的人名时，网络图上对应节点即时高亮——
-       粗描边+头像全彩，选人时能在右边直接看到他坐在网络哪个位置。
-       刻意只用描边和透明度（v66/v137 同款原则，不开滤镜渲染表面）。
-       必须放在状态/派系规则之后：同优先级时后写的才赢 */
-    .node.hovered circle.bg{stroke:var(--primary);stroke-width:5;opacity:1}
-    .node.hovered image{opacity:1}
-    .node.hovered text{opacity:1}
-
     .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
     .legend-item{display:inline-flex;align-items:center;gap:6px}
     .legend-svg{width:22px;height:22px;flex-shrink:0}
@@ -4460,6 +4452,9 @@ function drawNetwork(svgId, forceView){
          手机上手指点按很容易超过旧的 5px 阈值，导致"点头像没反应" */
       if(state.draggedNode===id && state.draggedStarted && (state.draggedMoved||0)>10) return;
       state.focusedNode=id;
+      /* v144：人物介绍默认收起（v143），只换标题条上的名字等于"点了没反应"——
+         点人物的本意就是看介绍，这里直接帮他展开 */
+      state.profileOpen=true;
       renderDetail(id,'detailBox');
       renderDetail(id,'detailBox2');
       render();
@@ -4471,6 +4466,7 @@ function drawNetwork(svgId, forceView){
       if(e.key==='Enter' || e.key===' '){
         e.preventDefault();
         state.focusedNode=id;
+        state.profileOpen=true;
         renderDetail(id,'detailBox');
         renderDetail(id,'detailBox2');
         render();
@@ -7399,26 +7395,9 @@ function syncTabbarMetrics(){
 window.addEventListener('resize', syncTabbarMetrics);
 window.addEventListener('resize', fitDecisionSticky);
 
-/* v140：悬停选人区的人名（或网络页速览列表），两张网络图上对应节点即时高亮——
-   选定动作后挑目标时，右边就能看到这个人坐在网络的哪个位置。
-   事件委托：选人区每次 render 重建，绑在 document 上不用重挂 */
-(function(){
-  const SVGS=['networkSvg','networkSvg2'];
-  const clearHover=()=>{ SVGS.forEach(sid=>{ const svg=document.getElementById(sid); if(svg) svg.querySelectorAll('g.node.hovered').forEach(g=>g.classList.remove('hovered')); }); };
-  const setHover=(pid)=>{ clearHover(); if(!pid) return; SVGS.forEach(sid=>{ const svg=document.getElementById(sid); if(!svg) return; const g=svg.querySelector(`g.node[data-id="${pid}"]`); if(g) g.classList.add('hovered'); }); };
-  document.addEventListener('mouseover',(e)=>{
-    const t=e.target.closest && (e.target.closest('.target') || e.target.closest('.qp-item'));
-    if(!t) return;
-    setHover(t.getAttribute('data-id')||t.getAttribute('data-pid'));
-  });
-  document.addEventListener('mouseout',(e)=>{
-    const t=e.target.closest && (e.target.closest('.target') || e.target.closest('.qp-item'));
-    if(!t) return;
-    /* 只在真的离开这个元素时清（移到其子元素或相邻人名上由 mouseover 接力） */
-    if(e.relatedTarget && t.contains(e.relatedTarget)) return;
-    clearHover();
-  });
-})();
+/* v144：删除 v140 的"悬停选人区人名→网络图节点高亮"特效——
+   人物介绍收起后地图放大到 420-540px，每次 mouseover 都重绘整张大地图
+   （12 张位图头像），鼠标扫过选人区时明显掉帧。用户明确要求删掉特效换流畅。 */
 /* v115：字体加载/语言切换会改变标签栏按钮的实际高度——加载完和切换后各复测一次，
    不然推进栏和标签栏之间会留一条缝（或重叠） */
 window.addEventListener('load', ()=>{ syncTabbarMetrics(); setTimeout(syncTabbarMetrics, 600); });
