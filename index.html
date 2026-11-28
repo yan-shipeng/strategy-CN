@@ -5911,33 +5911,29 @@ function fixAlignResidual(){
     const card=document.querySelector('#actionList .action.selected') || document.querySelector('#actionList .action-group.open .action-group-header');
     const map=panel.querySelector('.svg-wrapper');
     if(!card || !map) return;
-    /* v146：对齐基准从"地图顶"改为"右栏面板顶"（用户：动作卡上沿应与"社会网络"面板
-       标题行的上沿对齐）——panel.top 就是吸顶位置（top:12+boost，含那 10px 神秘偏移），
-       用它做基准不再需要 offsetTop 推算 */
-    let d=card.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+    /* v147：对齐基准=地图（社会网络图）上沿——选中动作卡与地图同高并排，
+       面板标题行不参与对齐；map.top 就是吸顶后地图的实际视口位置（含神秘偏移），直接量 */
+    let d=card.getBoundingClientRect().top - map.getBoundingClientRect().top;
     if(Math.abs(d)<=3) return;
-    const panelBefore=panel.getBoundingClientRect().top;
+    const mapBefore=map.getBoundingClientRect().top;
     window.scrollBy(0, d);
     /* v142c：用 setTimeout 而非 rAF——后台/未绘制标签页里 rAF 会被冻结，校正永远不跑 */
     setTimeout(()=>{
-      const d2=card.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+      const d2=card.getBoundingClientRect().top - map.getBoundingClientRect().top;
       if(Math.abs(d2)<=3) return;                       // 滚动已解决
-      const panelAfter=panel.getBoundingClientRect().top;
-      if(Math.abs(panelAfter-panelBefore)>1){ window.scrollBy(0, -d); return; }   // 没吸住：撤销
+      const mapAfter=map.getBoundingClientRect().top;
+      if(Math.abs(mapAfter-mapBefore)>1){ window.scrollBy(0, -d); return; }   // 没吸住：撤销
       /* 滚动被 clamp（页面到底）：吸顶面板下沉补齐 */
       setPanelTopBoost(panelTopBoost + d2);
     });
   }catch(_){}
 }
 
-/* v139：桌面吸顶模式下，返回"右栏面板吸顶后的视口顶部"作为对齐基准——
-   展开动作/选中卡片后让动作卡与"社会网络"面板从同一水平线并排开始。
-   v146：基准从地图顶改为面板顶（面板顶=标题行"决策时同步查看网络"的上沿），
-   地图在面板内部自然低于基准线，不影响。
-   关键：必须返回"吸顶后的位置"（12 + 下沉量），而不是当前视口位置——
-   未吸顶时面板随页面滚动，拿它当前位置当基准，页面一滚两者就脱钩。
-   动作列表里任意动作的文档位置都低于吸顶触发点，把它对齐到吸顶位置必然经过
-   "面板已吸顶"的区间，所以返回吸顶位置在数学上严格成立。
+/* v139：桌面吸顶模式下，返回"社会网络图（地图）吸顶后的视口顶部"作为对齐基准——
+   用户明确（v147 例：选「制度→调整汇报关系」，是这张动作子卡的上沿与地图的上沿对齐，
+   不是与面板大标题对齐）：地图顶=基准，面板标题行在基准线上方，不参与。
+   关键：必须返回"吸顶后的位置"，而不是当前视口位置——未吸顶时地图随页面滚动，
+   拿它当前位置当基准，页面一滚两者就脱钩。
    手机或右栏未吸顶（no-stick）时返回 null，走原有的居中等逻辑。 */
 function desktopAlignTop(){
   try{
@@ -5946,7 +5942,7 @@ function desktopAlignTop(){
     if(!panel || panel.classList.contains('no-stick')) return null;
     const map=panel.querySelector('.svg-wrapper');
     if(!map) return null;
-    return 12 + panelTopBoost;
+    return 12 + panelTopBoost + map.offsetTop;
   }catch(_){ return null; }
 }
 
