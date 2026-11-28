@@ -113,11 +113,13 @@
       }
       /* v143：人物介绍收起（默认）时，把省下的空间给网络图 */
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(480px,calc(100vh - 330px))}
-      /* v142：矮视口（≤840px 高，含 1366×768 教室本）紧凑模式——右栏总高须 ≤ 视口-28 才能吸顶，
-         否则 v137b 直接 no-stick，对齐整体失效（用户实测 768 视口"选了人网络图静止不动"）。
+      /* v142：矮视口（≤950px 高，含 1366×768 教室本与 1440×900 笔记本）紧凑模式——
+         右栏总高须 ≤ 视口-余量 才能吸顶，否则 v137b 直接 no-stick，对齐整体失效
+         （用户实测"展开介绍后对齐消失"：展开态在 900px 视口正好卡在吸顶阈值上，
+         EN 文案更长时更容易翻过去，v145 起紧凑模式覆盖到 950px 高）。
          压缩项：隐藏提示语、收紧留白、头像/状态胶囊缩小、正文行距收紧、地图下限降到 170。
-         只影响矮视口，900px 以上的正常桌面版式不变 */
-      @media (max-height:840px){
+         只影响矮视口，正常桌面版式不变 */
+      @media (max-height:950px){
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2){padding-top:8px;padding-bottom:8px}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > h2{font-size:16px;margin:0 0 4px}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > .small.muted{display:none}
@@ -128,6 +130,10 @@
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .pf2-body img{height:40px!important;width:40px!important}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .status{padding:3px 10px;font-size:11px}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .status .glyph{font-size:15px}
+      }
+      /* v145：840-950px 中高视口单独一档——收起态地图给到 440，避免直接落到 380 */
+      @media (max-height:950px) and (min-height:841px){
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(440px,calc(100vh - 300px))}
       }
     }
 
@@ -7281,7 +7287,7 @@ function fitDecisionSticky(){
   try{
     const panel=document.querySelector('#screen-decision > div[data-decision-grid] > .panel:nth-child(2)');
     if(!panel) return;
-    const canStick=window.matchMedia('(min-width:1100px)').matches && panel.offsetHeight<=window.innerHeight-28;
+    const canStick=window.matchMedia('(min-width:1100px)').matches && panel.offsetHeight<=window.innerHeight-14;
     panel.classList.toggle('no-stick', !canStick);
     panel.classList.toggle('pf2-open', !!state.profileOpen);   // v143：人物介绍展开态同步（决定地图大小）
     if(!canStick) setPanelTopBoost(0);   // v142b：不吸顶时下沉量无意义，清掉
