@@ -95,7 +95,7 @@
       /* v141：桌面端没有吸顶条（吸顶 hudBar 只存在于 ≤820px 手机版）——sticky 用 top:12
          即可，比原来的 64 释放出 52px 纵向空间：800px 上下的视口（含 1366×768 教室本）
          也能吸顶对齐；右栏随之收紧（padding 15、地图下限 210） */
-      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky!important;top:12px;z-index:6;align-self:start;padding-top:15px;padding-bottom:15px;
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky!important;top:calc(12px + var(--panel-boost,0px));z-index:6;align-self:start;padding-top:15px;padding-bottom:15px;
         /* v139：吸顶的包含块是"网格区域"——默认 stretch 时右栏会被左栏拉高到整行高，
            面板底被网格底钉死，吸顶行程≈0，看起来就是"右栏从不跟手"。
            改 start 后面板保持自身高度（851px），网格区域留出行高差做吸顶行程 */
@@ -110,6 +110,20 @@
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{
         height:auto!important;aspect-ratio:500/450;
         max-height:max(210px,min(400px,calc(100vh - 660px)));
+      }
+      /* v142：矮视口（≤840px 高，含 1366×768 教室本）紧凑模式——右栏总高须 ≤ 视口-28 才能吸顶，
+         否则 v137b 直接 no-stick，对齐整体失效（用户实测 768 视口"选了人网络图静止不动"）。
+         压缩项：隐藏提示语、收紧留白、头像/状态胶囊缩小、正文行距收紧、地图下限降到 170。
+         只影响矮视口，900px 以上的正常桌面版式不变 */
+      @media (max-height:840px){
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2){padding-top:8px;padding-bottom:8px}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > h2{font-size:16px;margin:0 0 4px}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > .small.muted{display:none}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{margin-top:8px!important;max-height:max(170px,calc(100vh - 700px))}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{margin-top:8px!important;padding:10px 12px;font-size:12.5px;line-height:1.45}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 img{height:40px!important;width:40px!important}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .status{padding:3px 10px;font-size:11px}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .status .glyph{font-size:15px}
       }
     }
 
@@ -2264,6 +2278,11 @@
           </div>
           <div id="detailBox2" class="detail" style="margin-top:12px"></div>
         </div>
+        <!-- v142d：隐形撑高器——吸顶的包含块是网格区域（行高=两栏较高的那个），
+             只开一个组时左栏可能比右栏矮，行高=右栏高度，吸顶行程=0，sticky 完全不生效
+             （面板跟着页面跑，看起来像"静止不动"）。这个 1px 隐形 item 占第 1 列，
+             由 JS 把行高撑到"右栏高+最深卡片的相对距离"，保证任意动作都有吸顶行程。 -->
+        <div id="gridSizer" aria-hidden="true" style="grid-column:1;width:1px;visibility:hidden;pointer-events:none"></div>
       </div>
   
     </section>
@@ -5820,24 +5839,41 @@ function whyDisabled(a, wait, noTeacher){
    只在这一组是"被展开"时摆位；点它自己收起时不抢镜头。 */
 let groupFocusToken=0;
 
-/* v141：残余对齐校正——前面对齐滚动结束后，量一次"卡片顶 vs 地图顶"的实际偏差，
-   若 >3px 则补滚一次；补滚后如果地图跟着动了（说明没吸住），立即撤回。
-   自校正，不受 sticky 实际吸附点与理论值之间神秘偏移（实测稳定差 10px）的影响。 */
+/* v142：残余对齐校正——前面对齐滚动结束后，量一次"卡片顶 vs 地图顶"的实际偏差，
+   若 >3px 先补滚一次；补滚后如果地图跟着动了（说明没吸住），立即撤回。
+   自校正，不受 sticky 实际吸附点与理论值之间神秘偏移（实测稳定差 10px）的影响。
+   v142b：补滚被页面底部 clamp（后面没有内容了，常见于矮视口+列表末尾的动作）时，
+   改为把吸顶面板整体下移 --panel-boost 补齐——sticky 的 top 本来就可以下沉，
+   面板在吸顶行程内跟着卡片走，对齐在物理上仍然成立。 */
+let panelTopBoost=0;   // v142b：当前右栏吸顶下沉量（px）
+function setPanelTopBoost(v){
+  panelTopBoost=Math.max(0,Math.round(v));
+  const panel=document.querySelector('#screen-decision > div[data-decision-grid] > .panel:nth-child(2)');
+  if(panel){
+    if(panelTopBoost>0) panel.style.setProperty('--panel-boost',panelTopBoost+'px');
+    else panel.style.removeProperty('--panel-boost');
+  }
+}
 function fixAlignResidual(){
   try{
-    if(desktopAlignTop()===null) return;
+    if(desktopAlignTop()===null){ setPanelTopBoost(0); return; }
     const panel=document.querySelector('#screen-decision > div[data-decision-grid] > .panel:nth-child(2)');
     if(!panel) return;
     const card=document.querySelector('#actionList .action.selected') || document.querySelector('#actionList .action-group.open .action-group-header');
     const map=panel.querySelector('.svg-wrapper');
     if(!card || !map) return;
-    const d=card.getBoundingClientRect().top - map.getBoundingClientRect().top;
+    let d=card.getBoundingClientRect().top - map.getBoundingClientRect().top;
     if(Math.abs(d)<=3) return;
     const mapBefore=map.getBoundingClientRect().top;
     window.scrollBy(0, d);
-    requestAnimationFrame(()=>{
+    /* v142c：用 setTimeout 而非 rAF——后台/未绘制标签页里 rAF 会被冻结，校正永远不跑 */
+    setTimeout(()=>{
+      const d2=card.getBoundingClientRect().top - map.getBoundingClientRect().top;
+      if(Math.abs(d2)<=3) return;                       // 滚动已解决
       const mapAfter=map.getBoundingClientRect().top;
-      if(Math.abs(mapAfter-mapBefore)>1) window.scrollBy(0, -d);   // 没吸住：撤销
+      if(Math.abs(mapAfter-mapBefore)>1){ window.scrollBy(0, -d); return; }   // 没吸住：撤销
+      /* 滚动被 clamp（页面到底）：吸顶面板下沉补齐 */
+      setPanelTopBoost(panelTopBoost + d2);
     });
   }catch(_){}
 }
@@ -5856,7 +5892,7 @@ function desktopAlignTop(){
     if(!panel || panel.classList.contains('no-stick')) return null;
     const map=panel.querySelector('.svg-wrapper');
     if(!map) return null;
-    return 12 + map.offsetTop;
+    return 12 + panelTopBoost + map.offsetTop;
   }catch(_){ return null; }
 }
 
@@ -5866,6 +5902,7 @@ function desktopAlignTop(){
 function placeGroupHeader(key, wantTop){
   const my=++groupFocusToken;
   focusToken++;                 // 作废可能还在排队的卡片摆位
+  setPanelTopBoost(0);          // v142b：换组对齐从吸顶基准重新开始
   const want=(typeof wantTop==='number')?wantTop:96;
   const go=()=>{
     if(my!==groupFocusToken) return;
@@ -5890,6 +5927,7 @@ let focusToken=0;   // v79：每次摆位发一个号，后发的作废先发的
 function focusSelectedCard(){
   const my=++focusToken;
   groupFocusToken++;   // v80：点了卡片，就把可能还在排队的「组首摆位」作废
+  setPanelTopBoost(0); // v142b：新一次对齐从吸顶基准重新开始，下沉量由残余校正按需重算
   let wanted=null;    // 上一次自己设定的落点
   let tries=0;
   /* 这里刻意不用平滑滚动。smooth 的动画时长由浏览器定，卡片高度又在展开后的
@@ -7203,6 +7241,27 @@ function fitDecisionSticky(){
     if(!panel) return;
     const canStick=window.matchMedia('(min-width:1100px)').matches && panel.offsetHeight<=window.innerHeight-28;
     panel.classList.toggle('no-stick', !canStick);
+    if(!canStick) setPanelTopBoost(0);   // v142b：不吸顶时下沉量无意义，清掉
+    /* v142d：撑高网格行，保证吸顶行程 ≥ 最深卡片相对右栏顶的距离——
+       否则只开一个组时行高不够，sticky 全程不生效（面板跟页面跑=用户看到的"静止不动"）。
+       依据：把卡片X对齐到吸顶地图旁需要 scrollY ≈ cardDocTop-对齐线，
+       吸顶能维持的区间长度 = 行高-面板高，所以行高 ≥ 面板高+最深卡片相对距离+余量。 */
+    const sizer=document.getElementById('gridSizer');
+    if(sizer){
+      if(!canStick){ sizer.style.height='0px'; }
+      else{
+        const pr=panel.getBoundingClientRect();
+        let maxRel=0;
+        const cands=document.querySelectorAll('#actionList .action, #actionList .action-group-header');
+        for(const c of cands){
+          const cr=c.getBoundingClientRect();
+          const rel=cr.top-pr.top;
+          if(rel>maxRel) maxRel=rel;
+        }
+        const need=panel.offsetHeight + maxRel + Math.round(window.innerHeight*0.35);
+        sizer.style.height=Math.max(0,need)+'px';
+      }
+    }
   }catch(_){}
 }
 
