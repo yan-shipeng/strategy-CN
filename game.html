@@ -70,7 +70,10 @@
     #screen-network .people-quicklist .qp-item.active{border-color:var(--primary);background:var(--primary-light);font-weight:600}
     #screen-network .people-quicklist .qp-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
     #screen-network .people-quicklist .qp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-    @media (max-width:1200px){#screen-network .layout{grid-template-columns:1fr}#screen-network .svg-wrapper{height:460px !important}}
+    @media (max-width:1200px){#screen-network .layout{grid-template-columns:1fr}#screen-network .svg-wrapper{height:460px !important}
+      /* v137：单列布局下"人物信息"侧栏取消吸顶——否则滚动时网络图会从钉住的
+         介绍栏下面滑过，两者重叠；改为整列随页面一起滚动 */
+      #screen-network .sidebar .panel{position:static !important}}
     .sidebar{display:grid;gap:16px;align-content:start;width:260px}
     .sticky{position:sticky;top:20px}
     /* v43：右栏不再自己滚动——面板按内容自然撑开，整页只留一条滚动条 */
@@ -84,11 +87,18 @@
         position:static!important;align-self:start;
         max-height:none!important;overflow:visible!important;
       }
+      /* v137：整个右栏（标题+网络图+人物介绍）作为一个整体吸顶——地图和介绍
+         永远一起动，介绍不会从固定地图下面滑过去造成重叠。吸顶的包含块是整行
+         网格（高度=左栏动作列表），所以选动作滚列表的全过程右栏都钉在旁边。
+         地图限高（给标题+介绍预留约 500px），视口太矮装不下整栏时吸顶自动失效，
+         整栏随页面滚动（同样不重叠） */
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky!important;top:64px;z-index:6;align-self:start}
+      /* v137b：右栏内容比视口还高时禁用吸顶（JS 加 .no-stick）——钉住反而会把
+         人物介绍底部永远挡在视口外且无法滚动查看；此时整栏随页面滚动，两全 */
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2).no-stick{position:static!important;top:auto;z-index:auto}
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{
         height:auto!important;aspect-ratio:500/450;
-        /* v136：只让网络图吸顶跟随——选动作滚列表时地图永远在动作旁边，
-           人物介绍在下方自然铺开（无内部滚动的小窗口） */
-        position:sticky;top:64px;z-index:6;
+        max-height:max(220px,min(420px,calc(100vh - 564px)));
       }
     }
 
@@ -115,7 +125,8 @@
        鼠标扫过 12 个节点等于连开 12 次，卡顿主要来自这里。改用描边加粗，代价几乎为零。 */
     .node circle.bg{transition:stroke-width .16s ease,stroke .16s ease,opacity .16s ease}
     .node:hover circle.bg{stroke-width:4}
-    .node image{transition:opacity 0.2s}
+    /* v137：去掉 image 的透明度过渡——SVG image 每次透明度变化都要重绘位图，
+       12 个头像叠加是网络图滚动/点击发肉的主因之一 */
     .node.faded image{opacity:0.25}
     .node.faded circle{opacity:0.25}
     .node.grabbing{cursor:grabbing}
@@ -136,13 +147,13 @@
     .node.s4 circle.bg{fill:var(--s4);stroke:var(--s4-light);stroke-width:3}
     .node.s4 text.glyph{fill:#ffffff}
 
-    .node.selected circle.bg{stroke:var(--primary);stroke-width:4;filter:drop-shadow(0 6px 14px rgba(13,139,150,.35))}
-    .node.selected image{filter:none}
-    .node:not(.faded) image{filter:none}
+    /* v137：选中/扩散圈的投影全部去掉（v66 同款思路——SVG filter 每个都要单独开
+       渲染表面，手机上最卡）；选中用粗描边、扩散圈用绿色描边表达，代价为零 */
+    .node.selected circle.bg{stroke:var(--primary);stroke-width:4}
     .node.faded circle.bg{opacity:0.2}
     .node.faded image{opacity:0.2}
     .node.faded text{opacity:0.35}
-    .node.influenced circle.bg{filter:drop-shadow(0 0 6px rgba(61,138,58,.6))}
+    .node.influenced circle.bg{stroke:var(--success);stroke-width:3.5}
 
     /* 派系颜色：为节点边框添加派系颜色指示 */
     .node.faction-hq circle.bg{stroke-width:2.5;stroke:#0d8b96}
@@ -2228,7 +2239,7 @@
         <div class="panel section">
           <h2>决策时同步查看网络</h2>
           <div class="small muted">高亮节点表示选择对象；浅光圈节点处于"扩散影响圈"内，本轮抵抗力较低。</div>
-          <div class="svg-wrapper" style="height:500px;margin-top:12px">
+          <div class="svg-wrapper" style="margin-top:12px">
             <svg id="networkSvg2"></svg>
           </div>
           <div id="detailBox2" class="detail" style="margin-top:12px"></div>
@@ -4225,16 +4236,9 @@ function drawNetwork(svgId, forceView){
       img.setAttribute('clip-path','url(#clip-'+svgId+'-'+id+')');
       img.setAttribute('preserveAspectRatio','xMidYMid slice');
       img.setAttribute('pointer-events','none');
-      // Always apply grayscale to avatars, but make unselected ones very faint
-      if(isFocused){
-        // Selected: full color and opacity
-        img.setAttribute('opacity','1');
-        img.setAttribute('filter','grayscale(0)');
-      } else {
-        // Unselected: very faint and grayscale
-        img.setAttribute('opacity','0.15');
-        img.setAttribute('filter','grayscale(1)');
-      }
+      // v137：不再给头像加 grayscale 滤镜——11 张带滤镜的 SVG image 等于 11 个
+      // 额外光栅表面，是网络图掉帧大户；未选中只用低透明度表达
+      img.setAttribute('opacity', isFocused ? '1' : '0.18');
       nodeG.appendChild(img);
       }
     } else {
@@ -4319,6 +4323,7 @@ function drawNetwork(svgId, forceView){
       const startX=clientX, startY=clientY;
       const startNodeX=p.x, startNodeY=p.y;
       const threshold=5;
+      let maxD=0;   // v137：本次按下到松手的最大位移（区分真拖拽与手滑点选）
       // 计算 SVG 视口坐标系到屏幕像素的比例（用于 viewBox 缩放补偿）
       const rect=svg.getBoundingClientRect();
       const vb=svg.viewBox.baseVal;
@@ -4326,7 +4331,9 @@ function drawNetwork(svgId, forceView){
       const sy=vb&&rect.height?vb.height/rect.height:1;
       const onMove=(cx,cy)=>{
         const dx=cx-startX, dy=cy-startY;
-        if(!state.draggedStarted && Math.hypot(dx,dy)<threshold) return;
+        const dist=Math.hypot(dx,dy);
+        if(dist>maxD) maxD=dist;
+        if(!state.draggedStarted && dist<threshold) return;
         state.draggedStarted=true;
         svg.classList.add('grabbing');
         p.x=startNodeX+dx*sx; p.y=startNodeY+dy*sy;
@@ -4347,7 +4354,9 @@ function drawNetwork(svgId, forceView){
             safeStorage.setItem('co-v17-nodePos', JSON.stringify(saved));
           }catch(_){}
         }
-        setTimeout(()=>{ state.draggedNode=null; }, 0);
+        // v137：松手时记下总位移，click 里用它区分"真拖拽"和"带手滑的点选"
+        state.draggedMoved=maxD;
+        setTimeout(()=>{ state.draggedNode=null; state.draggedStarted=false; state.draggedMoved=0; }, 0);
       };
       const mm=(ev)=>onMove(ev.clientX, ev.clientY);
       const mu=()=>onUp();
@@ -4362,7 +4371,9 @@ function drawNetwork(svgId, forceView){
     nodeG.addEventListener('touchstart',(e)=>{ if(e.touches.length!==1) return; beginDrag(e.touches[0].clientX, e.touches[0].clientY); },{passive:true});
 
     nodeG.addEventListener('click',()=>{
-      if(state.draggedNode===id && state.draggedStarted) return;
+      /* v137：只有真拖拽（位移>10px）才吞掉 click；轻微手滑（5-10px）仍算点选——
+         手机上手指点按很容易超过旧的 5px 阈值，导致"点头像没反应" */
+      if(state.draggedNode===id && state.draggedStarted && (state.draggedMoved||0)>10) return;
       state.focusedNode=id;
       renderDetail(id,'detailBox');
       renderDetail(id,'detailBox2');
@@ -7102,6 +7113,19 @@ function render(){
   renderDetail(state.focusedNode,'detailBox'); renderDetail(state.focusedNode,'detailBox2');
   renderPeopleQuickList();
   if(state.currentScreen==='log') renderLogScreen();
+  fitDecisionSticky();
+}
+
+/* v137b：决策页右栏吸顶的自适应开关——右栏（标题+地图+人物介绍）整体高度
+   能放进视口（减 72px 余量）才吸顶，否则禁用，整栏随页面滚动。
+   内容高度会随语言/打探状态变化，所以在 render 里每次都校准（开销可忽略）。 */
+function fitDecisionSticky(){
+  try{
+    const panel=document.querySelector('#screen-decision > div[data-decision-grid] > .panel:nth-child(2)');
+    if(!panel) return;
+    const canStick=window.matchMedia('(min-width:1100px)').matches && panel.offsetHeight<=window.innerHeight-72;
+    panel.classList.toggle('no-stick', !canStick);
+  }catch(_){}
 }
 
 /* =========================================================
@@ -7189,6 +7213,7 @@ function syncTabbarMetrics(){
   document.documentElement.style.setProperty('--tabbar-h', Math.max(0, Math.round(h-sab))+'px');
 }
 window.addEventListener('resize', syncTabbarMetrics);
+window.addEventListener('resize', fitDecisionSticky);
 /* v115：字体加载/语言切换会改变标签栏按钮的实际高度——加载完和切换后各复测一次，
    不然推进栏和标签栏之间会留一条缝（或重叠） */
 window.addEventListener('load', ()=>{ syncTabbarMetrics(); setTimeout(syncTabbarMetrics, 600); });
