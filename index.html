@@ -99,7 +99,7 @@
         /* v139：吸顶的包含块是"网格区域"——默认 stretch 时右栏会被左栏拉高到整行高，
            面板底被网格底钉死，吸顶行程≈0，看起来就是"右栏从不跟手"。
            改 start 后面板保持自身高度（851px），网格区域留出行高差做吸顶行程 */
-        height:max-content;box-sizing:border-box;}
+        height:max-content;box-sizing:border-box;will-change:transform;}
       /* v137b：右栏内容比视口还高时禁用吸顶（JS 加 .no-stick）——钉住反而会把
          人物介绍底部永远挡在视口外且无法滚动查看；此时整栏随页面滚动，两全 */
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2).no-stick{position:static!important;top:auto;z-index:auto}
@@ -112,7 +112,7 @@
         max-height:max(210px,min(400px,calc(100vh - 660px)));
       }
       /* v143：人物介绍收起（默认）时，把省下的空间给网络图 */
-      #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(540px,calc(100vh - 330px))}
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(480px,calc(100vh - 330px))}
       /* v142：矮视口（≤840px 高，含 1366×768 教室本）紧凑模式——右栏总高须 ≤ 视口-28 才能吸顶，
          否则 v137b 直接 no-stick，对齐整体失效（用户实测 768 视口"选了人网络图静止不动"）。
          压缩项：隐藏提示语、收紧留白、头像/状态胶囊缩小、正文行距收紧、地图下限降到 170。
@@ -122,8 +122,8 @@
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > h2{font-size:16px;margin:0 0 4px}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > .small.muted{display:none}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{margin-top:8px!important;max-height:max(170px,calc(100vh - 700px))}
-        /* v143：矮视口下人物介绍收起时地图放到 420px 上下（默认收起，空间全给地图） */
-        #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(420px,calc(100vh - 280px))}
+        /* v143：矮视口下人物介绍收起时地图放到 380px 上下（默认收起，空间全给地图） */
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(380px,calc(100vh - 280px))}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{margin-top:8px!important;padding:10px 12px;font-size:12.5px;line-height:1.45}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .pf2-body img{height:40px!important;width:40px!important}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .status{padding:3px 10px;font-size:11px}
@@ -210,7 +210,7 @@
     .status.s4{background:var(--s4);color:#fff}
     .status .glyph{font-size:18px;font-weight:800}
 
-    .action{padding:16px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);display:grid;gap:10px;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease;cursor:pointer}
+    .action{padding:16px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);display:grid;gap:10px;transition:border-color .18s ease,background-color .18s ease;cursor:pointer}
     /* v15：动作分组折叠 */
     .action-group{border:1px solid var(--border);border-radius:14px;background:var(--surface);margin-bottom:12px;overflow:hidden}
     .action-group-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:rgba(255,255,255,.04);user-select:none;transition:background .15s}
@@ -7302,7 +7302,7 @@ function fitDecisionSticky(){
           const rel=cr.top-pr.top;
           if(rel>maxRel) maxRel=rel;
         }
-        const need=panel.offsetHeight + maxRel + Math.round(window.innerHeight*0.35);
+        const need=panel.offsetHeight + maxRel + Math.round(window.innerHeight*0.15);
         sizer.style.height=Math.max(0,need)+'px';
       }
     }
