@@ -92,7 +92,11 @@
          网格（高度=左栏动作列表），所以选动作滚列表的全过程右栏都钉在旁边。
          地图限高（给标题+介绍预留约 500px），视口太矮装不下整栏时吸顶自动失效，
          整栏随页面滚动（同样不重叠） */
-      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky!important;top:64px;z-index:6;align-self:start;padding-top:18px;padding-bottom:18px}
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky!important;top:64px;z-index:6;align-self:start;padding-top:18px;padding-bottom:18px;
+        /* v139：吸顶的包含块是"网格区域"——默认 stretch 时右栏会被左栏拉高到整行高，
+           面板底被网格底钉死，吸顶行程≈0，看起来就是"右栏从不跟手"。
+           改 start 后面板保持自身高度（851px），网格区域留出行高差做吸顶行程 */
+        height:max-content;box-sizing:border-box;}
       /* v137b：右栏内容比视口还高时禁用吸顶（JS 加 .no-stick）——钉住反而会把
          人物介绍底部永远挡在视口外且无法滚动查看；此时整栏随页面滚动，两全 */
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2).no-stick{position:static!important;top:auto;z-index:auto}
@@ -102,7 +106,7 @@
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > .small.muted{font-size:11.5px;line-height:1.5;margin-top:2px}
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{
         height:auto!important;aspect-ratio:500/450;
-        max-height:max(220px,min(400px,calc(100vh - 628px)));
+        max-height:max(220px,min(400px,calc(100vh - 660px)));
       }
     }
 
@@ -4594,8 +4598,9 @@ function renderActions(){
       state.groupOpen[group.key] = willOpen;
       render();
       /* v80：展开时把标题摆到吸顶条下面（视线从这一组开头往下看）；
-         收起时页面会变短，标题会被顶跑，这里把它按回原来的位置。 */
-      placeGroupHeader(group.key, willOpen ? 96 : tBefore);
+         收起时页面会变短，标题会被顶跑，这里把它按回原来的位置。
+         v139：桌面吸顶时对齐基准换成"网络图顶部"——分组标题和网络图同高并排。 */
+      placeGroupHeader(group.key, willOpen ? (desktopAlignTop() ?? 96) : tBefore);
     };
     header.addEventListener('click', toggleGroup);
     header.addEventListener('keydown',(e)=>{
@@ -5803,6 +5808,25 @@ function whyDisabled(a, wait, noTeacher){
    手机上看到的是这组最后一张卡，学生以为"展开后直接跳到了底部"。
    只在这一组是"被展开"时摆位；点它自己收起时不抢镜头。 */
 let groupFocusToken=0;
+
+/* v139：桌面吸顶模式下，返回"右栏网络图吸顶后的视口顶部"作为对齐基准——
+   展开动作/选中卡片后让动作块与网络图从同一水平线并排开始。
+   关键：必须返回"吸顶后的位置"（64 + 地图在面板内的偏移），而不是当前视口位置——
+   未吸顶时地图随页面滚动，拿它当前位置当基准，页面一滚两者就脱钩。
+   动作列表里任意动作的文档位置都低于吸顶触发点，把它对齐到 154 左右必然经过
+   "地图已吸顶"的区间，所以返回吸顶位置在数学上严格成立。
+   手机或右栏未吸顶（no-stick）时返回 null，走原有的居中等逻辑。 */
+function desktopAlignTop(){
+  try{
+    if(!window.matchMedia('(min-width:1100px)').matches) return null;
+    const panel=document.querySelector('#screen-decision > div[data-decision-grid] > .panel:nth-child(2)');
+    if(!panel || panel.classList.contains('no-stick')) return null;
+    const map=panel.querySelector('.svg-wrapper');
+    if(!map) return null;
+    return 64 + map.offsetTop;
+  }catch(_){ return null; }
+}
+
 /* wantTop：想让这组的标题落在视口的哪个高度。
    展开时传吸顶条的位置（96）——视线从这一组开头往下看；
    收起时传它原来在屏幕上的位置——页面变短了，但标题别乱跑。 */
@@ -5825,6 +5849,7 @@ function placeGroupHeader(key, wantTop){
   };
   requestAnimationFrame(go);
   setTimeout(go, 280);   // 组内卡片展开、文字换行会把高度定下来，再校一次
+  setTimeout(go, 600);   // v139：说明区 0.22s 展开动画结束后第三轮校正
 }
 
 let focusToken=0;   // v79：每次摆位发一个号，后发的作废先发的
@@ -5848,7 +5873,15 @@ function focusSelectedCard(){
     if(wanted!==null && Math.abs(cur-wanted)>40) return;
     const r=card.getBoundingClientRect();
     let target;
-    if(r.height>=avail-8) target=cur+r.top-topPad;                        // 比可视区高：顶端对齐
+    /* v139：桌面吸顶时，把卡片对齐到网络图旁边——默认顶部与地图顶部同高并排；
+       卡片太长导致底部（选人区）伸到推进栏下面时，改为下移到选人区完整可见，
+       仍与地图大面积重叠。不再"视口居中"（居中会让动作高低不一，视觉上右栏像没跟着动） */
+    const alignTop=desktopAlignTop();
+    if(alignTop!==null){
+      const want=Math.max(96, Math.min(alignTop, vh-130-r.height));
+      target=cur+r.top-want;
+    }
+    else if(r.height>=avail-8) target=cur+r.top-topPad;                   // 比可视区高：顶端对齐
     else                  target=cur+r.top-topPad-(avail-r.height)/2;     // 否则：可视区居中
     const docH=Math.max(document.documentElement.scrollHeight||0, document.body.scrollHeight||0);
     const maxY=Math.max(0, docH-vh);
@@ -5860,7 +5893,9 @@ function focusSelectedCard(){
   requestAnimationFrame(go);
   /* 卡片里的文字换行、说明区展开都会在几十毫秒内把高度定下来，
      落点得跟着修正两次，否则手机上卡片顶会被吸顶条盖住一截。 */
-  const again=()=>{ go(); if(++tries<2) setTimeout(again, 260); };
+  /* v139：说明区展开 0.22s、选人区滑入 0.3s，高度会持续变三轮——校正也从两轮加到三轮，
+     否则最后一次布局位移会把刚对齐好的卡片又顶偏（实测偏差 87px） */
+  const again=()=>{ go(); if(++tries<3) setTimeout(again, 300); };
   setTimeout(again, 280);
 }
 function toggleTarget(id){
@@ -5874,7 +5909,7 @@ function toggleTarget(id){
   }
   const arr=state.selectedTargets;
   const pos=arr.indexOf(id);
-  if(pos>=0){ arr.splice(pos,1); state.targetHint=''; if(arr.length) state.focusedNode=arr[arr.length-1]; render(); return; }
+  if(pos>=0){ arr.splice(pos,1); state.targetHint=''; if(arr.length) state.focusedNode=arr[arr.length-1]; render(); focusSelectedCard(); return; }
   const p=state.people[id];
   /* v90：已经离场的人不能再被选为目标 */
   if(!p || p.removed){ state.targetHint='这个人已经不在场上了。'; render(); return; }
@@ -5896,6 +5931,9 @@ function toggleTarget(id){
   /* v64：右侧「人物介绍」跟着你点的人走——选谁就看谁，不用再回网络图上找 */
   state.focusedNode = id;
   render();
+  /* v139：选人后布局高度会变（选人区、右侧人物介绍），把选中卡片重新对齐到
+     网络图旁边；focusSelectedCard 自带"学生自己滑走了就别抢"的保护 */
+  focusSelectedCard();
 }
 
 /* v37：没打探过的人，只说"动了多少档"，不给精确数字
