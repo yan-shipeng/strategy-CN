@@ -111,6 +111,8 @@
         height:auto!important;aspect-ratio:500/450;
         max-height:max(210px,min(400px,calc(100vh - 660px)));
       }
+      /* v143：人物介绍收起（默认）时，把省下的空间给网络图 */
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(540px,calc(100vh - 330px))}
       /* v142：矮视口（≤840px 高，含 1366×768 教室本）紧凑模式——右栏总高须 ≤ 视口-28 才能吸顶，
          否则 v137b 直接 no-stick，对齐整体失效（用户实测 768 视口"选了人网络图静止不动"）。
          压缩项：隐藏提示语、收紧留白、头像/状态胶囊缩小、正文行距收紧、地图下限降到 170。
@@ -120,8 +122,10 @@
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > h2{font-size:16px;margin:0 0 4px}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > .small.muted{display:none}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{margin-top:8px!important;max-height:max(170px,calc(100vh - 700px))}
+        /* v143：矮视口下人物介绍收起时地图放到 420px 上下（默认收起，空间全给地图） */
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2):not(.pf2-open) .svg-wrapper{max-height:min(420px,calc(100vh - 280px))}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2{margin-top:8px!important;padding:10px 12px;font-size:12.5px;line-height:1.45}
-        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 img{height:40px!important;width:40px!important}
+        #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .pf2-body img{height:40px!important;width:40px!important}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .status{padding:3px 10px;font-size:11px}
         #screen-decision > div[data-decision-grid] > .panel:nth-child(2) #detailBox2 .status .glyph{font-size:15px}
       }
@@ -198,6 +202,14 @@
     .legend-svg{width:22px;height:22px;flex-shrink:0}
 
     .detail{margin-top:14px;padding:18px;border-radius:16px;background:rgba(13,139,150,.06);border:1px solid rgba(13,139,150,.2);min-height:160px}
+    /* v143：决策页人物介绍折叠标题条——像动作卡一样点一下才展开 */
+    #detailBox2{min-height:0}
+    .pf2-head{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;user-select:none;border-radius:12px;background:rgba(13,139,150,.08);border:1px solid rgba(13,139,150,.25);transition:background .15s}
+    .pf2-head:hover{background:rgba(13,139,150,.18)}
+    .pf2-head .chev{margin-left:auto;color:var(--muted);font-size:14px;transition:transform .2s}
+    .pf2-head.open .chev{transform:rotate(180deg)}
+    .pf2-body{margin-top:10px}
+    .pf2-body[hidden]{display:none!important}
     .status{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;gap:6px}
     .status.s0{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
     .status.s1,.status.s2{background:var(--s0-light);color:var(--s0);border:1px dashed var(--s0)}
@@ -3214,6 +3226,7 @@ function initState(){
     people:clonePeople(),
     selectedAction:null,
     selectedTargets:[],
+    profileOpen:false,   // v143：决策页右栏人物介绍默认收起（一行标题条，点击展开），把空间让给网络图
     detailsOpen:new Set(),   // v45：记住哪几张卡片的"详细参数"是展开的，重渲染后不丢
     descOpen:new Set(),      // v70：「ⓘ 说明」摊开过的卡片，重渲染后也别合回去
     focusedNode:null,
@@ -4099,13 +4112,13 @@ function renderDetail(id, boxId){
   const factionBg = p.faction==='总部'?'rgba(13,139,150,.1)':p.faction==='当地'?'rgba(45,134,89,.1)':p.faction==='外部'?'rgba(217,119,6,.1)':'#f5f5f5';
   const isStubborn = isKnownResistant(id);
   const stubbornBadge = isStubborn ? '<span class="stubborn-marker" style="display:inline-block;padding:4px 10px;background:rgba(192,0,0,.1);color:#c00;border-radius:4px;font-size:11px;font-weight:600;border:1px solid rgba(192,0,0,.3)">🔒 关键阻力（已确认）</span>' : '';
-  const avatarHtml = (id==='pm')
+  const avatarBig = (id==='pm')
     ? `<div style="width:68px;height:68px;border-radius:50%;background:#0d9488;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:3px solid #0d9488;"><span style="font-size:28px;color:#fff;font-weight:bold;">你</span></div>`
     : AVATARS[id]
       ? `<img src="${AVATARS[id]}" style="width:68px;height:68px;border-radius:50%;object-fit:cover;border:3px solid ${factionColor};flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15)" alt="${p.name}"/>`
       : `<div style="width:68px;height:68px;border-radius:50%;background:${factionColor};flex-shrink:0;"></div>`;
-  box.innerHTML=`<div style="display:flex;gap:14px;align-items:flex-start">
-    ${avatarHtml}
+  const bodyHtml = `<div style="display:flex;gap:14px;align-items:flex-start">
+    ${avatarBig}
     <div style="min-width:0;flex:1">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <strong style="font-size:17px">${p.name}</strong>
@@ -4134,6 +4147,40 @@ function renderDetail(id, boxId){
   ${hiddenTiesSection}
   ${hiddenSection}
   ${softenInfo}`;
+  /* v143：决策页右栏（detailBox2）把整个人物介绍收成一条标题——头像+姓名+状态+箭头，
+     点击才展开全文（toggleProfile2），省下的纵向空间全部让给网络图。
+     网络页（detailBox）维持全文显示不变。 */
+  if(boxId==='detailBox2'){
+    const open=!!state.profileOpen;
+    const headAvatar = (id==='pm')
+      ? `<div style="width:30px;height:30px;border-radius:50%;background:#0d9488;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:bold;">你</div>`
+      : AVATARS[id]
+        ? `<img src="${AVATARS[id]}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid ${factionColor};flex-shrink:0" alt=""/>`
+        : `<div style="width:30px;height:30px;border-radius:50%;background:${factionColor};flex-shrink:0"></div>`;
+    box.innerHTML=`<div class="pf2-head${open?' open':''}" onclick="toggleProfile2()" role="button" title="点击展开人物介绍 / Click to expand profile">
+      ${headAvatar}
+      <strong style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</strong>
+      <span class="status s${p.status}" style="white-space:nowrap;padding:2px 8px;font-size:11px;flex-shrink:0"><span class="glyph">${GLYPHS[p.status]}</span> ${statusLabelFor(id,p.status)}</span>
+      <span class="chev">▾</span>
+    </div>
+    <div class="pf2-body"${open?'':' hidden'}>${bodyHtml}</div>`;
+  } else {
+    box.innerHTML=bodyHtml;
+  }
+}
+
+/* v143：切换决策页人物介绍的收起/展开——展开后面板高度大变，
+   重判吸顶（可能从 no-stick 恢复吸顶），布局稳定后再校一次对齐 */
+function toggleProfile2(){
+  state.profileOpen=!state.profileOpen;
+  const box=document.getElementById('detailBox2'); if(!box) return;
+  const head=box.querySelector('.pf2-head'), body=box.querySelector('.pf2-body');
+  if(head) head.classList.toggle('open',!!state.profileOpen);
+  if(body) body.hidden=!state.profileOpen;
+  const panel=document.querySelector('#screen-decision > div[data-decision-grid] > .panel:nth-child(2)');
+  if(panel) panel.classList.toggle('pf2-open',!!state.profileOpen);
+  fitDecisionSticky();
+  setTimeout(fixAlignResidual,350);
 }
 
 /* v136：点人物后，把当前页面的详情盒滚进视线（手机版详情在地图下方，不滚就像没反应） */
@@ -7240,6 +7287,7 @@ function fitDecisionSticky(){
     if(!panel) return;
     const canStick=window.matchMedia('(min-width:1100px)').matches && panel.offsetHeight<=window.innerHeight-28;
     panel.classList.toggle('no-stick', !canStick);
+    panel.classList.toggle('pf2-open', !!state.profileOpen);   // v143：人物介绍展开态同步（决定地图大小）
     if(!canStick) setPanelTopBoost(0);   // v142b：不吸顶时下沉量无意义，清掉
     /* v142d：撑高网格行，保证吸顶行程 ≥ 最深卡片相对右栏顶的距离——
        否则只开一个组时行高不够，sticky 全程不生效（面板跟页面跑=用户看到的"静止不动"）。
