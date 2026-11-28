@@ -92,13 +92,17 @@
          网格（高度=左栏动作列表），所以选动作滚列表的全过程右栏都钉在旁边。
          地图限高（给标题+介绍预留约 500px），视口太矮装不下整栏时吸顶自动失效，
          整栏随页面滚动（同样不重叠） */
-      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky!important;top:64px;z-index:6;align-self:start}
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2){position:sticky!important;top:64px;z-index:6;align-self:start;padding-top:18px;padding-bottom:18px}
       /* v137b：右栏内容比视口还高时禁用吸顶（JS 加 .no-stick）——钉住反而会把
          人物介绍底部永远挡在视口外且无法滚动查看；此时整栏随页面滚动，两全 */
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2).no-stick{position:static!important;top:auto;z-index:auto}
+      /* v138：收紧右栏纵向开销（提示语字号、面板留白），地图按"视口减 628px"限高——
+         让 950px 上下的常见笔记本视口也能整体吸顶：选任何动作时网络图+人物介绍
+         都钉在动作旁边可见 */
+      #screen-decision > div[data-decision-grid] > .panel:nth-child(2) > .small.muted{font-size:11.5px;line-height:1.5;margin-top:2px}
       #screen-decision > div[data-decision-grid] > .panel:nth-child(2) .svg-wrapper{
         height:auto!important;aspect-ratio:500/450;
-        max-height:max(220px,min(420px,calc(100vh - 564px)));
+        max-height:max(220px,min(400px,calc(100vh - 628px)));
       }
     }
 
